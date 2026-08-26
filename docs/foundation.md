@@ -1,0 +1,368 @@
+# Fundamentos do Vigil
+
+> Documento de linguagem ubíqua, escopo e decisões que orientam o core do Vigil.
+
+## 1. Propósito e escopo
+
+O Vigil é uma aplicação leve de observabilidade, diagnóstico, validação e curadoria humana para consultas de bancos relacionais. O primeiro adaptador suporta PostgreSQL e Aurora PostgreSQL.
+
+O problema que ele trata não é a simples existência de um `Sequential Scan` ou o crescimento de RPM. O foco é uma família de consultas que, de modo **material e comprovável**, esteja degradando o banco por consumo de tempo, I/O, concorrência ou recursos temporários — seja por uma regressão silenciosa, seja por um problema crônico sem priorização.
+
+### Escopo inicial
+
+- Uma instalação do Vigil monitora um único *target*: um PostgreSQL ou cluster Aurora PostgreSQL.
+- A primeira versão analisa consultas de leitura (`SELECT`, inclusive CTEs cujo comando final é `SELECT`).
+- O Vigil não aplica DDL ou DML no banco monitorado. Uma aprovação humana não cria índices nem altera queries automaticamente.
+- A instalação é local ao ambiente do cliente e usa SQLite em volume persistente como persistência padrão.
+- Materialized views são tratadas como relações físicas relevantes, junto de tabelas, tabelas particionadas e outras relações suportadas pelo PostgreSQL.
+
+`INSERT`, `UPDATE`, `DELETE`, locks, bloat e autovacuum são problemas importantes, mas estão fora do recorte inicial: exigem sinais, permissões e regras próprias.
+
+### Princípios
+
+1. **Impacto antes de padrão.** `Sequential Scan`, RPM alto ou custo estimado isolados não comprovam problema.
+2. **Evidência antes de inferência.** O modelo de IA não é fonte de verdade técnica.
+3. **Privacidade por padrão.** SQL bruto, parâmetros e resultados não são persistidos ou enviados por padrão.
+4. **Falhar fechado para egress sensível.** Se o contexto não puder ser tratado de forma segura, ele não segue para inferência externa.
+5. **Humano decide; Vigil recomenda.** Nenhuma sugestão é aplicada automaticamente.
+6. **O core não conhece fornecedor.** JDBC, SQLite, Spring, Bedrock e Ollama pertencem aos adaptadores, não ao domínio.
+
+## 2. Fluxo principal
+
+```text
+Telemetria do target
+        ↓
+Consulta observada
+        ↓
+Avaliação de impacto e baseline
+        ↓
+Consulta candidata
+        ↓
+Caso de análise auditável
+        ↓
+Evidências → sanitização → diagnóstico → hipótese
+        ↓
+Validação isolada
+        ↓
+Recomendação → decisão humana → arquivamento
+```
+
+O fluxo deve preservar esta distinção:
+
+| Elemento | Pergunta que responde |
+|---|---|
+| Estado | Em que etapa controlada o caso está? |
+| Evento | O que aconteceu? |
+| Evidência | Em qual fato verificável a conclusão se apoia? |
+| Finding | Qual sinal ou problema técnico foi identificado? |
+| Diagnóstico | Como os findings e evidências são interpretados juntos? |
+
+## 3. Termos principais
+
+| Termo | Definição no Vigil | Não é |
+|---|---|---|
+| **Consulta observada** | Família de consulta identificada pela telemetria ou por solicitação humana. | Diagnóstico, plano ou recomendação. |
+| **Consulta candidata** | Consulta priorizada porque há indício de impacto material, regressão ou custo crônico. | Toda consulta observada. |
+| **Caso de análise** | Investigação auditável de uma consulta candidata em um contexto específico. | A própria consulta. |
+| **Evidência** | Fato de fonte verificável: métrica, plano, índice, estatística ou metadado. | Opinião de LLM ou conclusão não sustentada. |
+| **Contexto sanitizado** | Versão autorizada de dados para sair da fronteira confiável ou seguir ao modelo. | Garantia de que qualquer SQL é seguro. |
+| **Finding** | Sinal técnico específico, limitado e vinculado a evidências. | Recomendação pronta. |
+| **Diagnóstico** | Interpretação estruturada de findings sustentados por evidências. | Certeza absoluta ou mudança proposta. |
+| **Hipótese de otimização** | Mudança possível que pode mitigar uma causa. | Mudança comprovadamente benéfica. |
+| **Validação** | Experimento controlado que testa a hipótese e registra limitações. | Aplicação em produção. |
+| **Recomendação** | Hipótese validada apresentada com benefício, riscos e limitações. | Ordem automática de alteração. |
+| **Decisão humana** | Aprovação, rejeição ou pedido de alteração, com ator e justificativa. | Resultado do modelo. |
+| **Auditoria** | Histórico imutável de fatos e decisões para reconstruir o caso. | Log textual aleatório. |
+
+Exemplo da cadeia de raciocínio:
+
+- **Finding:** a consulta lê uma relação grande sequencialmente e retorna uma fração pequena das linhas.
+- **Hipótese:** um índice em `customer_id` pode reduzir leituras para esse padrão de filtro.
+- **Validação:** no ambiente de teste, a hipótese altera o plano e reduz as métricas definidas, dentro das limitações registradas.
+- **Recomendação:** criar o índice é uma alternativa justificável, com custo de escrita e risco descritos.
+- **Decisão humana:** o DBA aprova, rejeita ou pede uma alternativa por motivo explícito.
+
+## 4. Quando uma consulta vira candidata
+
+Uma consulta não se torna candidata por um único sintoma. Ela deve apresentar impacto técnico material e contexto suficiente para investigação.
+
+Sinais relevantes incluem:
+
+- participação relevante no tempo total de execução na janela observada;
+- alto volume de blocos lidos, escrita temporária ou pressão de I/O;
+- latência acima de um SLO configurado;
+- degradação em relação ao comportamento anterior;
+- mudança de plano acompanhada de piora de métricas;
+- custo crônico e recorrente relevante, ainda que não tenha ocorrido regressão;
+- aumento de chamadas **combinado** com custo total relevante;
+- saturação de CPU, I/O, conexões ou waits no contexto do banco.
+
+O Vigil pode abrir um caso por impacto absoluto mesmo sem histórico. O sistema deve explicar qual evidência abriu o caso e sua confiança histórica.
+
+### Observabilidade progressiva
+
+| Camada | Funcionamento | Confiança |
+|---|---|---|
+| **Impacto absoluto** | Prioriza a carga relevante na janela atual; funciona desde a primeira coleta. | `ABSENT` |
+| **Baseline provisório** | Compara com períodos recentes usando estatísticas móveis. | `PROVISIONAL` |
+| **Baseline sazonal** | Compara períodos equivalentes, como hora e dia da semana. | `MATURE` |
+
+O baseline é por família de consulta e por target. Um pico conhecido não é automaticamente uma anomalia; pode ser registrado como janela operacional esperada. Ainda assim, se causar saturação, pode revelar problema de capacidade ou arquitetura.
+
+## 5. Estados do caso de análise
+
+`AnalysisCase` é a investigação completa e auditável. Ele é o aggregate root do domínio: protege as transições e invariantes do fluxo.
+
+| Estado | Significado | Condição mínima |
+|---|---|---|
+| `DISCOVERED` | A consulta foi identificada ou recebida para análise. | Consulta observada e identificador do caso. |
+| `TRIAGED` | A consulta foi selecionada para investigação. | Razão de priorização explícita. |
+| `EVIDENCE_COLLECTED` | Fatos técnicos foram coletados. | Ao menos uma evidência vinculada ao caso. |
+| `SANITIZED` | O contexto foi avaliado pela política de privacidade. | Resultado e versão da política registrados. |
+| `DIAGNOSED` | Findings e diagnóstico foram produzidos. | Referências às evidências e limitações. |
+| `HYPOTHESIS_PROPOSED` | Há uma otimização possível a testar. | Hipótese ligada a diagnóstico, riscos e pré-condições. |
+| `VALIDATING` | Experimento isolado está preparado ou em execução. | Ambiente e hipótese definidos. |
+| `VALIDATED` | A hipótese mostrou benefício suficiente no ambiente utilizado. | Comparação, fidelidade e limites registrados. |
+| `INVALIDATED` | A hipótese não ajudou ou piorou o cenário. | Evidência comparativa. |
+| `INCONCLUSIVE` | Não foi possível concluir com segurança. | Limitação explícita. |
+| `AWAITING_HUMAN` | Recomendação validada está pronta para revisão. | Evidências, riscos e limitações disponíveis. |
+| `APPROVED` | Um humano aprovou a recomendação. | Ator, data e justificativa. |
+| `REJECTED` | Um humano rejeitou a recomendação. | Ator, data e justificativa. |
+| `CHANGES_REQUESTED` | O revisor pediu alteração. | Pedido explícito. |
+| `ARCHIVED` | O caso foi encerrado e preservado. | Não recebe mudanças silenciosas. |
+
+Falhas operacionais, como `COLLECTION_FAILED`, `MODEL_FAILED`, `VALIDATION_FAILED` e `TIMED_OUT`, devem ser registradas como eventos com causa e podem levar o caso a um estado terminal ou de reprocessamento conforme a política. Não devem apagar evidências já coletadas.
+
+### Invariantes
+
+- Não existe diagnóstico antes de um contexto autorizado pela política de sanitização.
+- Hipótese exige diagnóstico.
+- Recomendação exige validação suficiente; `INCONCLUSIVE` não é evidência de benefício.
+- Decisão humana exige ator e justificativa.
+- Eventos de auditoria não carregam SQL bruto nem valores sensíveis.
+- O Vigil não executa alteração no banco monitorado, inclusive após `APPROVED`.
+
+## 6. Objetos fundamentais
+
+### ObservedQuery
+
+Representa a família de consulta identificada. Contém, de forma típica:
+
+- fingerprint do Vigil;
+- identificador nativo da fonte, quando existir;
+- origem (`POSTGRESQL`, integração de aplicação ou fixture);
+- momento de observação;
+- ambiente;
+- referência segura à representação permitida da consulta.
+
+Ele não deve persistir SQL bruto por padrão.
+
+### Fingerprint, template normalizado e SQL bruto
+
+Estes são conceitos diferentes:
+
+| Representação | Uso | Exemplo |
+|---|---|---|
+| SQL bruto | Existe temporariamente em uma fonte autorizada. | `SELECT * FROM users WHERE cpf = '099...'` |
+| Template normalizado | Explica a estrutura sem valores literais. Ainda pode revelar termos de negócio. | `SELECT * FROM users WHERE cpf = $1` |
+| Contexto sanitizado/pseudonimizado | Pode ser usado fora da fronteira confiável, conforme política. | `SELECT * FROM entity_1 WHERE field_1 = $1` |
+| Fingerprint | Identificador opaco para agrupamento e correlação. | `qf:v1:84fa9c1d...` |
+
+Muitas execuções concretas podem compartilhar a mesma estrutura normalizada e, portanto, o mesmo fingerprint.
+
+```text
+SQL bruto
+  ↓
+Parse/normalização
+  ↓
+Representação canônica
+  ↓
+Fingerprint opcionalmente derivado por hash ou HMAC
+```
+
+Fingerprint não é SQL criptografado e não permite reconstruir SQL. HMAC, se adotado no futuro, também não é reversível: ele apenas produz um token verificável com uma chave. Para o MVP, o uso de HMAC não é obrigatório.
+
+O `queryid` de `pg_stat_statements` pode ser usado como identificador da fonte PostgreSQL, contextualizado por banco, usuário e tipo de execução. Ele não é o identificador global e permanente do Vigil: depende do PostgreSQL, pode mudar em recriações de objetos e não deve ser presumido estável entre versões maiores.
+
+### Evidence
+
+É um fato verificável. Exemplos: plano de execução, métricas por janela, relação consultada, índices existentes e estatísticas do planner.
+
+Toda evidência deve registrar origem, instante de captura, versão do coletor, escopo, nível de confiança e conteúdo sanitizado ou referência segura.
+
+### Finding e Diagnosis
+
+Findings possíveis:
+
+- `POSSIBLE_AVOIDABLE_SEQ_SCAN`;
+- `POSSIBLE_MISSING_INDEX`;
+- `CARDINALITY_ESTIMATION_DIVERGENCE`;
+- `NON_SARGABLE_PREDICATE`;
+- `EXPENSIVE_JOIN`;
+- `EXCESSIVE_TEMP_IO`;
+- `PLAN_REGRESSION`.
+
+Um finding explica observação, gravidade, evidências e limites. O diagnóstico interpreta um conjunto de findings; pode declarar incerteza e nunca deve mascarar suposições como fatos.
+
+### OptimizationHypothesis, ValidationRun e Recommendation
+
+Uma hipótese declara o problema tratado, a mudança proposta, benefício esperado, riscos, pré-condições e evidências usadas. Uma hipótese pode inclusive concluir que nenhuma mudança é justificável com a evidência disponível.
+
+`ValidationRun` registra ambiente, plano antes/depois, métricas comparadas, resultado, limitações e nível de fidelidade.
+
+Uma recomendação agrega diagnóstico, hipótese, validação, benefício observado/estimado, riscos, limitações e instrução de revisão humana.
+
+## 7. Telemetria e termos de PostgreSQL
+
+### Snapshot de telemetria
+
+Snapshot não é backup do banco nem cópia de tabelas. É uma medição compacta, por janela, de contadores agregados.
+
+O Vigil coleta dados amplos o suficiente para ranquear impacto no workload, mas só abre planos e diagnósticos detalhados para candidatas. Snapshots detalhados têm retenção limitada; dados antigos viram baselines estatísticos compactos.
+
+`pg_stat_statements` é a fonte inicial de observação. Entre suas métricas estão chamadas, tempo total e médio, linhas, blocos compartilhados e blocos temporários. Como seus contadores são acumulados, o Vigil calcula deltas entre coletas para obter a janela atual.
+
+### Plano e custo
+
+- **Plano de execução:** estratégia escolhida pelo PostgreSQL, como `Seq Scan`, `Index Scan`, `Bitmap Heap Scan`, `Nested Loop`, `Hash Join`, `Merge Join`, `Sort` e `Aggregate`.
+- **`EXPLAIN`:** mostra o plano estimado sem executar a consulta; é o padrão seguro para o ambiente monitorado.
+- **`EXPLAIN ANALYZE`:** executa a consulta e mede resultado real; deve ser usado somente em sandbox, réplica governada ou situação explicitamente autorizada.
+- **Custo estimado:** unidade interna para comparar alternativas do planner, não milissegundos nem custo financeiro de cloud.
+- **Cardinalidade:** quantidade de linhas estimada ou real em uma etapa do plano.
+- **Seletividade:** proporção de linhas que um filtro mantém. Um filtro que retorna 10 linhas em uma tabela de 1 milhão é altamente seletivo.
+
+### Sequential Scan e índices
+
+`Sequential Scan` lê a relação sequencialmente. Pode ser a melhor escolha para relações pequenas ou para consultas que retornam parcela grande dos dados. Ele só se torna suspeito quando combinado, por exemplo, com relação grande, baixa fração retornada, alto I/O, alta frequência ou regressão de plano.
+
+Índices podem melhorar leituras, mas possuem custo de armazenamento e manutenção em `INSERT`, `UPDATE` e `DELETE`. O Vigil precisa considerar seletividade, índices existentes, ordem de colunas, tamanho da relação e padrão de escrita antes de sugerir um.
+
+Um predicado sargável costuma permitir melhor uso de índice. Exemplo geralmente favorável:
+
+```sql
+WHERE created_at >= :start_date
+```
+
+Exemplo frequentemente menos favorável para índice comum:
+
+```sql
+WHERE DATE(created_at) = :date
+```
+
+### Hipóteses de índice e sandbox
+
+HypoPG pode apoiar a avaliação de índices hipotéticos, sem criar o índice físico, mas o resultado ainda é uma estimativa do planner. Ele não substitui uma medição real em ambiente controlado.
+
+Níveis de evidência de validação:
+
+| Nível | Ambiente | Tipo de conclusão permitido |
+|---|---|---|
+| S0 | Parser/AST e regras estáticas | Viabilidade sintática/lógica, não desempenho. |
+| S1 | PostgreSQL com schema | Compatibilidade básica de plano. |
+| S2 | Schema e dados sintéticos | Tendência técnica inicial. |
+| S3 | Dados sintéticos calibrados ou autorizados | Evidência comparativa mais forte. |
+| S4 | Staging ou réplica governada | Evidência próxima de produção, ainda com limitações. |
+
+Nenhum nível deve alegar reproduzir perfeitamente produção sem evidência correspondente.
+
+## 8. Arquitetura
+
+### Domínio, aplicação, portas e adaptadores
+
+- **Domínio:** regras independentes de tecnologia, como “diagnóstico exige contexto autorizado”.
+- **Camada de aplicação:** coordena casos de uso, persistência e chamadas a portas; não contém invariantes de negócio.
+- **Porta:** interface que representa uma necessidade do core.
+- **Adaptador:** implementação concreta de uma porta.
+
+| Porta | Adaptadores possíveis |
+|---|---|
+| `AnalysisCaseRepository` | Memória, SQLite, PostgreSQL futuro |
+| `TelemetrySource` | JDBC PostgreSQL, fixture de teste |
+| `SqlSanitizer` | Implementação local conforme política |
+| `InferencePort` | Bedrock, Ollama, vLLM, Azure AI Foundry |
+| `HypothesisValidator` | HypoPG, Testcontainers, staging governado |
+| `Clock` | Relógio real, relógio fixo de teste |
+| `IdGenerator` | UUID em produção, implementação determinística em teste |
+
+Hibernate não é requisito para acessar a telemetria do PostgreSQL; JDBC é a integração natural do coletor. Hibernate pode futuramente ser uma origem complementar de observação em aplicações Java.
+
+### Persistência
+
+SQLite é a persistência padrão da instalação local e de target único. Deve usar volume persistente e WAL. Ele é adequado a um coletor e processo escritor; não deve ser compartilhado entre hosts ou usado como banco central para várias réplicas.
+
+Uma evolução para PostgreSQL como adapter de persistência só é necessária se o produto passar a exigir múltiplas instâncias ativas, alta disponibilidade, centralização ou retenção muito maior.
+
+### Idempotência e eventos
+
+Idempotência significa que repetir uma operação não cria efeitos indevidos. Uma evidência enviada duas vezes não deve criar recomendações ou eventos duplicados.
+
+Evento de domínio é um fato passado, como `EvidenceCollected` ou `ValidationCompleted`. Ele não é um comando. Exemplo:
+
+```text
+Comando: “Sanitize esta consulta.”
+Evento:  “A consulta foi sanitizada.”
+```
+
+## 9. IA no Vigil
+
+LLM é um componente auxiliar para interpretar contexto permitido e gerar hipóteses estruturadas. Ele não substitui métricas, plano, regras determinísticas ou decisão humana.
+
+A saída deve obedecer a schema validável, contendo no mínimo: tipo de problema, evidências referenciadas, hipótese, confiança e limitações. Texto livre como “talvez crie um índice” não é suficiente.
+
+**Grounding** é a exigência de que afirmações relevantes possam ser associadas a evidência ou regra. Para reduzir alucinações, o Vigil usa contexto minimizado e sanitizado, regras determinísticas, schema de saída, validação e curadoria humana.
+
+Um “agente” não precisa ser autônomo: inicialmente pode ser um serviço Java com responsabilidade única e contrato claro. Frameworks de agentes só entram se trouxerem benefício comprovado.
+
+## 10. Segurança e governança
+
+- **Sanitização:** remove ou generaliza valores sensíveis, comentários, parâmetros e identificadores definidos pela política. Identificadores de negócio também podem ser sensíveis.
+- **Fail-closed:** se não for possível produzir contexto seguro para egress ou inferência, a operação é bloqueada; nunca se envia “mesmo assim”.
+- **Menor privilégio:** a credencial PostgreSQL do Vigil lê apenas métricas e catálogo necessários e executa somente comandos permitidos. Não cria índices nem altera dados.
+- **Egress de dados:** em modo local, não há saída de conteúdo sensível. Com inferência gerenciada, o sistema minimiza o contexto enviado e respeita região, identidade, rede e política do provedor.
+- **Prompt injection:** SQL, comentários e identificadores devem ser tratados como dados não confiáveis, nunca como instruções para o modelo.
+- **Human-in-the-loop:** é obrigatório antes da aprovação; aprovação nunca dispara alteração automática.
+
+O relatório padrão mostra template normalizado ou sanitizado. A consulta original, se a política permitir, só pode ser resolvida em visão privilegiada, auditada e a partir de uma referência segura na fonte. O `pg_stat_statements` agrupa famílias de query e não preserva necessariamente uma amostra exata de cada execução.
+
+## 11. Pesquisa e avaliação
+
+### Casos de teste e fixtures
+
+Cada caso de teste deve informar:
+
+- SQL permitido para o experimento;
+- schema e dados sintéticos;
+- índices existentes;
+- plano e problema esperados;
+- hipóteses aceitáveis e proibidas;
+- resultado esperado de validação;
+- versão do PostgreSQL, configuração e seed quando aplicável.
+
+Uma fixture é um conjunto fixo e reproduzível de schema, dados e cenário. Um benchmark organiza casos e métricas para comparar abordagens.
+
+### Métricas de avaliação
+
+- **Precisão de findings:** dos problemas sinalizados, quantos eram problemas reais?
+- **Recall de findings:** dos problemas existentes, quantos foram identificados?
+- **Taxa de recomendação insegura:** quantas recomendações deveriam ter sido bloqueadas, rejeitadas ou marcadas inconclusivas?
+- **Qualidade da hipótese:** a proposta é tecnicamente plausível e sustentada?
+- **Qualidade de explicação:** as evidências e limitações são compreensíveis para curadoria?
+- **Reprodutibilidade:** outro avaliador consegue repetir o experimento com versões, dados, prompts e configurações declarados?
+
+Não confundir **baseline operacional** — comportamento histórico de uma consulta — com **grupos de comparação do experimento**. Para avaliar o TCC, os grupos podem ser:
+
+| Grupo | Abordagem |
+|---|---|
+| B0 | Triagem manual baseada em métricas |
+| B1 | Regras determinísticas |
+| B2 | LLM sem validação |
+| B3 | Vigil híbrido: regras, LLM e validação |
+
+## 12. Decisões e referências relacionadas
+
+- ADR-001 — Observabilidade progressiva e baseline adaptativo.
+- ADR-002 — SQLite como persistência padrão da instalação local do Vigil.
+- [PostgreSQL — pg_stat_statements](https://www.postgresql.org/docs/current/pgstatstatements.html)
+- [PostgreSQL — EXPLAIN](https://www.postgresql.org/docs/current/sql-explain.html)
+- [PostgreSQL — Using EXPLAIN](https://www.postgresql.org/docs/current/using-explain.html)
+- [SQLite — Write-Ahead Logging](https://www.sqlite.org/wal.html)
