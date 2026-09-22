@@ -3,7 +3,9 @@ package com.vigil.core;
 import com.vigil.core.domain.ObservationWindow;
 import com.vigil.core.domain.ObservedQuery;
 import com.vigil.core.domain.ObservedQueryMetrics;
+import com.vigil.core.domain.NormalizedQueryTemplate;
 import com.vigil.core.domain.QueryFingerprint;
+import com.vigil.core.domain.SourceQueryId;
 import com.vigil.core.domain.enums.CommandType;
 import com.vigil.core.domain.enums.TelemetrySource;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -24,7 +27,15 @@ public class ObservedQueryTest {
                 .toList();
 
         assertEquals(
-                List.of("fingerprint", "source", "commandType", "observationWindow", "metrics"),
+                List.of(
+                        "fingerprint",
+                        "source",
+                        "observedAt",
+                        "sourceQueryId",
+                        "commandType",
+                        "observationWindow",
+                        "metrics"
+                ),
                 componentNames
         );
     }
@@ -38,6 +49,8 @@ public class ObservedQueryTest {
         );
 
         var source = TelemetrySource.PG_STAT_STATEMENTS;
+        var observedAt = Instant.parse("2026-09-07T12:05:00Z");
+        var sourceQueryId = Optional.of(new SourceQueryId("16384"));
         var commandType = CommandType.SELECT;
 
         var window = new ObservationWindow(
@@ -55,6 +68,8 @@ public class ObservedQueryTest {
         var observedQuery = new ObservedQuery(
                 fingerprint,
                 source,
+                observedAt,
+                sourceQueryId,
                 commandType,
                 window,
                 metrics
@@ -64,6 +79,8 @@ public class ObservedQueryTest {
         assertAll(
                 () -> assertEquals(fingerprint, observedQuery.fingerprint()),
                 () -> assertEquals(source, observedQuery.source()),
+                () -> assertEquals(observedAt, observedQuery.observedAt()),
+                () -> assertEquals(sourceQueryId, observedQuery.sourceQueryId()),
                 () -> assertEquals(commandType, observedQuery.commandType()),
                 () -> assertEquals(window, observedQuery.observationWindow()),
                 () -> assertEquals(metrics, observedQuery.metrics())
@@ -127,6 +144,8 @@ public class ObservedQueryTest {
                 () -> new ObservedQuery(
                         null,
                         TelemetrySource.PG_STAT_STATEMENTS,
+                        Instant.parse("2026-09-07T12:05:00Z"),
+                        Optional.empty(),
                         CommandType.SELECT,
                         window,
                         metrics
@@ -165,6 +184,71 @@ public class ObservedQueryTest {
                         Duration.ofSeconds(-1),
                         800
                 )
+        );
+    }
+
+    @Test
+    void shouldGroupEquivalentObservationsByVigilFingerprint() {
+        var fingerprint = new QueryFingerprint("vigil:8f15d2", "v1");
+        var firstObservation = observedQuery(
+                fingerprint,
+                Instant.parse("2026-09-07T12:05:00Z"),
+                Optional.of(new SourceQueryId("16384"))
+        );
+        var secondObservation = observedQuery(
+                fingerprint,
+                Instant.parse("2026-09-07T12:10:00Z"),
+                Optional.of(new SourceQueryId("16385"))
+        );
+
+        assertAll(
+                () -> assertEquals(firstObservation.fingerprint(), secondObservation.fingerprint()),
+                () -> assertNotEquals(firstObservation.sourceQueryId(), secondObservation.sourceQueryId())
+        );
+    }
+
+    @Test
+    void shouldAllowObservationWithoutSourceQueryId() {
+        var observedQuery = observedQuery(
+                new QueryFingerprint("vigil:8f15d2", "v1"),
+                Instant.parse("2026-09-07T12:05:00Z"),
+                Optional.empty()
+        );
+
+        assertTrue(observedQuery.sourceQueryId().isEmpty());
+    }
+
+    @Test
+    void shouldKeepNormalizedTemplateDistinctAndRedacted() {
+        var template = new NormalizedQueryTemplate("SELECT * FROM customer WHERE id = $1");
+
+        assertAll(
+                () -> assertNotEquals(QueryFingerprint.class, NormalizedQueryTemplate.class),
+                () -> assertEquals("NormalizedQueryTemplate[redacted]", template.toString())
+        );
+    }
+
+    @Test
+    void shouldRejectBlankSourceQueryId() {
+        assertThrows(IllegalArgumentException.class, () -> new SourceQueryId(" "));
+    }
+
+    private ObservedQuery observedQuery(
+            QueryFingerprint fingerprint,
+            Instant observedAt,
+            Optional<SourceQueryId> sourceQueryId
+    ) {
+        return new ObservedQuery(
+                fingerprint,
+                TelemetrySource.PG_STAT_STATEMENTS,
+                observedAt,
+                sourceQueryId,
+                CommandType.SELECT,
+                new ObservationWindow(
+                        observedAt.minusSeconds(300),
+                        observedAt
+                ),
+                new ObservedQueryMetrics(10, Duration.ofSeconds(2), 5)
         );
     }
 }
