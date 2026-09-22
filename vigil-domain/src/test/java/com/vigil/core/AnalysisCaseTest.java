@@ -1,11 +1,15 @@
 package com.vigil.core;
 
 import com.vigil.core.domain.AnalysisCase;
+import com.vigil.core.domain.AnalysisCaseDiscovered;
+import com.vigil.core.domain.DomainEventMetadata;
 import com.vigil.core.domain.Evidence;
+import com.vigil.core.domain.EvidenceCollected;
 import com.vigil.core.domain.MetricEvidencePayload;
 import com.vigil.core.domain.ObservationWindow;
 import com.vigil.core.domain.enums.CaseStatus;
 import com.vigil.core.domain.TransitionMetadata;
+import com.vigil.core.domain.QueryTriaged;
 import com.vigil.core.domain.enums.EvidenceConfidence;
 import com.vigil.core.domain.enums.EvidenceSource;
 import com.vigil.core.domain.enums.EvidenceType;
@@ -154,6 +158,40 @@ public class AnalysisCaseTest {
                 () -> assertTrue(analysisCase.events().isEmpty()),
                 () -> assertTrue(analysisCase.evidences().isEmpty())
         );
+    }
+
+    @Test
+    void shouldPublishSafeDomainEventsAndClearOnlyThePendingQueue() {
+        var caseId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        var discoveredAt = Instant.parse("2026-08-26T12:00:00Z");
+        var analysisCase = AnalysisCase.discover(
+                caseId,
+                discoveredAt,
+                eventMetadata("33333333-3333-3333-3333-333333333333", discoveredAt)
+        );
+        analysisCase.triage(
+                "Investigar impacto absoluto.",
+                eventMetadata("44444444-4444-4444-4444-444444444444", Instant.parse("2026-08-26T12:01:00Z"))
+        );
+        analysisCase.collectEvidence(
+                metricEvidence(caseId),
+                eventMetadata("55555555-5555-5555-5555-555555555555", Instant.parse("2026-08-26T12:02:00Z"))
+        );
+
+        var events = analysisCase.pullEvents();
+
+        assertAll(
+                () -> assertEquals(3, events.size()),
+                () -> assertInstanceOf(AnalysisCaseDiscovered.class, events.get(0)),
+                () -> assertInstanceOf(QueryTriaged.class, events.get(1)),
+                () -> assertInstanceOf(EvidenceCollected.class, events.get(2)),
+                () -> assertEquals(caseId, events.get(2).caseId()),
+                () -> assertTrue(analysisCase.pullEvents().isEmpty())
+        );
+    }
+
+    private DomainEventMetadata eventMetadata(String eventId, Instant occurredAt) {
+        return new DomainEventMetadata(UUID.fromString(eventId), "vigil-core", occurredAt, "v1");
     }
 
     private Evidence metricEvidence(UUID caseId) {

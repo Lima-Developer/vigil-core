@@ -14,6 +14,7 @@ public final class AnalysisCase {
     private final Instant createdAt;
     private final List<CaseEvent> events = new ArrayList<>();
     private final List<Evidence> evidences = new ArrayList<>();
+    private final List<DomainEvent> pendingDomainEvents = new ArrayList<>();
     private CaseStatus status;
 
     private AnalysisCase(UUID caseId, Instant createdAt) {
@@ -26,8 +27,23 @@ public final class AnalysisCase {
         return new AnalysisCase(caseId, createdAt);
     }
 
+    public static AnalysisCase discover(UUID caseId, Instant createdAt, DomainEventMetadata metadata) {
+        var analysisCase = new AnalysisCase(caseId, createdAt);
+        analysisCase.pendingDomainEvents.add(new AnalysisCaseDiscovered(
+                metadata.eventId(), caseId, metadata.actor(), metadata.occurredAt(), metadata.version()
+        ));
+        return analysisCase;
+    }
+
     public void triage(String reason, String actor, Instant occurredAt) {
         triage(new TransitionMetadata(actor, reason, occurredAt));
+    }
+
+    public void triage(String reason, DomainEventMetadata metadata) {
+        triage(reason, metadata.actor(), metadata.occurredAt());
+        pendingDomainEvents.add(new QueryTriaged(
+                metadata.eventId(), caseId, metadata.actor(), metadata.occurredAt(), metadata.version()
+        ));
     }
 
     public void triage(TransitionMetadata metadata) {
@@ -71,6 +87,19 @@ public final class AnalysisCase {
                 metadata.occuredAt()
         ));
         status = CaseStatus.EVIDENCE_COLLECTED;
+    }
+
+    public void collectEvidence(Evidence evidence, DomainEventMetadata metadata) {
+        collectEvidence(evidence, metadata.actor(), metadata.occurredAt());
+        pendingDomainEvents.add(new EvidenceCollected(
+                metadata.eventId(), caseId, evidence.id(), metadata.actor(), metadata.occurredAt(), metadata.version()
+        ));
+    }
+
+    public List<DomainEvent> pullEvents() {
+        var pulledEvents = List.copyOf(pendingDomainEvents);
+        pendingDomainEvents.clear();
+        return pulledEvents;
     }
 
     public UUID caseId() {
