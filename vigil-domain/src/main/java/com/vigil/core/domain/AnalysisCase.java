@@ -13,6 +13,7 @@ public final class AnalysisCase {
     private final UUID caseId;
     private final Instant createdAt;
     private final List<CaseEvent> events = new ArrayList<>();
+    private final List<Evidence> evidences = new ArrayList<>();
     private CaseStatus status;
 
     private AnalysisCase(UUID caseId, Instant createdAt) {
@@ -21,8 +22,12 @@ public final class AnalysisCase {
         this.status = CaseStatus.DISCOVERED;
     }
 
-    public static AnalysisCase discovered(UUID caseId, Instant createdAt) {
+    public static AnalysisCase discover(UUID caseId, Instant createdAt) {
         return new AnalysisCase(caseId, createdAt);
+    }
+
+    public void triage(String reason, String actor, Instant occurredAt) {
+        triage(new TransitionMetadata(actor, reason, occurredAt));
     }
 
     public void triage(TransitionMetadata metadata) {
@@ -43,6 +48,31 @@ public final class AnalysisCase {
         status = CaseStatus.TRIAGED;
     }
 
+    public void collectEvidence(Evidence evidence, String actor, Instant occurredAt) {
+        Objects.requireNonNull(evidence, "Evidence must not be null.");
+        var metadata = new TransitionMetadata(actor, "Evidence collected.", occurredAt);
+
+        if (status != CaseStatus.TRIAGED) {
+            throw new InvalidCaseTransitionException(status, CaseStatus.EVIDENCE_COLLECTED);
+        }
+
+        evidence.requireBelongsTo(caseId);
+
+        if (evidences.stream().anyMatch(existing -> existing.id().equals(evidence.id()))) {
+            throw new IllegalArgumentException("Evidence is already attached to this analysis case.");
+        }
+
+        evidences.add(evidence);
+        events.add(new CaseEvent(
+                status,
+                CaseStatus.EVIDENCE_COLLECTED,
+                metadata.actor(),
+                metadata.reason(),
+                metadata.occuredAt()
+        ));
+        status = CaseStatus.EVIDENCE_COLLECTED;
+    }
+
     public UUID caseId() {
         return caseId;
     }
@@ -53,6 +83,10 @@ public final class AnalysisCase {
 
     public List<CaseEvent> events() {
         return List.copyOf(events);
+    }
+
+    public List<Evidence> evidences() {
+        return List.copyOf(evidences);
     }
 
     public CaseStatus status() {
