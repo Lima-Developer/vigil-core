@@ -17,12 +17,17 @@ import com.vigil.core.domain.enums.MeasurementUnit;
 import com.vigil.core.domain.enums.MetricKind;
 import com.vigil.core.exception.InvalidCaseTransitionException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -86,6 +91,31 @@ public class AnalysisCaseTest {
         );
 
         assertEquals(1, analysisCase.events().size());
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @MethodSource("invalidTransitions")
+    void shouldRejectInvalidTransitionsWithoutSideEffects(
+            String description,
+            Consumer<AnalysisCase> arrange,
+            Consumer<AnalysisCase> invalidTransition
+    ) {
+        var analysisCase = AnalysisCase.discover(
+                UUID.fromString("11111111-1111-1111-1111-111111111111"),
+                Instant.parse("2026-08-26T12:00:00Z")
+        );
+        arrange.accept(analysisCase);
+        var statusBefore = analysisCase.status();
+        var eventsBefore = analysisCase.events();
+        var evidencesBefore = analysisCase.evidences();
+
+        assertThrows(InvalidCaseTransitionException.class, () -> invalidTransition.accept(analysisCase));
+
+        assertAll(
+                () -> assertEquals(statusBefore, analysisCase.status()),
+                () -> assertEquals(eventsBefore, analysisCase.events()),
+                () -> assertEquals(evidencesBefore, analysisCase.evidences())
+        );
     }
 
     @Test
@@ -190,11 +220,34 @@ public class AnalysisCaseTest {
         );
     }
 
-    private DomainEventMetadata eventMetadata(String eventId, Instant occurredAt) {
+    private static Stream<Arguments> invalidTransitions() {
+        return Stream.of(
+                Arguments.of(
+                        "TRIAGED não pode ser triaged novamente",
+                        (Consumer<AnalysisCase>) analysisCase -> analysisCase.triage(
+                                "Investigar impacto absoluto.", "vigil-core", Instant.parse("2026-08-26T12:01:00Z")
+                        ),
+                        (Consumer<AnalysisCase>) analysisCase -> analysisCase.triage(
+                                "Repetir triagem.", "vigil-core", Instant.parse("2026-08-26T12:02:00Z")
+                        )
+                ),
+                Arguments.of(
+                        "DISCOVERED não pode coletar evidência",
+                        (Consumer<AnalysisCase>) analysisCase -> { },
+                        (Consumer<AnalysisCase>) analysisCase -> analysisCase.collectEvidence(
+                                metricEvidence(analysisCase.caseId()),
+                                "vigil-core",
+                                Instant.parse("2026-08-26T12:02:00Z")
+                        )
+                )
+        );
+    }
+
+    private static DomainEventMetadata eventMetadata(String eventId, Instant occurredAt) {
         return new DomainEventMetadata(UUID.fromString(eventId), "vigil-core", occurredAt, "v1");
     }
 
-    private Evidence metricEvidence(UUID caseId) {
+    private static Evidence metricEvidence(UUID caseId) {
         return new Evidence(
                 UUID.fromString("22222222-2222-2222-2222-222222222222"),
                 caseId,
