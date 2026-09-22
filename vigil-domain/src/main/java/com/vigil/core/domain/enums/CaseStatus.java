@@ -1,4 +1,4 @@
-package com.vigil.core.domain;
+package com.vigil.core.domain.enums;
 
 public enum CaseStatus {
     DISCOVERED,

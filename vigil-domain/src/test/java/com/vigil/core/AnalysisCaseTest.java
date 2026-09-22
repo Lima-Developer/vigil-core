@@ -1,7 +1,7 @@
 package com.vigil.core;
 
 import com.vigil.core.domain.AnalysisCase;
-import com.vigil.core.domain.CaseStatus;
+import com.vigil.core.domain.enums.CaseStatus;
 import com.vigil.core.domain.TransitionMetadata;
 import com.vigil.core.exception.InvalidCaseTransitionException;
 import org.junit.jupiter.api.Test;

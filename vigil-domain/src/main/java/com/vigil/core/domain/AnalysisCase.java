@@ -1,5 +1,6 @@
 package com.vigil.core.domain;
 
+import com.vigil.core.domain.enums.CaseStatus;
 import com.vigil.core.exception.InvalidCaseTransitionException;
 
 import java.time.Instant;
