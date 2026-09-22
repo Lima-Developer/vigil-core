@@ -2,6 +2,7 @@ package com.vigil.core.domain;
 
 import com.vigil.core.domain.enums.EvidenceType;
 import com.vigil.core.domain.enums.PlanNodeType;
+import com.vigil.core.domain.interfaces.EvidencePayload;
 
 import java.util.List;
 import java.util.Objects;

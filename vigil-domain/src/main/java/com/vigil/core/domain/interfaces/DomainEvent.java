@@ -1,10 +1,10 @@
-package com.vigil.core.domain;
+package com.vigil.core.domain.interfaces;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
-public sealed interface DomainEvent permits AnalysisCaseDiscovered, QueryTriaged, EvidenceCollected {
+public interface DomainEvent {
     UUID eventId();
     UUID caseId();
     String actor();

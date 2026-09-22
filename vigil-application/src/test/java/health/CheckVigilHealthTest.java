@@ -3,7 +3,7 @@ package health;
 import com.vigil.application.configuration.VigilConfiguration;
 import com.vigil.application.health.CheckVigilHealth;
 import com.vigil.application.health.HealthStatus;
-import com.vigil.application.port.out.ClockPort;
+import com.vigil.application.port.out.interfaces.ClockPort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

@@ -1,7 +1,7 @@
 package com.vigil.application.health;
 
 import com.vigil.application.configuration.VigilConfiguration;
-import com.vigil.application.port.out.ClockPort;
+import com.vigil.application.port.out.interfaces.ClockPort;
 
 import java.time.Instant;
 import java.util.Objects;

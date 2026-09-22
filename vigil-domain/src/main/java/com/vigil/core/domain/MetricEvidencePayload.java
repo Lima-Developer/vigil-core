@@ -3,6 +3,7 @@ package com.vigil.core.domain;
 import com.vigil.core.domain.enums.EvidenceType;
 import com.vigil.core.domain.enums.MeasurementUnit;
 import com.vigil.core.domain.enums.MetricKind;
+import com.vigil.core.domain.interfaces.EvidencePayload;
 
 import java.math.BigDecimal;
 import java.util.Objects;

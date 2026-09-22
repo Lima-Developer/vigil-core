@@ -1,5 +1,7 @@
 package com.vigil.core.domain;
 
+import com.vigil.core.domain.interfaces.DomainEvent;
+
 import java.time.Instant;
 import java.util.UUID;
 

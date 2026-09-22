@@ -3,6 +3,7 @@ package com.vigil.core.domain;
 import com.vigil.core.domain.enums.EvidenceConfidence;
 import com.vigil.core.domain.enums.EvidenceSource;
 import com.vigil.core.domain.enums.EvidenceType;
+import com.vigil.core.domain.interfaces.EvidencePayload;
 
 import java.time.Instant;
 import java.util.Objects;

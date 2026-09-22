@@ -1,4 +1,4 @@
-package com.vigil.application.port.out;
+package com.vigil.application.port.out.interfaces;
 
 import java.time.Instant;
 

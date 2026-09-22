@@ -1,6 +1,6 @@
 package com.vigil.adapters;
 
-import com.vigil.application.port.out.ClockPort;
+import com.vigil.application.port.out.interfaces.ClockPort;
 
 import java.time.Instant;
 
