@@ -455,7 +455,7 @@ A cadeia será:
 Target PostgreSQL
     -> Leitura de metadados relevantes
     -> SchemaBlueprint
-    -> PostgreSQL em Testconainters
+    -> PostgreSQL em Testcontainers
     -> CREATE TABLE / INSERT sintético / CREATE INDEX
     -> EXPLAIN ANALYZE no Sandbox
 ```

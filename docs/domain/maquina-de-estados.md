@@ -97,7 +97,7 @@ stateDiagram-v2
 | `AWAITING_HUMAN`      | `REJECTED`            | `reject`                | `HumanDecision`                                              | Apenas ator humano humano autorizado pode rejeitar.                     |
 | `AWAITING_HUMAN`      | `CHANGES_REQUESTED`   | `requestChanges`        | `HumanDecision`                                              | Deve indicar quais complementações são necessárias.                     |
 | `CHANGES_REQUESTED`   | `TRIAGED`             | `retriage`              | `TransitionMetadata`                                         | O caso é reaberto para nova investigação, preservando todo o histórico. |
-| `APPROVED`            | `ARCHIVED`            | `archive`               | `ClosureMetadata`                                            | A aprovação é preservada; o Vigil não exectura a alteração aprovada.    |
+| `APPROVED`            | `ARCHIVED`            | `archive`               | `ClosureMetadata`                                            | A aprovação é preservada; o Vigil não executa a alteração aprovada.     |
 | `REJECTED`            | `ARCHIVED`            | `archive`               | `ClosureMetadata`                                            | O motivo da rejeição permanece auditável.                               |
 | `CHANGES_REQUESTED`   | `ARCHIVED`            | `archive`               | `ClosureMetadata`                                            | Permitido quando a curadoria decide não continuar a investigação.       |
 
@@ -109,7 +109,7 @@ Um caso somente pode atingir `EVIDENCE_COLLECTED` se possuir, no mínimo:
 3. Um `QueryPlan` obtido com `EXPLAIN (FORMAT JSON)` sem `ANALYZE` no target;
 4. `RelationMetadata` para as relações relevantes;
 5. Metadados de índices existentes nas relações relevantes;
-6. Otigem, instante de coleta e versão da política aplicada a cada Evidence.
+6. Origem, instante de coleta e versão da política aplicada a cada Evidence.
 
 O caso somente pode atingir `DIAGNOSED` se, alkém das evidências acima, possuir:
 1. `SanitizationResult` permitido;
