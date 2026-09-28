@@ -8,24 +8,39 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 public final class AnalysisCase {
     private final UUID caseId;
     private final Instant createdAt;
+    private final Optional<QueryFingerprint> queryFingerprint;
     private final List<CaseEvent> events = new ArrayList<>();
     private final List<Evidence> evidences = new ArrayList<>();
     private final List<DomainEvent> pendingDomainEvents = new ArrayList<>();
     private CaseStatus status;
 
     private AnalysisCase(UUID caseId, Instant createdAt) {
+        this(caseId, createdAt, Optional.empty());
+    }
+
+    private AnalysisCase(UUID caseId, Instant createdAt, Optional<QueryFingerprint> queryFingerprint) {
         this.caseId = Objects.requireNonNull(caseId, "CaseId must not be null.");
         this.createdAt = Objects.requireNonNull(createdAt, "CreatedAt must not be null.");
+        this.queryFingerprint = Objects.requireNonNull(queryFingerprint, "Query fingerprint must not be null.");
         this.status = CaseStatus.DISCOVERED;
     }
 
     public static AnalysisCase discover(UUID caseId, Instant createdAt) {
         return new AnalysisCase(caseId, createdAt);
+    }
+
+    /**
+     * Opens a case for an observed query while retaining only its opaque identity.
+     */
+    public static AnalysisCase discover(UUID caseId, Instant createdAt, ObservedQuery observedQuery) {
+        Objects.requireNonNull(observedQuery, "Observed query must not be null.");
+        return new AnalysisCase(caseId, createdAt, Optional.of(observedQuery.fingerprint()));
     }
 
     public static AnalysisCase discover(UUID caseId, Instant createdAt, DomainEventMetadata metadata) {
@@ -109,6 +124,10 @@ public final class AnalysisCase {
 
     public Instant createdAt() {
         return createdAt;
+    }
+
+    public Optional<QueryFingerprint> queryFingerprint() {
+        return queryFingerprint;
     }
 
     public List<CaseEvent> events() {

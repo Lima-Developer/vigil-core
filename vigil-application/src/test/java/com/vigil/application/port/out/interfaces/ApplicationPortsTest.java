@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -43,6 +44,16 @@ class ApplicationPortsTest {
         @Override
         public void save(AnalysisCase analysisCase) {
             cases.put(analysisCase.caseId(), analysisCase);
+        }
+
+        @Override
+        public void saveDiscovered(AnalysisCase analysisCase, String idempotencyKey) {
+            save(analysisCase);
+        }
+
+        @Override
+        public Optional<AnalysisCase> findByIdempotencyKey(String idempotencyKey) {
+            return Optional.empty();
         }
 
         @Override
