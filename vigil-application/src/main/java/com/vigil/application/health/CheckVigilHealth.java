@@ -1,17 +1,17 @@
 package com.vigil.application.health;
 
 import com.vigil.application.configuration.VigilConfiguration;
-import com.vigil.application.port.out.interfaces.ClockPort;
+import com.vigil.application.port.out.interfaces.Clock;
 
 import java.time.Instant;
 import java.util.Objects;
 
 public final class CheckVigilHealth {
 
-    private final ClockPort clock;
+    private final Clock clock;
     private final String applicationVersion;
 
-    public CheckVigilHealth(ClockPort clock, String applicationVersion) {
+    public CheckVigilHealth(Clock clock, String applicationVersion) {
         this.clock = Objects.requireNonNull(clock, "Clock não pode ser nulo");
 
         if (applicationVersion == null || applicationVersion.isBlank()) {
@@ -26,7 +26,7 @@ public final class CheckVigilHealth {
 
         Instant checkedAt = Objects.requireNonNull(
                 clock.now(),
-                "ClockPort não pode retornar um instante nulo"
+                "Clock não pode retornar um instante nulo"
         );
 
         return new HealthStatus(

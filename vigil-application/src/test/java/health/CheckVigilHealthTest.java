@@ -3,7 +3,7 @@ package health;
 import com.vigil.application.configuration.VigilConfiguration;
 import com.vigil.application.health.CheckVigilHealth;
 import com.vigil.application.health.HealthStatus;
-import com.vigil.application.port.out.interfaces.ClockPort;
+import com.vigil.application.port.out.interfaces.Clock;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -16,7 +16,7 @@ public class CheckVigilHealthTest {
     void shouldReturnHealthyStatusForValidConfiguration() {
         // Given
         Instant fixedInstant = Instant.parse("2026-08-26T12:00:00Z");
-        ClockPort fixedClock = () -> fixedInstant;
+        Clock fixedClock = () -> fixedInstant;
 
         CheckVigilHealth healthCheck =
                 new CheckVigilHealth(fixedClock, "0.1.0-SNAPSHOT");

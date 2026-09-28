@@ -4,7 +4,7 @@ import com.vigil.adapters.SystemClockAdapter;
 import com.vigil.application.configuration.VigilConfiguration;
 import com.vigil.application.health.CheckVigilHealth;
 import com.vigil.application.health.HealthStatus;
-import com.vigil.application.port.out.interfaces.ClockPort;
+import com.vigil.application.port.out.interfaces.Clock;
 
 public class Main {
 
@@ -22,7 +22,7 @@ public class Main {
 
             VigilConfiguration vigilConfiguration = new VigilConfiguration(targetName, environment);
 
-            ClockPort clock = new SystemClockAdapter();
+            Clock clock = new SystemClockAdapter();
 
             CheckVigilHealth checkVigilHealth = new CheckVigilHealth(clock, APPLICATION_VERSION);
 
