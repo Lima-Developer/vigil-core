@@ -39,6 +39,7 @@ class SqliteConnectionFactoryTest {
             assertAll(
                     () -> assertEquals(List.of("1"), rows(connection, "PRAGMA foreign_keys")),
                     () -> assertEquals(List.of("wal"), rows(connection, "PRAGMA journal_mode")),
+                    () -> assertEquals(List.of("5000"), rows(connection, "PRAGMA busy_timeout")),
                     () -> assertTrue(connection.getAutoCommit()),
                     () -> assertTrue(Files.exists(databaseFile)),
                     () -> assertEquals(databaseFile.toAbsolutePath().normalize(), factory.databaseFile())

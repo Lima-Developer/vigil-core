@@ -15,6 +15,8 @@ import java.util.Objects;
  * so no transaction is open while the pragmas are applied.
  */
 public final class SqliteConnectionFactory {
+    private static final int BUSY_TIMEOUT_MILLIS = 5_000;
+
     private final Path databaseFile;
     private final ConnectionOpener opener;
 
@@ -50,6 +52,8 @@ public final class SqliteConnectionFactory {
 
     private static void configure(Connection connection) throws SQLException {
         try (Statement statement = connection.createStatement()) {
+            statement.execute("PRAGMA busy_timeout = " + BUSY_TIMEOUT_MILLIS);
+            requirePragma(statement, "PRAGMA busy_timeout", String.valueOf(BUSY_TIMEOUT_MILLIS));
             statement.execute("PRAGMA foreign_keys = ON");
             requirePragma(statement, "PRAGMA foreign_keys", "1");
             requirePragma(statement, "PRAGMA journal_mode = WAL", "wal");

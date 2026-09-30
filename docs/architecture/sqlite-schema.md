@@ -165,6 +165,8 @@ o ano `0000`. A validade semântica é garantida por quem grava, usando o codec.
   `suppressed`).
 - **Propriedade:** quem chama `open()` é dono da conexão e deve fechá-la (`try-with-resources`). A fábrica não
   mantém pool nem referência às conexões.
+- Cada conexão define `busy_timeout` de 5000 ms, para tolerar contenção breve de escrita em vez de falhar de
+  imediato com `SQLITE_BUSY`; não torna múltiplos escritores suportados.
 - Operação conforme ADR-002: um único processo escritor por arquivo e volume local (sem NFS/EFS).
 
 ## 6. Migrations — `SqlMigrationRunner`
