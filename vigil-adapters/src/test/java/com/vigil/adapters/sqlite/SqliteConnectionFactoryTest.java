@@ -43,6 +43,8 @@ class SqliteConnectionFactoryTest {
                     () -> assertEquals(List.of("1"), rows(connection, "PRAGMA foreign_keys")),
                     () -> assertEquals(List.of("wal"), rows(connection, "PRAGMA journal_mode")),
                     () -> assertEquals(List.of("5000"), rows(connection, "PRAGMA busy_timeout")),
+                    () -> assertEquals(List.of("1000"), rows(connection, "PRAGMA wal_autocheckpoint")),
+                    () -> assertEquals(List.of("2"), rows(connection, "PRAGMA synchronous")),
                     () -> assertTrue(connection.getAutoCommit()),
                     () -> assertTrue(Files.exists(databaseFile)),
                     () -> assertEquals(databaseFile.toAbsolutePath().normalize(), factory.databaseFile())
@@ -113,6 +115,16 @@ class SqliteConnectionFactoryTest {
                     () -> assertEquals(List.of(CASE_ID), rows(reader, "SELECT case_id FROM analysis_case")),
                     () -> assertEquals(List.of(), rows(reader, "PRAGMA foreign_key_check"))
             );
+        }
+    }
+
+    @Test
+    void shouldAllowShortBusyTimeoutOnlyThroughPackagePrivateConstructor() throws SQLException {
+        var factory = new SqliteConnectionFactory(directory.resolve("short-timeout.db"), 200);
+        try (var connection = factory.open()) {
+            assertEquals(List.of("200"), rows(connection, "PRAGMA busy_timeout"));
+            assertEquals(List.of("1000"), rows(connection, "PRAGMA wal_autocheckpoint"));
+            assertEquals(List.of("2"), rows(connection, "PRAGMA synchronous"));
         }
     }
 

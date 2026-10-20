@@ -19,16 +19,29 @@ public final class SqliteConnectionFactory {
 
     private final Path databaseFile;
     private final ConnectionOpener opener;
+    private final int busyTimeoutMillis;
 
     public SqliteConnectionFactory(Path databaseFile) {
-        this(databaseFile, url -> DriverManager.getConnection(url));
+        this(databaseFile, BUSY_TIMEOUT_MILLIS);
+    }
+
+    SqliteConnectionFactory(Path databaseFile, int busyTimeoutMillis) {
+        this(databaseFile, url -> DriverManager.getConnection(url), busyTimeoutMillis);
     }
 
     SqliteConnectionFactory(Path databaseFile, ConnectionOpener opener) {
+        this(databaseFile, opener, BUSY_TIMEOUT_MILLIS);
+    }
+
+    SqliteConnectionFactory(Path databaseFile, ConnectionOpener opener, int busyTimeoutMillis) {
         this.databaseFile = Objects.requireNonNull(databaseFile, "Database file must not be null.")
                 .toAbsolutePath()
                 .normalize();
         this.opener = Objects.requireNonNull(opener, "Connection opener must not be null.");
+        if (busyTimeoutMillis <= 0) {
+            throw new IllegalArgumentException("Busy timeout must be positive.");
+        }
+        this.busyTimeoutMillis = busyTimeoutMillis;
     }
 
     public Connection open() throws SQLException {
@@ -62,13 +75,17 @@ public final class SqliteConnectionFactory {
         return databaseFile;
     }
 
-    private static void configure(Connection connection) throws SQLException {
+    private void configure(Connection connection) throws SQLException {
         try (Statement statement = connection.createStatement()) {
-            statement.execute("PRAGMA busy_timeout = " + BUSY_TIMEOUT_MILLIS);
-            requirePragma(statement, "PRAGMA busy_timeout", String.valueOf(BUSY_TIMEOUT_MILLIS));
+            statement.execute("PRAGMA busy_timeout = " + busyTimeoutMillis);
+            requirePragma(statement, "PRAGMA busy_timeout", String.valueOf(busyTimeoutMillis));
             statement.execute("PRAGMA foreign_keys = ON");
             requirePragma(statement, "PRAGMA foreign_keys", "1");
             requirePragma(statement, "PRAGMA journal_mode = WAL", "wal");
+            statement.execute("PRAGMA wal_autocheckpoint = 1000");
+            requirePragma(statement, "PRAGMA wal_autocheckpoint", "1000");
+            statement.execute("PRAGMA synchronous = FULL");
+            requirePragma(statement, "PRAGMA synchronous", "2");
         }
     }
 

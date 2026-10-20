@@ -124,6 +124,8 @@ Essa evolução não deverá alterar os princípios de observabilidade progressi
 
 ## Referências
 
+- [Procedimento operacional de SQLite, backup e restauração](sqlite-operacao.md)
+
 - [SQLite — Appropriate Uses For SQLite](https://www.sqlite.org/whentouse.html)
 - [SQLite — Write-Ahead Logging](https://www.sqlite.org/wal.html)
 - [PostgreSQL — pg_stat_statements](https://www.postgresql.org/docs/current/pgstatstatements.html)
