@@ -47,14 +47,17 @@ final class PostgresFailureClassifier {
     }
 
     /**
-     * pgjdbc reports a hostname mismatch and a server without TLS as a plain {@code PSQLException}, with no
-     * {@link SSLException} cause. Since only verified TLS modes exist, those two messages are TLS failures; with a
+     * pgjdbc reports a hostname mismatch, a server without TLS and an unreadable root certificate file as a plain
+     * {@code PSQLException}, with no {@link SSLException} cause. Since only verified TLS modes exist, those messages
+     * are TLS trust failures that retrying cannot fix; with a
      * localized driver message the failure degrades to the bounded UNREACHABLE retry instead.
      */
     private static boolean isTlsMessage(String message) {
         return message != null
                 && (message.contains("could not be verified by hostnameverifier")
-                || message.contains("The server does not support SSL"));
+                || message.contains("The server does not support SSL")
+                || message.contains("Could not open SSL root certificate file")
+                || message.contains("Could not read SSL root certificate file"));
     }
 
     private static boolean isNetworkFailure(Throwable link) {

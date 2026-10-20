@@ -91,7 +91,9 @@ class PostgresFailureClassifierTest {
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
             "The hostname 127.0.0.1 could not be verified by hostnameverifier PgjdbcHostnameVerifier.|08006",
-            "The server does not support SSL.|08004"
+            "The server does not support SSL.|08004",
+            "Could not open SSL root certificate file /home/u/.postgresql/root.crt.|08006",
+            "Could not read SSL root certificate file /home/u/.postgresql/root.crt.|08006"
     })
     void shouldRecognizeDriverTlsFailuresReportedWithoutAnSslCause(String message, String sqlState) {
         var classification = PostgresFailureClassifier.classify(new SQLException(message, sqlState));

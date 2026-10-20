@@ -63,7 +63,7 @@ verifica contagem 0 para `orders`). Isso é **capacidade indisponível**, não f
 a fábrica chama `setAutoCommit(true)` e `setReadOnly(true)` e confirma com `SHOW` os valores na forma normalizada do
 servidor (`5s`, `200ms`, `on`, `vigil`). Qualquer divergência fecha a conexão e resulta em `UNKNOWN`.
 
-TLS: somente `verify-ca`/`verify-full` (`TargetSslMode`). `sslrootcert` é opcional; sem ele vale o padrão do driver.
+TLS: somente `verify-ca`/`verify-full` (`TargetSslMode`). `sslrootcert` é opcional; sem ele vale o padrão do driver (`~/.postgresql/root.crt`); se o arquivo não existir ou não puder ser lido, a falha é `TLS_FAILED` sem retry, e a conexão nunca cai para um modo sem verificação.
 
 ## 4. Classificação e retry
 

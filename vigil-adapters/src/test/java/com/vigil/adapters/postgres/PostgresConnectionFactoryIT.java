@@ -374,12 +374,7 @@ class PostgresConnectionFactoryIT {
         assertTrue(sleeps.isEmpty());
     }
 
-    /**
-     * Reproduces a defect found in QA: with no sslrootcert configured, pgjdbc opens ~/.postgresql/root.crt, fails with
-     * PSQLException 08006 and FileNotFoundException, and the classifier reports UNREACHABLE, so the TLS trust
-     * configuration error is retried three times instead of failing once as TLS_FAILED.
-     */
-    @Disabled("BUG VIG-032: missing root certificate file is classified as UNREACHABLE and retried")
+    /** Without sslrootcert pgjdbc opens ~/.postgresql/root.crt; the missing file is a TLS trust failure, not retried. */
     @Test
     void shouldFailTlsWithoutRetryWhenNoRootCertificateIsConfigured() {
         var attempts = new AtomicInteger();
