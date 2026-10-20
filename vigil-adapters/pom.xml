@@ -14,6 +14,8 @@
 
     <properties>
         <sqlite-jdbc.version>3.49.1.0</sqlite-jdbc.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
+        <postgresql-jdbc.version>42.7.7</postgresql-jdbc.version>
     </properties>
 
     <dependencies>
@@ -40,6 +42,27 @@
             <artifactId>junit-platform-launcher</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql-jdbc.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -51,9 +74,11 @@
                     <skip>false</skip>
                     <targetClasses>
                         <param>com.vigil.adapters.sqlite.*</param>
+                        <param>com.vigil.adapters.postgres.lab.*</param>
                     </targetClasses>
                     <targetTests>
                         <param>com.vigil.adapters.sqlite.*</param>
+                        <param>com.vigil.adapters.postgres.lab.*Test</param>
                     </targetTests>
                 </configuration>
             </plugin>
