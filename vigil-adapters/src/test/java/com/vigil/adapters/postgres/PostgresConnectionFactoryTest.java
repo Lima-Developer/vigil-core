@@ -21,6 +21,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLHandshakeException;
@@ -340,5 +341,45 @@ class PostgresConnectionFactoryTest {
         var thrown = assertThrows(TargetConnectionFailure.class, factory::open);
 
         assertEquals(List.of(closeFailure), List.of(thrown.getCause().getSuppressed()));
+    }
+
+    /**
+     * Reproduces a defect found in QA: an unreadable password file escapes the factory as a raw UncheckedIOException,
+     * although the class contract says every failure that escapes is a TargetConnectionFailure. Disabled until the
+     * password read is wrapped at the adapter boundary.
+     */
+    @Disabled("BUG VIG-032: unreadable password file escapes as UncheckedIOException, not TargetConnectionFailure")
+    @Test
+    void shouldReportAnUnreadablePasswordFileAsTargetConnectionFailure() {
+        var missing = PostgresPasswordSource.fromEnvironment(
+                Map.of("VIGIL_PG_PASSWORD_FILE", "/nonexistent/vigil-qa.pw"));
+        var factory = new PostgresConnectionFactory(PostgresTestSupport.settings(), missing,
+                failingWith(new SQLException("unused", "08001")), sleeps::add);
+
+        var thrown = assertThrows(TargetConnectionFailure.class, factory::open);
+
+        assertEquals(TargetFailureReason.UNKNOWN, thrown.reason());
+        assertFalse(thrown.getMessage().contains("/nonexistent"));
+    }
+
+    /**
+     * Reproduces a defect found in QA: pgjdbc takes socketTimeout in whole seconds and the factory truncates it, so a
+     * 500 ms socket timeout reaches the driver as 0, which pgjdbc treats as no timeout. Disabled with the same
+     * root cause as {@link #shouldSendASocketTimeoutThatStillExceedsTheStatementTimeout()}.
+     */
+    @Disabled("BUG VIG-032: sub-second socketTimeout is truncated to 0, which pgjdbc reads as no timeout")
+    @Test
+    void shouldNotSendAZeroSocketTimeoutForASubSecondValue() {
+        var fake = new FakeConnection();
+        fake.settings.put("statement_timeout", "200ms");
+        fake.settings.put("lock_timeout", "100ms");
+        var profile = PostgresTestSupport.profile();
+        var settings = new PostgresTargetSettings(profile, "vigil_collector", null,
+                Duration.ofMillis(500), Duration.ofMillis(200), Duration.ofMillis(100));
+
+        factory(settings, (url, properties) -> fake.connection()).open();
+
+        assertFalse("0".equals(snapshots.get(0).getProperty("socketTimeout")),
+                "pgjdbc reads socketTimeout 0 as no timeout at all");
     }
 }

@@ -25,6 +25,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -48,6 +49,8 @@ class PostgresConnectionFactoryIT {
             "echo subjectAltName=DNS:localhost > ext.cnf",
             "openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 2"
                     + " -extfile ext.cnf",
+            "openssl req -x509 -newkey rsa:2048 -nodes -keyout unrelated-ca.key -out unrelated-ca.crt"
+                    + " -subj /CN=vigil-unrelated-ca -days 2",
             "chown postgres:postgres server.key server.crt",
             "chmod 600 server.key",
             "exec docker-entrypoint.sh \"$@\" -c ssl=on -c ssl_cert_file=" + TLS_DIRECTORY + "/server.crt"
@@ -66,6 +69,7 @@ class PostgresConnectionFactoryIT {
 
     private static Path workDirectory;
     private static Path caCertificate;
+    private static Path unrelatedCaCertificate;
 
     @BeforeAll
     static void prepareLaboratory() throws Exception {
@@ -73,6 +77,8 @@ class PostgresConnectionFactoryIT {
         workDirectory = Files.createTempDirectory("vigil-it");
         caCertificate = workDirectory.resolve("ca.crt");
         CONTAINER.copyFileFromContainer(TLS_DIRECTORY + "/ca.crt", caCertificate.toString());
+        unrelatedCaCertificate = workDirectory.resolve("unrelated-ca.crt");
+        CONTAINER.copyFileFromContainer(TLS_DIRECTORY + "/unrelated-ca.crt", unrelatedCaCertificate.toString());
         createRole();
         try (Connection admin = admin(); Statement statement = admin.createStatement()) {
             statement.execute("CREATE TABLE su_owned (id int)");
@@ -325,5 +331,73 @@ class PostgresConnectionFactoryIT {
 
         assertEquals(TargetFailureReason.UNREACHABLE, failure.reason());
         assertTrue(elapsed.compareTo(Duration.ofSeconds(1)) >= 0, "backoff 200ms + 800ms not honored: " + elapsed);
+    }
+
+    @Test
+    void shouldRunOnTheMajorVersionRequestedByTheImageProperty() throws SQLException {
+        var image = System.getProperty("vigil.postgres.image", PostgresLaboratory.IMAGE);
+        var major = Integer.parseInt(image.replaceAll(".*:(\\d+).*", "$1"));
+
+        try (Connection connection = factory().open()) {
+            assertEquals(major, Integer.parseInt(single(connection, "SHOW server_version_num")) / 10000);
+        }
+    }
+
+    @Test
+    void shouldAcceptVerifyCaWhenTheCertificateChainIsTrusted() throws SQLException {
+        var port = CONTAINER.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT);
+
+        try (Connection connection = factory("127.0.0.1", port, CONTAINER.getDatabaseName(), PASSWORD,
+                TargetSslMode.VERIFY_CA).open()) {
+            assertEquals("true", single(connection, "SELECT ssl::text FROM pg_stat_ssl WHERE pid = pg_backend_pid()"));
+        }
+    }
+
+    @Test
+    void shouldFailTlsWithoutRetryWhenTheServerCertificateDoesNotChainToTheTrustedCa() {
+        var attempts = new AtomicInteger();
+        var sleeps = new ArrayList<Duration>();
+        var profile = new TargetProfile("lab", "development", TLS_HOST,
+                CONTAINER.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT), CONTAINER.getDatabaseName(),
+                TargetSslMode.VERIFY_FULL, Duration.ofSeconds(5));
+        var factory = new PostgresConnectionFactory(
+                PostgresTargetSettings.withDefaults(profile, USER, unrelatedCaCertificate), PASSWORD::toCharArray,
+                (url, properties) -> {
+                    attempts.incrementAndGet();
+                    return DriverManager.getConnection(url, properties);
+                }, sleeps::add);
+
+        var failure = assertThrows(TargetConnectionFailure.class, factory::open);
+
+        assertEquals(TargetFailureReason.TLS_FAILED, failure.reason());
+        assertEquals(1, attempts.get());
+        assertTrue(sleeps.isEmpty());
+    }
+
+    /**
+     * Reproduces a defect found in QA: with no sslrootcert configured, pgjdbc opens ~/.postgresql/root.crt, fails with
+     * PSQLException 08006 and FileNotFoundException, and the classifier reports UNREACHABLE, so the TLS trust
+     * configuration error is retried three times instead of failing once as TLS_FAILED.
+     */
+    @Disabled("BUG VIG-032: missing root certificate file is classified as UNREACHABLE and retried")
+    @Test
+    void shouldFailTlsWithoutRetryWhenNoRootCertificateIsConfigured() {
+        var attempts = new AtomicInteger();
+        var sleeps = new ArrayList<Duration>();
+        var profile = new TargetProfile("lab", "development", TLS_HOST,
+                CONTAINER.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT), CONTAINER.getDatabaseName(),
+                TargetSslMode.VERIFY_FULL, Duration.ofSeconds(5));
+        var factory = new PostgresConnectionFactory(
+                PostgresTargetSettings.withDefaults(profile, USER, null), PASSWORD::toCharArray,
+                (url, properties) -> {
+                    attempts.incrementAndGet();
+                    return DriverManager.getConnection(url, properties);
+                }, sleeps::add);
+
+        var failure = assertThrows(TargetConnectionFailure.class, factory::open);
+
+        assertEquals(TargetFailureReason.TLS_FAILED, failure.reason());
+        assertEquals(1, attempts.get());
+        assertTrue(sleeps.isEmpty());
     }
 }
