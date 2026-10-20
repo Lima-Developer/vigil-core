@@ -28,6 +28,11 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage("com.vigil.adapters..", "com.vigil.bootstrap..")
             .because("a aplicação depende de ports e domínio, nunca de adapters ou bootstrap");
 
+    private static final ArchRule APPLICATION_NEVER_SEES_JDBC = ArchRuleDefinition.noClasses()
+            .that().resideInAPackage("com.vigil.application..")
+            .should().dependOnClassesThat().resideInAnyPackage("java.sql..", "javax.sql..")
+            .because("a conexão JDBC nunca atravessa a fronteira do adapter; o core só vê TargetConnectionFailure");
+
     private static final ArchRule BOOTSTRAP_ONLY_COMPOSES = ArchRuleDefinition.noClasses()
             .that().resideInAPackage("com.vigil.bootstrap..")
             .should().dependOnClassesThat().resideInAnyPackage("java.sql..", "javax.sql..", "org.sqlite..")
@@ -51,6 +56,11 @@ class ArchitectureTest {
     @Test
     void shouldKeepApplicationIndependentOfAdaptersAndBootstrap() {
         APPLICATION_IS_INDEPENDENT_OF_INFRASTRUCTURE.check(productionClasses());
+    }
+
+    @Test
+    void shouldKeepApplicationFreeOfJdbc() {
+        APPLICATION_NEVER_SEES_JDBC.check(productionClasses());
     }
 
     @Test

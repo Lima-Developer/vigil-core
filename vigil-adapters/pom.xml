@@ -61,7 +61,6 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>${postgresql-jdbc.version}</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -74,9 +73,11 @@
                     <skip>false</skip>
                     <targetClasses>
                         <param>com.vigil.adapters.sqlite.*</param>
+                        <param>com.vigil.adapters.postgres.Postgres*</param>
                     </targetClasses>
                     <targetTests>
                         <param>com.vigil.adapters.sqlite.*</param>
+                        <param>com.vigil.adapters.postgres.Postgres*Test</param>
                     </targetTests>
                 </configuration>
             </plugin>
