@@ -49,6 +49,16 @@ class EvidenceRowMapperTest {
     }
 
     @Test
+    void shouldPreserveFalseForRelationCompatibilityFlag() {
+        var payload = new com.vigil.core.domain.RelationMetadataEvidencePayload(
+                new com.vigil.core.domain.SafeRelationReference("relation_orders"), 42L, 3, false);
+        var encoded = EvidencePayloadCodec.encode(payload);
+
+        assertEquals("relation=relation_orders;estimatedRows=42;indexCount=3;compatibleIndexExists=false", encoded);
+        assertEquals(payload, EvidencePayloadCodec.decode(EvidenceType.RELATION_METADATA, encoded));
+    }
+
+    @Test
     void shouldReadARowWithAndWithoutProtectedReference() throws SQLException {
         var payload = "'nodes=INDEX_SCAN;estimatedRows=5'";
 

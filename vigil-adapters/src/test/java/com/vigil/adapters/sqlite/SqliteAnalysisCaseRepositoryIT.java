@@ -156,6 +156,21 @@ class SqliteAnalysisCaseRepositoryIT {
     }
 
     @Test
+    void shouldKeepCaseEventSequenceWhenTransitionTimestampsAreEqual() {
+        var analysisCase = AnalysisCaseFixtures.triaged();
+        analysisCase.collectEvidence(AnalysisCaseFixtures.evidence(AnalysisCaseFixtures.plan(), Optional.empty()),
+                "collector", LATER);
+        repository.save(analysisCase);
+
+        var loaded = reopened().getById(CASE_ID);
+
+        assertEquals(analysisCase.events(), loaded.events());
+        assertEquals(2, loaded.events().size());
+        assertEquals(LATER, loaded.events().get(0).occuredAt());
+        assertEquals(LATER, loaded.events().get(1).occuredAt());
+    }
+
+    @Test
     void shouldIncrementTheVersionOnlyWhenSomethingIsPersistedAndNeverDuplicateRows() throws SQLException {
         var analysisCase = AnalysisCaseFixtures.discovered();
         repository.save(analysisCase);
@@ -286,6 +301,55 @@ class SqliteAnalysisCaseRepositoryIT {
     }
 
     @Test
+    void shouldPersistPendingDomainEventsWhenSavingByIdempotencyKey() throws SQLException {
+        var eventId = UUID.randomUUID();
+        var analysisCase = AnalysisCase.discover(CASE_ID, CREATED_AT,
+                new DomainEventMetadata(eventId, "vigil-core", CREATED_AT, "1"));
+
+        repository.saveDiscovered(analysisCase, "key-with-event");
+
+        assertAll(
+                () -> assertEquals(1, analysisCase.version()),
+                () -> assertTrue(analysisCase.pendingEvents().isEmpty()),
+                () -> assertEquals(List.of(eventId + " | ANALYSIS_CASE_DISCOVERED"),
+                        query("SELECT event_id, event_type FROM domain_event")),
+                () -> assertEquals(CASE_ID, repository.findByIdempotencyKey("key-with-event").orElseThrow().caseId())
+        );
+    }
+
+    @Test
+    void shouldPropagateNonUniqueDiscoveryInsertErrorsAsPersistenceFailures() throws SQLException {
+        run("CREATE TRIGGER fail_discovery BEFORE INSERT ON analysis_case BEGIN SELECT RAISE(ABORT, 'injected failure'); END");
+        var analysisCase = AnalysisCaseFixtures.discovered();
+
+        var failure = assertThrows(SqlitePersistenceException.class,
+                () -> repository.saveDiscovered(analysisCase, "key-1"));
+
+        assertAll(
+                () -> assertInstanceOf(SQLException.class, failure.getCause()),
+                () -> assertEquals(0, analysisCase.version()),
+                () -> assertEquals(List.of("0"), query("SELECT count(*) FROM analysis_case"))
+        );
+    }
+
+    @Test
+    void shouldRejectAReplacementForThePersistedHistoryPrefixAtTheSameVersion() throws SQLException {
+        repository.save(AnalysisCaseFixtures.triaged());
+        var replacementHistory = List.of(new com.vigil.core.domain.CaseEvent(
+                com.vigil.core.domain.enums.CaseStatus.DISCOVERED,
+                CaseStatus.TRIAGED, "another-actor", "rewritten reason", LATER));
+        var rewritten = AnalysisCase.reconstitute(CASE_ID, CREATED_AT, Optional.empty(), CaseStatus.TRIAGED, 1,
+                replacementHistory, List.of());
+
+        assertThrows(ConcurrentCaseUpdate.class, () -> repository.save(rewritten));
+
+        assertAll(
+                () -> assertEquals(List.of("vigil-core | Slow query."), query("SELECT actor, reason FROM case_event")),
+                () -> assertEquals(List.of("1"), query("SELECT version FROM analysis_case"))
+        );
+    }
+
+    @Test
     void shouldPersistTriageAndEvidenceDomainEventsWithTheirEvidenceLink() throws SQLException {
         var analysisCase = AnalysisCaseFixtures.discovered();
         analysisCase.triage("Slow.", new DomainEventMetadata(UUID.randomUUID(), "a", LATER, "1"));
@@ -326,6 +390,33 @@ class SqliteAnalysisCaseRepositoryIT {
                 () -> assertEquals(2, analysisCase.version()),
                 () -> assertTrue(analysisCase.pendingEvents().isEmpty()),
                 () -> assertEquals(List.of("1"), query("SELECT count(*) FROM domain_event"))
+        );
+    }
+
+    @Test
+    void shouldRollBackDiscoveryKeyAndDomainEventTogetherAndAllowRetry() throws SQLException {
+        var eventId = UUID.randomUUID();
+        var analysisCase = AnalysisCase.discover(CASE_ID, CREATED_AT,
+                new DomainEventMetadata(eventId, "vigil-core", CREATED_AT, "1"));
+        run("CREATE TRIGGER fail_discovery_event BEFORE INSERT ON domain_event BEGIN SELECT RAISE(ABORT, 'injected failure'); END");
+
+        assertThrows(SqlitePersistenceException.class, () -> repository.saveDiscovered(analysisCase, "rollback-key"));
+
+        assertAll(
+                () -> assertEquals(0, analysisCase.version()),
+                () -> assertEquals(1, analysisCase.pendingEvents().size()),
+                () -> assertEquals(List.of("0"), query("SELECT count(*) FROM analysis_case")),
+                () -> assertEquals(List.of("0"), query("SELECT count(*) FROM domain_event")),
+                () -> assertEquals(Optional.empty(), repository.findByIdempotencyKey("rollback-key"))
+        );
+
+        run("DROP TRIGGER fail_discovery_event");
+        repository.saveDiscovered(analysisCase, "rollback-key");
+        assertAll(
+                () -> assertEquals(1, analysisCase.version()),
+                () -> assertTrue(analysisCase.pendingEvents().isEmpty()),
+                () -> assertEquals(CASE_ID, repository.findByIdempotencyKey("rollback-key").orElseThrow().caseId()),
+                () -> assertEquals(List.of(eventId.toString()), query("SELECT event_id FROM domain_event"))
         );
     }
 
