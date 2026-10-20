@@ -4,6 +4,7 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition;
+import com.vigil.application.fixture.ForbiddenApplicationJdbcDependency;
 import com.vigil.core.domain.fixture.ForbiddenDomainAdapterDependency;
 import org.junit.jupiter.api.Test;
 
@@ -68,6 +69,13 @@ class ArchitectureTest {
         var violatingClass = new ClassFileImporter().importClasses(ForbiddenDomainAdapterDependency.class);
 
         assertThrows(AssertionError.class, () -> DOMAIN_IS_INFRASTRUCTURE_FREE.check(violatingClass));
+    }
+
+    @Test
+    void shouldFailWhenAnApplicationClassLeaksJdbc() {
+        var violatingClass = new ClassFileImporter().importClasses(ForbiddenApplicationJdbcDependency.class);
+
+        assertThrows(AssertionError.class, () -> APPLICATION_NEVER_SEES_JDBC.check(violatingClass));
     }
 
     private static com.tngtech.archunit.core.domain.JavaClasses productionClasses() {

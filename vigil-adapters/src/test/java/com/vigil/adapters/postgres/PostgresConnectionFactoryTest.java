@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vigil.adapters.postgres.PostgresTestSupport.FakeConnection;
+import com.vigil.application.configuration.TargetProfile;
+import com.vigil.application.configuration.TargetSslMode;
 import com.vigil.application.exception.TargetConnectionFailure;
 import com.vigil.application.exception.TargetFailureReason;
 import java.net.ConnectException;
@@ -22,9 +24,11 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLHandshakeException;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class PostgresConnectionFactoryTest {
 
@@ -90,6 +94,38 @@ class PostgresConnectionFactoryTest {
         assertEquals("-c statement_timeout=5000 -c lock_timeout=200 -c default_transaction_read_only=on",
                 properties.getProperty("options"));
         assertEquals(8, properties.size());
+    }
+
+    @ParameterizedTest
+    @EnumSource(TargetSslMode.class)
+    void shouldPassEveryVerifiedSslModeToTheDriverUnchanged(TargetSslMode mode) {
+        var fake = new FakeConnection();
+        var profile = new TargetProfile("lab", "development", "localhost", 5432, "vigil_lab", mode,
+                Duration.ofSeconds(5));
+        var settings = PostgresTargetSettings.withDefaults(profile, "vigil_collector", null);
+
+        factory(settings, (url, properties) -> fake.connection()).open();
+
+        assertEquals(mode.configValue(), snapshots.get(0).getProperty("sslmode"));
+    }
+
+    /**
+     * Reproduces a defect found in review: pgjdbc takes socketTimeout in whole seconds and the factory truncates it,
+     * so 5001 ms passes validation but reaches the driver as 5 s, the same as statement_timeout. Disabled to keep the
+     * build green until the fix lands; enable it together with the fix.
+     */
+    @Disabled("BUG VIG-032: socketTimeout 5001 ms is truncated to 5 s, equal to statement_timeout")
+    @Test
+    void shouldSendASocketTimeoutThatStillExceedsTheStatementTimeout() {
+        var fake = new FakeConnection();
+        var profile = PostgresTestSupport.profile();
+        var settings = new PostgresTargetSettings(profile, "vigil_collector", null,
+                Duration.ofMillis(5001), Duration.ofSeconds(5), Duration.ofMillis(200));
+
+        factory(settings, (url, properties) -> fake.connection()).open();
+
+        assertTrue(Long.parseLong(snapshots.get(0).getProperty("socketTimeout")) > 5,
+                "driver socketTimeout must exceed statement_timeout of 5 s");
     }
 
     @Test

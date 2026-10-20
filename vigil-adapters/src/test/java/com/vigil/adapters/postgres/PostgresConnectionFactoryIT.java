@@ -56,8 +56,10 @@ class PostgresConnectionFactoryIT {
     private static final String USER = "vigil_collector";
     private static final String TLS_HOST = "localhost";
 
+    /** Version matrix: run with {@code -Dvigil.postgres.image=postgres:14} (or 15, 17, 18) to repeat the suite. */
     @Container
-    static final PostgreSQLContainer<?> CONTAINER = PostgresLaboratory.newContainer()
+    static final PostgreSQLContainer<?> CONTAINER = PostgresLaboratory.newContainer(
+                    System.getProperty("vigil.postgres.image", PostgresLaboratory.IMAGE))
             .withCreateContainerCmdModifier(cmd -> cmd.withEntrypoint("sh", "-c", TLS_BOOTSTRAP, "sh"));
 
     private static final String PASSWORD = "pw-" + UUID.randomUUID();
@@ -224,7 +226,8 @@ class PostgresConnectionFactoryIT {
                 var elapsed = Duration.ofNanos(System.nanoTime() - started);
 
                 assertEquals("55P03", failure.getSQLState());
-                assertTrue(elapsed.compareTo(Duration.ofSeconds(3)) < 0, "waited too long: " + elapsed);
+                assertTrue(elapsed.compareTo(Duration.ofMillis(150)) >= 0, "gave up before lock_timeout: " + elapsed);
+                assertTrue(elapsed.compareTo(Duration.ofSeconds(1)) < 0, "waited too long: " + elapsed);
                 var classification = PostgresFailureClassifier.classify(failure);
                 assertEquals(TargetFailureReason.TIMEOUT, classification.reason());
                 assertFalse(classification.retryable());
@@ -286,13 +289,37 @@ class PostgresConnectionFactoryIT {
     @Test
     void shouldFailTlsVerificationWithoutRetryWhenTheHostnameDoesNotMatchTheCertificate() {
         var sleeps = new ArrayList<Duration>();
+        var attempts = new AtomicInteger();
         var factory = factory("127.0.0.1", CONTAINER.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT),
-                CONTAINER.getDatabaseName(), PASSWORD, TargetSslMode.VERIFY_FULL, DriverManager::getConnection,
-                sleeps::add);
+                CONTAINER.getDatabaseName(), PASSWORD, TargetSslMode.VERIFY_FULL,
+                (url, properties) -> {
+                    attempts.incrementAndGet();
+                    return DriverManager.getConnection(url, properties);
+                }, sleeps::add);
 
         var failure = assertThrows(TargetConnectionFailure.class, factory::open);
 
         assertEquals(TargetFailureReason.TLS_FAILED, failure.reason());
+        assertEquals(1, attempts.get());
         assertTrue(sleeps.isEmpty());
+    }
+
+    @Test
+    void shouldWaitTheProductionBackoffBetweenRetriesWhenUsingTheDefaultSleeper() throws IOException {
+        int closedPort;
+        try (var socket = new ServerSocket(0)) {
+            closedPort = socket.getLocalPort();
+        }
+        var profile = new TargetProfile("lab", "development", TLS_HOST, closedPort, CONTAINER.getDatabaseName(),
+                TargetSslMode.VERIFY_FULL, Duration.ofSeconds(5));
+        var factory = new PostgresConnectionFactory(
+                PostgresTargetSettings.withDefaults(profile, USER, caCertificate), PASSWORD::toCharArray);
+
+        var started = System.nanoTime();
+        var failure = assertThrows(TargetConnectionFailure.class, factory::open);
+        var elapsed = Duration.ofNanos(System.nanoTime() - started);
+
+        assertEquals(TargetFailureReason.UNREACHABLE, failure.reason());
+        assertTrue(elapsed.compareTo(Duration.ofSeconds(1)) >= 0, "backoff 200ms + 800ms not honored: " + elapsed);
     }
 }

@@ -37,7 +37,12 @@ public final class PostgresLaboratory {
     }
 
     public static PostgreSQLContainer<?> newContainer() {
-        return new PostgreSQLContainer<>(IMAGE).withCommand(
+        return newContainer(IMAGE);
+    }
+
+    /** Same laboratory settings on another PostgreSQL image, for the version matrix of the integration tests. */
+    public static PostgreSQLContainer<?> newContainer(String image) {
+        return new PostgreSQLContainer<>(image).withCommand(
                 "postgres",
                 "-c", "shared_preload_libraries=pg_stat_statements",
                 "-c", "pg_stat_statements.track=all");
