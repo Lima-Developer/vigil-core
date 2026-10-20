@@ -28,6 +28,16 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage("com.vigil.adapters..", "com.vigil.bootstrap..")
             .because("a aplicação depende de ports e domínio, nunca de adapters ou bootstrap");
 
+    private static final ArchRule BOOTSTRAP_ONLY_COMPOSES = ArchRuleDefinition.noClasses()
+            .that().resideInAPackage("com.vigil.bootstrap..")
+            .should().dependOnClassesThat().resideInAnyPackage("java.sql..", "javax.sql..", "org.sqlite..")
+            .because("o bootstrap compõe adapters e encaminha comandos, sem JDBC próprio");
+
+    @Test
+    void shouldKeepBootstrapFreeOfJdbc() {
+        BOOTSTRAP_ONLY_COMPOSES.check(productionClasses());
+    }
+
     @Test
     void shouldKeepDomainClassesInExpectedPackages() {
         DOMAIN_STAYS_IN_ITS_PACKAGES.check(productionClasses());

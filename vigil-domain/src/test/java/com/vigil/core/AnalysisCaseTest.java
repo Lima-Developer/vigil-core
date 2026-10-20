@@ -407,4 +407,32 @@ public class AnalysisCaseTest {
                 () -> assertEquals(2, analysisCase.version())
         );
     }
+
+    @Test
+    void shouldRetainTheFingerprintAndRecordTheDiscoveryEventWhenDiscoveringAnObservedQuery() {
+        var caseId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        var eventId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+        var createdAt = Instant.parse("2026-08-26T12:00:00Z");
+        var fingerprint = new com.vigil.core.domain.QueryFingerprint("sha256:observed-query", "v1");
+        var observedQuery = new com.vigil.core.domain.ObservedQuery(
+                fingerprint,
+                com.vigil.core.domain.enums.TelemetrySource.PG_STAT_STATEMENTS,
+                createdAt,
+                Optional.empty(),
+                com.vigil.core.domain.enums.CommandType.SELECT,
+                new ObservationWindow(createdAt.minusSeconds(60), createdAt),
+                new com.vigil.core.domain.ObservedQueryMetrics(1, java.time.Duration.ofSeconds(1), 1)
+        );
+
+        var analysisCase = AnalysisCase.discover(
+                caseId, createdAt, observedQuery, new DomainEventMetadata(eventId, "vigil-system", createdAt, "1"));
+
+        assertAll(
+                () -> assertEquals(Optional.of(fingerprint), analysisCase.queryFingerprint()),
+                () -> assertEquals(CaseStatus.DISCOVERED, analysisCase.status()),
+                () -> assertEquals(
+                        List.of(new AnalysisCaseDiscovered(eventId, caseId, "vigil-system", createdAt, "1")),
+                        analysisCase.pendingEvents())
+        );
+    }
 }

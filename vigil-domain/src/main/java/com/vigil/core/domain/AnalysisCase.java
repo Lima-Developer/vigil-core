@@ -45,6 +45,19 @@ public final class AnalysisCase {
         return new AnalysisCase(caseId, createdAt, Optional.of(observedQuery.fingerprint()));
     }
 
+    /**
+     * Opens a case for an observed query, retaining its fingerprint, and records {@link AnalysisCaseDiscovered}.
+     */
+    public static AnalysisCase discover(UUID caseId, Instant createdAt, ObservedQuery observedQuery,
+                                        DomainEventMetadata metadata) {
+        Objects.requireNonNull(metadata, "Domain event metadata must not be null.");
+        var analysisCase = discover(caseId, createdAt, observedQuery);
+        analysisCase.pendingDomainEvents.add(new AnalysisCaseDiscovered(
+                metadata.eventId(), caseId, metadata.actor(), metadata.occurredAt(), metadata.version()
+        ));
+        return analysisCase;
+    }
+
     public static AnalysisCase discover(UUID caseId, Instant createdAt, DomainEventMetadata metadata) {
         var analysisCase = new AnalysisCase(caseId, createdAt);
         analysisCase.pendingDomainEvents.add(new AnalysisCaseDiscovered(
