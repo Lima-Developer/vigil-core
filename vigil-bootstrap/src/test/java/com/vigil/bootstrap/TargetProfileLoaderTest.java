@@ -82,7 +82,7 @@ class TargetProfileLoaderTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"abc", "-1", "0", "65536", "54.32", "+5432", " 5432", "99999999999999999999"})
+    @ValueSource(strings = {"abc", "-1", "0", "65536", "54.32", "5432.0", "+5432", " 5432", "99999999999999999999"})
     void rejectsInvalidPort(String port) {
         assertTrue(failure(with("VIGIL_TARGET_PORT", port)).contains("VIGIL_TARGET_PORT"));
     }
@@ -117,9 +117,14 @@ class TargetProfileLoaderTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"a;b", "a?b", "a&b", "a=b", "a/b", "a b"})
+    @ValueSource(strings = {"a;b", "a?b", "a&b", "a=b", "a/b", "a b", ""})
     void namesInvalidDatabase(String database) {
         assertTrue(failure(with("VIGIL_TARGET_DATABASE", database)).contains("VIGIL_TARGET_DATABASE"));
+    }
+
+    @Test
+    void namesDatabaseLongerThan63() {
+        assertTrue(failure(with("VIGIL_TARGET_DATABASE", "d".repeat(64))).contains("VIGIL_TARGET_DATABASE"));
     }
 
     @ParameterizedTest
@@ -134,6 +139,14 @@ class TargetProfileLoaderTest {
         env.put("VIGIL_TARGET_3_HOST", "x");
         env.put("VIGIL_TARGET_2_HOST", "y");
         assertTrue(failure(Map.copyOf(env)).contains("VIGIL_TARGET_2_HOST"));
+    }
+
+    @Test
+    void targetNameAndHostAreNotIndexedTargetKeys() {
+        var env = base();
+        env.put("VIGIL_TARGET_NAME", "alvo");
+        env.put("VIGIL_TARGET_HOST", "db.example.com");
+        assertEquals("alvo", TargetProfileLoader.load(Map.copyOf(env)).name());
     }
 
     @Test

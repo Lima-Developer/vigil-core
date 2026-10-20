@@ -29,10 +29,18 @@ class TargetCapabilitiesTest {
     }
 
     @Test
-    void rejectsNulls() {
+    void rejectsNullsNamingTheField() {
+        var missingVersion = assertThrows(NullPointerException.class, () -> new TargetCapabilities(null, false, NOW));
+        var missingCheck = assertThrows(NullPointerException.class, () -> new TargetCapabilities("16", false, null));
         assertAll(
-                () -> assertThrows(NullPointerException.class, () -> new TargetCapabilities(null, false, NOW)),
-                () -> assertThrows(NullPointerException.class, () -> new TargetCapabilities("16", false, null))
+                () -> assertTrue(missingVersion.getMessage().contains("Versão")),
+                () -> assertTrue(missingCheck.getMessage().contains("Instante"))
         );
+    }
+
+    @Test
+    void rejectsBlankVersionNamingTheField() {
+        var error = assertThrows(IllegalArgumentException.class, () -> new TargetCapabilities(" ", false, NOW));
+        assertTrue(error.getMessage().contains("Versão"));
     }
 }

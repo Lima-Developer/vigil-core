@@ -79,6 +79,15 @@ class MainTest {
     }
 
     @Test
+    void returnsConfigurationExitCodeForMissingTargetHost() {
+        var variables = Map.of("VIGIL_DATABASE_PATH", directory.resolve("vigil.db").toString(),
+                "VIGIL_TARGET_NAME", "target", "VIGIL_ENVIRONMENT", "test", "VIGIL_TARGET_DATABASE", "lab");
+        var errors = new ByteArrayOutputStream();
+        assertEquals(2, Main.run(variables, new PrintStream(new ByteArrayOutputStream()), new PrintStream(errors)));
+        assertTrue(errors.toString().contains("VIGIL_TARGET_HOST"));
+    }
+
+    @Test
     void returnsConfigurationExitCodeForMultipleTargets() {
         var variables = Map.of("VIGIL_DATABASE_PATH", directory.resolve("vigil.db").toString(),
                 "VIGIL_TARGET_NAME", "target", "VIGIL_ENVIRONMENT", "test",

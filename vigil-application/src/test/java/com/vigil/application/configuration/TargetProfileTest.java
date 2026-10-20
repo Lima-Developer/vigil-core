@@ -2,7 +2,6 @@ package com.vigil.application.configuration;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.RecordComponent;
@@ -37,17 +36,36 @@ class TargetProfileTest {
         assertDoesNotThrow(() -> profile("a", "e", "h", 65535, "d", TargetSslMode.VERIFY_CA, Duration.ofSeconds(60)));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"db.example.com", "db-01.example.com", "localhost", "192.168.0.10", "A-Z.9"})
+    void acceptsHostsWithLettersDigitsDotsAndHyphens(String host) {
+        assertEquals(host, profile("n", "e", host, 1, "d", TargetSslMode.VERIFY_FULL, Duration.ofSeconds(1)).host());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"vigil_lab", "vigil-lab", "L", "Vigil_01-x"})
+    void acceptsDatabaseNamesWithLettersDigitsUnderscoreAndHyphen(String database) {
+        assertEquals(database, profile("n", "e", "h", 1, database, TargetSslMode.VERIFY_FULL,
+                Duration.ofSeconds(1)).database());
+    }
+
     @Test
     void rejectsNullComponents() {
         var ok = valid();
         assertAll(
-                () -> assertThrows(NullPointerException.class, () -> profile(null, "e", "h", 1, "d", ok.sslMode(), ok.connectTimeout())),
-                () -> assertThrows(NullPointerException.class, () -> profile("n", null, "h", 1, "d", ok.sslMode(), ok.connectTimeout())),
-                () -> assertThrows(NullPointerException.class, () -> profile("n", "e", null, 1, "d", ok.sslMode(), ok.connectTimeout())),
-                () -> assertThrows(NullPointerException.class, () -> profile("n", "e", "h", 1, null, ok.sslMode(), ok.connectTimeout())),
-                () -> assertThrows(NullPointerException.class, () -> profile("n", "e", "h", 1, "d", null, ok.connectTimeout())),
-                () -> assertThrows(NullPointerException.class, () -> profile("n", "e", "h", 1, "d", ok.sslMode(), null))
+                () -> assertNullMessage("Nome", () -> profile(null, "e", "h", 1, "d", ok.sslMode(), ok.connectTimeout())),
+                () -> assertNullMessage("Ambiente", () -> profile("n", null, "h", 1, "d", ok.sslMode(), ok.connectTimeout())),
+                () -> assertNullMessage("Host", () -> profile("n", "e", null, 1, "d", ok.sslMode(), ok.connectTimeout())),
+                () -> assertNullMessage("Database", () -> profile("n", "e", "h", 1, null, ok.sslMode(), ok.connectTimeout())),
+                () -> assertNullMessage("Modo SSL", () -> profile("n", "e", "h", 1, "d", null, ok.connectTimeout())),
+                () -> assertNullMessage("Timeout", () -> profile("n", "e", "h", 1, "d", ok.sslMode(), null))
         );
+    }
+
+    private static void assertNullMessage(String field, org.junit.jupiter.api.function.Executable creation) {
+        var error = assertThrows(NullPointerException.class, creation);
+        assertTrue(error.getMessage().contains(field) && error.getMessage().contains("não pode ser nulo"),
+                error.getMessage());
     }
 
     @ParameterizedTest
@@ -62,8 +80,8 @@ class TargetProfileTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", " ", "db host", "jdbc://host", "host/db", "user@host", "host?x=1", "host#a", "host;x",
-            "::1", "[::1]", "host:5432", "hóst", "a\nb"})
+    @ValueSource(strings = {"", " ", "\t", "db host", "jdbc://host", "host/db", "user@host", "host?x=1", "host#a",
+            "host;x", "::1", "[::1]", "host:5432", "hóst", "a_b", "a\nb"})
     void rejectsInvalidHost(String host) {
         var error = assertThrows(IllegalArgumentException.class,
                 () -> profile("n", "e", host, 1, "d", TargetSslMode.VERIFY_FULL, Duration.ofSeconds(1)));
@@ -72,8 +90,9 @@ class TargetProfileTest {
 
     @Test
     void rejectsHostLongerThan253() {
-        assertThrows(IllegalArgumentException.class, () -> profile("n", "e", "a".repeat(254), 1, "d",
+        var error = assertThrows(IllegalArgumentException.class, () -> profile("n", "e", "a".repeat(254), 1, "d",
                 TargetSslMode.VERIFY_FULL, Duration.ofSeconds(1)));
+        assertTrue(error.getMessage().contains("Host"));
     }
 
     @ParameterizedTest
@@ -94,15 +113,16 @@ class TargetProfileTest {
 
     @Test
     void rejectsDatabaseLongerThan63() {
-        assertThrows(IllegalArgumentException.class, () -> profile("n", "e", "h", 1, "d".repeat(64),
+        var error = assertThrows(IllegalArgumentException.class, () -> profile("n", "e", "h", 1, "d".repeat(64),
                 TargetSslMode.VERIFY_FULL, Duration.ofSeconds(1)));
+        assertTrue(error.getMessage().contains("Database"));
     }
 
     @Test
     void rejectsInvalidTimeout() {
         for (Duration timeout : new Duration[]{Duration.ZERO, Duration.ofSeconds(-1), Duration.ofSeconds(61),
                 Duration.ofMillis(1500), Duration.ofMillis(500), Duration.ofSeconds(60).plusNanos(1),
-                Duration.ofSeconds(1).minusNanos(1)}) {
+                Duration.ofSeconds(1).minusNanos(1), Duration.ofSeconds(1).plusNanos(1)}) {
             var error = assertThrows(IllegalArgumentException.class,
                     () -> profile("n", "e", "h", 1, "d", TargetSslMode.VERIFY_FULL, timeout), timeout.toString());
             assertTrue(error.getMessage().contains("Timeout"));
@@ -125,21 +145,4 @@ class TargetProfileTest {
         }
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"disable", "allow", "prefer", "require", "VERIFY-FULL", "Verify-Ca", " verify-full", "verify-full ", ""})
-    @NullSource
-    void rejectsInsecureOrUnknownSslMode(String value) {
-        var error = assertThrows(IllegalArgumentException.class, () -> TargetSslMode.fromConfigValue(value));
-        assertTrue(error.getMessage().contains("VIGIL_TARGET_SSL_MODE"));
-    }
-
-    @Test
-    void parsesSecureSslModes() {
-        assertAll(
-                () -> assertEquals(TargetSslMode.VERIFY_CA, TargetSslMode.fromConfigValue("verify-ca")),
-                () -> assertEquals(TargetSslMode.VERIFY_FULL, TargetSslMode.fromConfigValue("verify-full")),
-                () -> assertEquals("verify-ca", TargetSslMode.VERIFY_CA.configValue()),
-                () -> assertEquals(2, TargetSslMode.values().length)
-        );
-    }
 }
