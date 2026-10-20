@@ -74,11 +74,9 @@
                     <skip>false</skip>
                     <targetClasses>
                         <param>com.vigil.adapters.sqlite.*</param>
-                        <param>com.vigil.adapters.postgres.lab.*</param>
                     </targetClasses>
                     <targetTests>
                         <param>com.vigil.adapters.sqlite.*</param>
-                        <param>com.vigil.adapters.postgres.lab.*Test</param>
                     </targetTests>
                 </configuration>
             </plugin>

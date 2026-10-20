@@ -90,11 +90,17 @@ estimadas não são comparados, pois não são estáveis byte a byte entre vers�
   via Failsafe, sem passo manual de banco.
 - Ambientes com socket não padrão precisam de `DOCKER_HOST`; sem Docker as ITs falham (não são ignoradas).
 - Tempo medido: a IT leva cerca de 6 s após o container baixado; o `verify` completo ficou em ~14 s.
-- Pitest cobre `com.vigil.adapters.postgres.lab.*` usando apenas `*Test` (sem Docker); `PostgresLaboratory` só é
-  exercitado pela IT e, portanto, seus mutantes ficam fora do loop.
+- Pitest (`pitest-maven` 1.17.4) só muta `target/classes`; o laboratório vive em `src/test/java` e, portanto, **não**
+  entra no comando oficial de mutação (que cobre apenas `com.vigil.adapters.sqlite.*`). Mover o laboratório para
+  `src/main` quebraria o critério de `src/main` intocado e foi descartado.
+- A qualidade dos testes do laboratório foi medida fora do repositório, com o mesmo motor pitest apontando
+  `codePaths` para `target/test-classes`: 44/44 mutantes mortos em `LaboratoryDataset`, `LaboratoryWorkload` e `Batcher`;
+  `PostgresLaboratory` só é exercitado pela IT e fica fora do loop. Os `*MutationTest` do laboratório guardam esse nível.
 
 ## 8. Decisões em aberto
 
+- **Mutação do laboratório:** sem suporte do `pitest-maven` a código mutável em `target/test-classes`, a cobertura
+  de mutação do lab depende de um driver externo; decidir se vale um módulo dedicado ou aceitar a medição manual.
 - **Docker em CI:** o repositório não tem pipeline (`.github/` ausente). A política (runner com Docker, cache de
   imagem, digest fixado) fica para decisão do time; este card não cria workflow.
 - **VIG-003:** dependência do card sem rastro no git ou nos docs; premissa vinda apenas do board.
