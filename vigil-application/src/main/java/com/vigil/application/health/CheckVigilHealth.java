@@ -55,7 +55,8 @@ public final class CheckVigilHealth {
         try {
             StorageFacts facts = Objects.requireNonNull(storageProbe.inspect(path), "StorageProbe retornou nulo");
             if (!facts.directoryExists()) {
-                problems.add("Diretório do banco inexistente: " + path.getParent() + ". Monte um volume persistente.");
+                problems.add(facts.failure() != null ? facts.failure()
+                        : "Diretório do banco inexistente: " + path.getParent() + ". Monte um volume persistente.");
                 return new StorageHealth(false, problems);
             }
             if (!facts.directoryWritable()) {

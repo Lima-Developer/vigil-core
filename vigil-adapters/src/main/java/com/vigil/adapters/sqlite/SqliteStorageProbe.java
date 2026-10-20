@@ -25,7 +25,11 @@ public final class SqliteStorageProbe implements StorageProbe {
         Objects.requireNonNull(databaseFile);
         Path directory = databaseFile.toAbsolutePath().getParent();
         if (!Files.isDirectory(directory)) {
-            return new StorageFacts(false, false, !Files.exists(databaseFile), -1, null, null);
+            String failure = Files.exists(directory)
+                    ? "Caminho pai do banco não é um diretório: " + directory
+                    + ". Informe um diretório de volume válido."
+                    : null;
+            return new StorageFacts(false, false, !Files.exists(databaseFile), -1, null, failure);
         }
         boolean writable = Files.isWritable(directory);
         String failure = null;

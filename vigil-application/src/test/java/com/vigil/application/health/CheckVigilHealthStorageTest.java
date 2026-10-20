@@ -73,6 +73,14 @@ class CheckVigilHealthStorageTest {
     }
 
     @Test
+    void keepsProbeFailureWhenParentIsNotADirectory() {
+        var status = check(new StorageFacts(false, false, false, -1, null,
+                "Caminho pai do banco não é um diretório: /volume"));
+        assertTrue(status.storage().problems().stream()
+                .anyMatch(problem -> problem.contains("não é um diretório: /volume")));
+    }
+
+    @Test
     void reportsUnknownSpaceWithoutInsufficientSpaceMessage() {
         var status = check(new StorageFacts(true, true, true, -1, null, "Falha ao medir espaço"));
         assertEquals(1, status.storage().problems().size());
