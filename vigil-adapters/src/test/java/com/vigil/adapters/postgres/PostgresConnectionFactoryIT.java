@@ -151,8 +151,12 @@ class PostgresConnectionFactoryIT {
     void shouldRunWithARoleWithoutAdministrativePrivileges() throws SQLException {
         try (Connection connection = factory().open()) {
             assertEquals("false", single(connection,
-                    "SELECT (rolsuper OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls OR rolinherit)::text"
+                    "SELECT (rolsuper OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls)::text"
                             + " FROM pg_roles WHERE rolname = current_user"));
+            // 14/15 cannot scope INHERIT per grant, so the script enables it there; 16+ stays NOINHERIT.
+            boolean perGrantInherit = Integer.parseInt(single(connection, "SHOW server_version_num")) >= 160000;
+            assertEquals(String.valueOf(!perGrantInherit), single(connection,
+                    "SELECT rolinherit::text FROM pg_roles WHERE rolname = current_user"));
         }
     }
 

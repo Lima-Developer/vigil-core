@@ -28,12 +28,16 @@ literal). Atributos: `LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPL
 | `pg_stat_statements` | leitura, inclusive texto da query | `pg_monitor` | consultas observadas |
 | Catálogos (`pg_class`, `pg_index`, ...) | leitura | `PUBLIC` | metadados de relação |
 | Tabelas e schemas da aplicação | **nenhum** | — | o Vigil não lê dados de negócio |
-| `public` (CREATE) | **nenhum** | padrão do PostgreSQL 15+ | impede DDL |
+| `public` (CREATE) | **nenhum** | `REVOKE` explícito no script (padrão apenas no 15+) | impede DDL |
 
-- `pg_monitor` é concedido com `WITH INHERIT TRUE` (PostgreSQL 16+), para manter `NOINHERIT` no restante. Em 14 e 15
-  não existe a opção por concessão; ali o papel precisaria de `INHERIT`, o que contraria o script. O script só é
-  validado em **16.4** (`PostgresLaboratory.IMAGE`); 14, 15, 17 e 18 ficam por validar.
-- A IT afirma `rolsuper`, `rolcreaterole`, `rolcreatedb`, `rolreplication`, `rolbypassrls` e `rolinherit` falsos.
+- `pg_monitor` é concedido com `WITH INHERIT TRUE` no PostgreSQL 16+, mantendo `NOINHERIT` no restante. Em 14 e 15 não
+  existe a opção por concessão: o script (via `\if` do psql) concede `pg_monitor` e aplica `ALTER ROLE ... INHERIT`,
+  aceitável porque o papel não tem outra pertinência. Sem isso o `NOINHERIT` anularia o `pg_monitor`.
+- O script faz `REVOKE CREATE ON SCHEMA public FROM PUBLIC` em todas as versões: no 14 o `PUBLIC` ainda cria objetos
+  em `public`, e a barreira de privilégio (42501) não pode depender do `default_transaction_read_only`.
+- A IT roda por padrão em **16.4** (`PostgresLaboratory.IMAGE`) e é parametrizável por `-Dvigil.postgres.image`
+  (14, 15, 16, 17; 18 por validar).
+- A IT afirma `rolsuper`, `rolcreaterole`, `rolcreatedb`, `rolreplication`, `rolbypassrls` falsos (e `rolinherit` falso no 16+).
   Em Aurora/RDS o usuário pode herdar `rds_superuser`; essa checagem deve ser repetida ali.
 - Se um pooler intermediário descartar o parâmetro `options`, o servidor não aplica os limites. Por isso a fábrica
   confirma cada valor com `SHOW` e não assume.
