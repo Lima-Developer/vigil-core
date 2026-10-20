@@ -32,7 +32,19 @@ public final class SqliteConnectionFactory {
     }
 
     public Connection open() throws SQLException {
-        var connection = opener.open("jdbc:sqlite:" + databaseFile);
+        return open("jdbc:sqlite:" + databaseFile);
+    }
+
+    /**
+     * Like {@link #open()}, but transactions started with {@code setAutoCommit(false)} are {@code BEGIN IMMEDIATE}:
+     * the write lock is taken up front, so a read-then-write unit of work never fails on a stale snapshot.
+     */
+    public Connection openForWrite() throws SQLException {
+        return open("jdbc:sqlite:" + databaseFile + "?transaction_mode=IMMEDIATE");
+    }
+
+    private Connection open(String url) throws SQLException {
+        var connection = opener.open(url);
         try {
             configure(connection);
             return connection;

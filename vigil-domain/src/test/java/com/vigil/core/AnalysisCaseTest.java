@@ -268,4 +268,143 @@ public class AnalysisCaseTest {
                 Optional.empty()
         );
     }
+
+    private static final UUID RECON_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    private static final Instant RECON_AT = Instant.parse("2026-08-26T12:00:00Z");
+
+    private static com.vigil.core.domain.CaseEvent step(CaseStatus from, CaseStatus to) {
+        return new com.vigil.core.domain.CaseEvent(from, to, "actor", "reason", RECON_AT.plusSeconds(60));
+    }
+
+    private static Evidence reconEvidence(UUID id, UUID caseId) {
+        return new Evidence(id, caseId, EvidenceType.METRIC, EvidenceSource.PG_STAT_STATEMENTS, RECON_AT,
+                "collector-v1", EvidenceConfidence.HIGH,
+                new MetricEvidencePayload(MetricKind.CALLS, new BigDecimal("1.50"), MeasurementUnit.EXECUTIONS,
+                        new ObservationWindow(RECON_AT.minusSeconds(60), RECON_AT)),
+                Optional.empty());
+    }
+
+    private static AnalysisCase reconstitute(CaseStatus status, long version,
+                                             List<com.vigil.core.domain.CaseEvent> events, List<Evidence> evidences) {
+        return AnalysisCase.reconstitute(RECON_ID, RECON_AT, Optional.empty(), status, version, events, evidences);
+    }
+
+    @Test
+    void shouldReconstituteEveryStatusWithoutPendingEventsAndKeepVersion() {
+        var evidence = reconEvidence(UUID.randomUUID(), RECON_ID);
+        var discovered = reconstitute(CaseStatus.DISCOVERED, 1, List.of(), List.of());
+        var triaged = reconstitute(CaseStatus.TRIAGED, 2, List.of(step(CaseStatus.DISCOVERED, CaseStatus.TRIAGED)), List.of());
+        var collected = reconstitute(CaseStatus.EVIDENCE_COLLECTED, 3, List.of(
+                step(CaseStatus.DISCOVERED, CaseStatus.TRIAGED),
+                step(CaseStatus.TRIAGED, CaseStatus.EVIDENCE_COLLECTED)), List.of(evidence));
+
+        assertAll(
+                () -> assertEquals(1, discovered.version()),
+                () -> assertEquals(CaseStatus.TRIAGED, triaged.status()),
+                () -> assertEquals(2, collected.events().size()),
+                () -> assertEquals(List.of(evidence), collected.evidences()),
+                () -> assertEquals(3, collected.version()),
+                () -> assertTrue(collected.pendingEvents().isEmpty()),
+                () -> assertTrue(collected.pullEvents().isEmpty())
+        );
+    }
+
+    @Test
+    void shouldContinueToWorkAfterReconstitution() {
+        var triaged = reconstitute(CaseStatus.TRIAGED, 2, List.of(step(CaseStatus.DISCOVERED, CaseStatus.TRIAGED)), List.of());
+
+        triaged.collectEvidence(reconEvidence(UUID.randomUUID(), RECON_ID), "actor", RECON_AT.plusSeconds(120));
+
+        assertAll(
+                () -> assertEquals(CaseStatus.EVIDENCE_COLLECTED, triaged.status()),
+                () -> assertEquals(2, triaged.version()),
+                () -> assertThrows(InvalidCaseTransitionException.class, () -> triaged.triage("r", "a", RECON_AT))
+        );
+    }
+
+    static Stream<Arguments> invalidReconstitutions() {
+        var id = UUID.randomUUID();
+        var evidence = reconEvidence(id, RECON_ID);
+        var toTriaged = step(CaseStatus.DISCOVERED, CaseStatus.TRIAGED);
+        var toCollected = step(CaseStatus.TRIAGED, CaseStatus.EVIDENCE_COLLECTED);
+        return Stream.of(
+                Arguments.of("negative version", (java.util.function.Supplier<AnalysisCase>) () ->
+                        reconstitute(CaseStatus.DISCOVERED, -1, List.of(), List.of())),
+                Arguments.of("status ahead of history", (java.util.function.Supplier<AnalysisCase>) () ->
+                        reconstitute(CaseStatus.TRIAGED, 1, List.of(), List.of())),
+                Arguments.of("status behind history", (java.util.function.Supplier<AnalysisCase>) () ->
+                        reconstitute(CaseStatus.DISCOVERED, 1, List.of(toTriaged), List.of())),
+                Arguments.of("history skips a step", (java.util.function.Supplier<AnalysisCase>) () ->
+                        reconstitute(CaseStatus.EVIDENCE_COLLECTED, 1, List.of(toCollected), List.of(evidence))),
+                Arguments.of("history not starting at discovered", (java.util.function.Supplier<AnalysisCase>) () ->
+                        reconstitute(CaseStatus.TRIAGED, 1, List.of(step(CaseStatus.TRIAGED, CaseStatus.TRIAGED)), List.of())),
+                Arguments.of("backward transition", (java.util.function.Supplier<AnalysisCase>) () ->
+                        reconstitute(CaseStatus.DISCOVERED, 1, List.of(toTriaged, step(CaseStatus.TRIAGED, CaseStatus.DISCOVERED)), List.of())),
+                Arguments.of("blank actor", (java.util.function.Supplier<AnalysisCase>) () ->
+                        reconstitute(CaseStatus.TRIAGED, 1, List.of(new com.vigil.core.domain.CaseEvent(
+                                CaseStatus.DISCOVERED, CaseStatus.TRIAGED, " ", "r", RECON_AT)), List.of())),
+                Arguments.of("evidence of another case", (java.util.function.Supplier<AnalysisCase>) () ->
+                        reconstitute(CaseStatus.EVIDENCE_COLLECTED, 1, List.of(toTriaged, toCollected),
+                                List.of(reconEvidence(id, UUID.randomUUID())))),
+                Arguments.of("duplicate evidence ids", (java.util.function.Supplier<AnalysisCase>) () ->
+                        reconstitute(CaseStatus.EVIDENCE_COLLECTED, 1, List.of(toTriaged, toCollected),
+                                List.of(evidence, evidence))),
+                Arguments.of("evidence before collection", (java.util.function.Supplier<AnalysisCase>) () ->
+                        reconstitute(CaseStatus.TRIAGED, 1, List.of(toTriaged), List.of(evidence))),
+                Arguments.of("collected without evidence", (java.util.function.Supplier<AnalysisCase>) () ->
+                        reconstitute(CaseStatus.EVIDENCE_COLLECTED, 1, List.of(toTriaged, toCollected), List.of()))
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("invalidReconstitutions")
+    void shouldRejectInconsistentReconstitution(String rule, java.util.function.Supplier<AnalysisCase> attempt) {
+        assertThrows(IllegalArgumentException.class, attempt::get, rule);
+    }
+
+    @Test
+    void shouldRejectNullReconstitutionInputs() {
+        assertAll(
+                () -> assertThrows(NullPointerException.class, () -> AnalysisCase.reconstitute(
+                        RECON_ID, RECON_AT, Optional.empty(), null, 0, List.of(), List.of())),
+                () -> assertThrows(NullPointerException.class, () -> AnalysisCase.reconstitute(
+                        RECON_ID, RECON_AT, Optional.empty(), CaseStatus.DISCOVERED, 0, null, List.of())),
+                () -> assertThrows(NullPointerException.class, () -> AnalysisCase.reconstitute(
+                        RECON_ID, RECON_AT, Optional.empty(), CaseStatus.DISCOVERED, 0, List.of(), null))
+        );
+    }
+
+    @Test
+    void shouldReadPendingEventsWithoutDrainingAndConfirmThemByIdAfterCommit() {
+        var first = new DomainEventMetadata(UUID.randomUUID(), "actor", RECON_AT, "v1");
+        var analysisCase = AnalysisCase.discover(RECON_ID, RECON_AT, first);
+        var second = new DomainEventMetadata(UUID.randomUUID(), "actor", RECON_AT.plusSeconds(1), "v1");
+        analysisCase.triage("reason", second);
+
+        var pending = analysisCase.pendingEvents();
+        assertEquals(2, pending.size());
+        assertEquals(pending, analysisCase.pendingEvents());
+
+        analysisCase.confirmPersisted(1, List.of(first.eventId()));
+
+        assertAll(
+                () -> assertEquals(1, analysisCase.version()),
+                () -> assertEquals(List.of(pending.get(1)), analysisCase.pendingEvents()),
+                () -> assertEquals(List.of(pending.get(1)), analysisCase.pullEvents())
+        );
+    }
+
+    @Test
+    void shouldNotChangeVersionBeforeConfirmationAndRejectRegression() {
+        var analysisCase = AnalysisCase.discover(RECON_ID, RECON_AT);
+        assertEquals(0, analysisCase.version());
+        analysisCase.confirmPersisted(2, List.of());
+
+        assertAll(
+                () -> assertEquals(2, analysisCase.version()),
+                () -> assertThrows(IllegalArgumentException.class, () -> analysisCase.confirmPersisted(1, List.of())),
+                () -> assertThrows(NullPointerException.class, () -> analysisCase.confirmPersisted(3, null)),
+                () -> assertEquals(2, analysisCase.version())
+        );
+    }
 }
