@@ -2,3 +2,7 @@ env:
   VIGIL_TARGET_NAME: "local-postgres"
   VIGIL_ENVIRONMENT: "development"
   VIGIL_DATABASE_PATH: "/var/lib/vigil/vigil.db"
+  VIGIL_TARGET_HOST: "localhost"
+  VIGIL_TARGET_PORT: "5432"
+  VIGIL_TARGET_DATABASE: "vigil_lab"
+  VIGIL_TARGET_SSL_MODE: "verify-full"

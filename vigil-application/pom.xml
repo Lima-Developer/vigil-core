@@ -36,8 +36,19 @@
                 <artifactId>pitest-maven</artifactId>
                 <configuration>
                     <skip>false</skip>
-                    <targetClasses><param>com.vigil.application.health.*</param></targetClasses>
-                    <targetTests><param>health.*</param><param>com.vigil.application.health.*</param></targetTests>
+                    <targetClasses>
+                        <param>com.vigil.application.health.*</param>
+                        <param>com.vigil.application.configuration.*</param>
+                        <param>com.vigil.application.target.*</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>health.*</param>
+                        <param>com.vigil.application.health.*</param>
+                        <param>configuration.*</param>
+                        <param>com.vigil.application.configuration.*</param>
+                        <param>target.*</param>
+                        <param>com.vigil.application.target.*</param>
+                    </targetTests>
                 </configuration>
             </plugin>
         </plugins>
