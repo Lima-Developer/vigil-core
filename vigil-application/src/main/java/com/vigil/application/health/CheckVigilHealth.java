@@ -56,6 +56,7 @@ public final class CheckVigilHealth {
             StorageFacts facts = Objects.requireNonNull(storageProbe.inspect(path), "StorageProbe retornou nulo");
             if (!facts.directoryExists()) {
                 problems.add("Diretório do banco inexistente: " + path.getParent() + ". Monte um volume persistente.");
+                return new StorageHealth(false, problems);
             }
             if (!facts.directoryWritable()) {
                 problems.add("Diretório sem permissão de escrita: " + path.getParent() + ". Ajuste dono e permissões do volume.");
@@ -63,7 +64,7 @@ public final class CheckVigilHealth {
             if (!facts.fileWritable()) {
                 problems.add("Arquivo do banco sem permissão de escrita: " + path + ". Ajuste dono e permissões.");
             }
-            if (facts.usableBytes() < storageConfiguration.minimumFreeBytes()) {
+            if (facts.usableBytes() >= 0 && facts.usableBytes() < storageConfiguration.minimumFreeBytes()) {
                 problems.add("Espaço insuficiente em " + path.getParent() + ": mínimo "
                         + storageConfiguration.minimumFreeBytes() + " bytes; disponíveis " + facts.usableBytes() + ". Libere espaço.");
             }
@@ -74,7 +75,8 @@ public final class CheckVigilHealth {
                 problems.add(facts.failure());
             }
         } catch (Exception failure) {
-            problems.add("Falha ao verificar armazenamento em " + path + ": " + failure.getMessage());
+            problems.add("Falha ao verificar armazenamento em " + path
+                    + ". Verifique o volume e a integridade do banco.");
         }
         return new StorageHealth(problems.isEmpty(), problems);
     }

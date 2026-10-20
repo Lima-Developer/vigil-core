@@ -10,9 +10,15 @@ import java.util.Objects;
 /** Produces a standalone, transactionally consistent SQLite file. */
 public final class SqliteBackup {
     private final SqliteConnectionFactory source;
+    private final Runnable afterVacuum;
 
     public SqliteBackup(SqliteConnectionFactory source) {
+        this(source, () -> { });
+    }
+
+    SqliteBackup(SqliteConnectionFactory source, Runnable afterVacuum) {
         this.source = Objects.requireNonNull(source);
+        this.afterVacuum = Objects.requireNonNull(afterVacuum);
     }
 
     public void backupTo(Path target) {
@@ -40,6 +46,7 @@ public final class SqliteBackup {
                 statement.setString(1, staging.toString());
                 statement.execute();
             }
+            afterVacuum.run();
             verify(staging);
             Files.move(staging, destination);
         } catch (IOException | SQLException | RuntimeException failure) {
@@ -59,16 +66,19 @@ public final class SqliteBackup {
     }
 
     private void verify(Path destination) throws SQLException {
-        try (var original = source.open();
-             var backup = new SqliteConnectionFactory(destination).open();
+        try (var backup = new SqliteConnectionFactory(destination).open();
              var statement = backup.createStatement();
              var result = statement.executeQuery("PRAGMA quick_check")) {
             if (!result.next() || !"ok".equalsIgnoreCase(result.getString(1))) {
                 throw new SqliteBackupException("Backup gerado com integridade inválida em " + destination);
             }
             for (String table : new String[]{"analysis_case", "case_event"}) {
-                if (count(original, table) != count(backup, table)) {
-                    throw new SqliteBackupException("Contagem divergente no backup em " + destination + ": " + table);
+                count(backup, table);
+            }
+            try (var foreignKeys = backup.createStatement();
+                 var violations = foreignKeys.executeQuery("PRAGMA foreign_key_check")) {
+                if (violations.next()) {
+                    throw new SqliteBackupException("Backup com referências inválidas em " + destination);
                 }
             }
         }

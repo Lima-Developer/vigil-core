@@ -25,8 +25,7 @@ public final class SqliteStorageProbe implements StorageProbe {
         Objects.requireNonNull(databaseFile);
         Path directory = databaseFile.toAbsolutePath().getParent();
         if (!Files.isDirectory(directory)) {
-            return new StorageFacts(false, false, !Files.exists(databaseFile), 0, null,
-                    "Diretório do banco inexistente ou inválido: " + directory + ". Monte um volume persistente.");
+            return new StorageFacts(false, false, !Files.exists(databaseFile), -1, null, null);
         }
         boolean writable = Files.isWritable(directory);
         String failure = null;
@@ -36,15 +35,15 @@ public final class SqliteStorageProbe implements StorageProbe {
                 Files.delete(probe);
             } catch (IOException exception) {
                 writable = false;
-                failure = "Não foi possível criar e remover sonda em " + directory + ". Ajuste permissões do volume.";
+                failure = append(failure, "Não foi possível criar e remover sonda em " + directory + ". Ajuste permissões do volume.");
             }
         }
         boolean fileWritable = !Files.exists(databaseFile) || Files.isWritable(databaseFile);
-        long usableBytes = 0;
+        long usableBytes = -1;
         try {
             usableBytes = spaceProvider.usableBytes(directory);
         } catch (IOException exception) {
-            failure = "Não foi possível medir espaço em " + directory + ". Verifique o volume.";
+            failure = append(failure, "Não foi possível medir espaço em " + directory + ". Verifique o volume.");
         }
         String integrity = null;
         if (writable && fileWritable && Files.exists(databaseFile)) {
@@ -53,11 +52,15 @@ public final class SqliteStorageProbe implements StorageProbe {
                  var result = statement.executeQuery("PRAGMA quick_check")) {
                 integrity = result.next() ? result.getString(1) : "sem resultado";
             } catch (SQLException exception) {
-                failure = "Não foi possível abrir ou verificar o banco em " + databaseFile
-                        + ". Verifique o arquivo ou restaure um backup íntegro.";
+                failure = append(failure, "Não foi possível abrir ou verificar o banco em " + databaseFile
+                        + ". Verifique o arquivo ou restaure um backup íntegro.");
             }
         }
         return new StorageFacts(true, writable, fileWritable, usableBytes, integrity, failure);
+    }
+
+    private static String append(String previous, String next) {
+        return previous == null ? next : previous + " " + next;
     }
 
     @FunctionalInterface

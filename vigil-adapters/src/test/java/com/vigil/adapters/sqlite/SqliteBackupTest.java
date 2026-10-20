@@ -56,6 +56,28 @@ class SqliteBackupTest {
     }
 
     @Test
+    void acceptsSnapshotWhenWriterCommitsAfterVacuum() throws Exception {
+        var source = new SqliteConnectionFactory(directory.resolve("source.db"));
+        SqliteWalConcurrencyTest.migrate(source);
+        var destination = directory.resolve("backup.db");
+        try (var writer = source.open()) {
+            SqliteWalConcurrencyTest.insertCase(writer, "11111111-1111-1111-1111-111111111111");
+            new SqliteBackup(source, () -> {
+                try {
+                    SqliteWalConcurrencyTest.insertCase(writer, "22222222-2222-2222-2222-222222222222");
+                } catch (java.sql.SQLException exception) {
+                    throw new RuntimeException(exception);
+                }
+            }).backupTo(destination);
+            assertEquals(List.of("2"), rows(writer, "SELECT count(*) FROM analysis_case"));
+        }
+        try (var backup = new SqliteConnectionFactory(destination).open()) {
+            assertEquals(List.of("ok"), rows(backup, "PRAGMA quick_check"));
+            assertEquals(List.of("1"), rows(backup, "SELECT count(*) FROM analysis_case"));
+        }
+    }
+
+    @Test
     void deletesOnlyItsStagingFileWhenVerificationFails() throws Exception {
         var source = new SqliteConnectionFactory(directory.resolve("empty.db"));
         try (var ignored = source.open()) {

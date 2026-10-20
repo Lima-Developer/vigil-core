@@ -60,7 +60,21 @@ class CheckVigilHealthStorageTest {
         var status = checker.check(new VigilConfiguration("target", "test"));
         assertFalse(status.healthy());
         assertEquals(1, calls.get());
-        assertTrue(status.storage().problems().getFirst().contains("volume indisponível"));
+        assertTrue(status.storage().problems().getFirst().contains("Falha ao verificar armazenamento"));
+        assertFalse(status.storage().problems().getFirst().contains("volume indisponível"));
+    }
+
+    @Test
+    void reportsOnlyMissingDirectoryWhenVolumeIsAbsent() {
+        var status = check(new StorageFacts(false, false, false, -1, null, null));
+        assertEquals(1, status.storage().problems().size());
+        assertTrue(status.storage().problems().getFirst().contains("inexistente"));
+    }
+
+    @Test
+    void reportsUnknownSpaceWithoutInsufficientSpaceMessage() {
+        var status = check(new StorageFacts(true, true, true, -1, null, "Falha ao medir espaço"));
+        assertEquals(1, status.storage().problems().size());
     }
 
     @Test

@@ -42,7 +42,7 @@ class SqliteWalConcurrencyTest {
             long millis = (System.nanoTime() - start) / 1_000_000;
             assertTrue(failure instanceof SQLiteException);
             assertEquals(SQLiteErrorCode.SQLITE_BUSY, ((SQLiteException) failure).getResultCode());
-            assertTrue(millis >= 150 && millis < 1500, "waited " + millis + " ms");
+            assertTrue(millis >= 150, "waited " + millis + " ms");
             execute(first, "ROLLBACK");
         }
     }

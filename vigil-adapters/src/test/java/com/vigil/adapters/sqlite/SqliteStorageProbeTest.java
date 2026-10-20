@@ -31,7 +31,16 @@ class SqliteStorageProbeTest {
     void reportsMissingDirectory() {
         var facts = new SqliteStorageProbe().inspect(directory.resolve("missing/vigil.db"));
         assertFalse(facts.directoryExists());
-        assertTrue(facts.failure().contains("missing"));
+        assertNull(facts.failure());
+        assertEquals(-1, facts.usableBytes());
+    }
+
+    @Test
+    void reportsUnknownSpaceWithoutClaimingItIsEmpty() {
+        var facts = new SqliteStorageProbe(path -> { throw new java.io.IOException("unavailable"); })
+                .inspect(directory.resolve("vigil.db"));
+        assertEquals(-1, facts.usableBytes());
+        assertTrue(facts.failure().contains("medir espaço"));
     }
 
     @Test
