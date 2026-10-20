@@ -76,7 +76,7 @@ public final class VigilCli {
             err.println("O caso foi alterado por outra operação. Tente novamente.");
             return 1;
         } catch (RuntimeException failure) {
-            err.println("Falha ao acessar o armazenamento SQLite. Verifique o volume e a integridade do banco.");
+            err.println("Falha ao acessar o armazenamento. Verifique o volume e a integridade do banco.");
             return 1;
         }
     }

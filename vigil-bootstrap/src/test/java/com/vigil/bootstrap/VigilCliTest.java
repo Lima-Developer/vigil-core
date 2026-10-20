@@ -207,7 +207,7 @@ class VigilCliTest {
         assertAll(
                 () -> assertEquals(1, result.exit()),
                 () -> assertEquals("", result.out()),
-                () -> assertEquals("Falha ao acessar o armazenamento SQLite. Verifique o volume e a integridade do banco."
+                () -> assertEquals("Falha ao acessar o armazenamento. Verifique o volume e a integridade do banco."
                         + System.lineSeparator(), result.err())
         );
     }
@@ -221,7 +221,7 @@ class VigilCliTest {
         assertAll(
                 () -> assertEquals(1, result.exit()),
                 () -> assertFalse(result.err().contains("not a database")),
-                () -> assertTrue(result.err().startsWith("Falha ao acessar o armazenamento SQLite."))
+                () -> assertTrue(result.err().startsWith("Falha ao acessar o armazenamento."))
         );
     }
 
