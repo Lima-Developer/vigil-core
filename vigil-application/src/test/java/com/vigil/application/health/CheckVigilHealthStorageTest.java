@@ -25,6 +25,7 @@ class CheckVigilHealthStorageTest {
                 Arguments.of(new StorageFacts(true, false, true, 256, null, null), "Diretório sem permissão"),
                 Arguments.of(new StorageFacts(true, true, false, 256, null, null), "Arquivo do banco"),
                 Arguments.of(new StorageFacts(true, true, true, 255, null, null), "Espaço insuficiente"),
+                Arguments.of(new StorageFacts(true, true, true, 0, null, null), "Espaço insuficiente"),
                 Arguments.of(new StorageFacts(true, true, true, 256, "corrupt", null), "Integridade"),
                 Arguments.of(new StorageFacts(true, true, true, 256, null, "falha de abertura"), "falha de abertura")
         );

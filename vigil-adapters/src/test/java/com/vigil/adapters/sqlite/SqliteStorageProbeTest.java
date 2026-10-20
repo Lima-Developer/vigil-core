@@ -36,6 +36,18 @@ class SqliteStorageProbeTest {
     }
 
     @Test
+    void reportsParentThatIsAFileAsAnActionableStorageFailure() throws Exception {
+        var parentFile = directory.resolve("not-a-directory");
+        Files.writeString(parentFile, "not a directory");
+
+        var facts = new SqliteStorageProbe().inspect(parentFile.resolve("vigil.db"));
+
+        assertFalse(facts.directoryExists());
+        assertNotNull(facts.failure());
+        assertTrue(facts.failure().contains(parentFile.toString()));
+    }
+
+    @Test
     void reportsUnknownSpaceWithoutClaimingItIsEmpty() {
         var facts = new SqliteStorageProbe(path -> { throw new java.io.IOException("unavailable"); })
                 .inspect(directory.resolve("vigil.db"));
