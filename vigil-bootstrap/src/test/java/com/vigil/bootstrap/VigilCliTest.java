@@ -81,8 +81,13 @@ class VigilCliTest {
 
         assertAll(
                 () -> assertEquals(0, child.exit(), child.err()),
-                () -> assertTrue(child.out().contains("case=" + caseId + " status=TRIAGED version=2"), child.out()),
-                () -> assertTrue(child.out().contains("event=QUERY_TRIAGED"))
+                () -> assertEquals(List.of(
+                        "case=" + caseId + " status=TRIAGED version=2",
+                        "history=DISCOVERED->TRIAGED reason=" + REASON,
+                        "event=ANALYSIS_CASE_DISCOVERED",
+                        "event=QUERY_TRIAGED"), lines(child.out())),
+                () -> assertEquals("", child.err()),
+                () -> assertNoSql(child.out() + child.err())
         );
     }
 
@@ -97,7 +102,7 @@ class VigilCliTest {
                 + run(Map.of("VIGIL_DATABASE_PATH", directory.resolve("missing/vigil.db").toString()),
                 "case", "discover").err();
 
-        assertFalse(Pattern.compile("(?i)select |insert |update |domain_event|sqlite_|jdbc").matcher(all).find(), all);
+        assertNoSql(all);
     }
 
     @Test
@@ -237,6 +242,36 @@ class VigilCliTest {
     }
 
     @Test
+    void shouldAllowDeletingDatabaseAndTemporaryDirectoryAfterSuccessAndFailure() throws IOException {
+        var env = env();
+        var database = directory.resolve("vigil.db");
+        var id = caseId(run(env, "case", "discover"));
+        run(env, "case", "triage", "--case", id, "--reason", REASON);
+        var failed = run(env, "case", "triage", "--case", id, "--reason", "segunda tentativa");
+        assertEquals(1, failed.exit());
+
+        Files.deleteIfExists(directory.resolve("vigil.db-wal"));
+        Files.deleteIfExists(directory.resolve("vigil.db-shm"));
+        Files.delete(database);
+        Files.delete(directory);
+
+        assertFalse(Files.exists(directory));
+    }
+
+    @Test
+    void shouldNotPrintSqlOrJdbcDetailsOnSuccessOrOperationalFailure() {
+        var env = env();
+        var id = caseId(run(env, "case", "discover"));
+        var success = run(env, "case", "show", "--case", id);
+        var missingCase = run(env, "case", "show", "--case", UUID.randomUUID().toString());
+        var corruptPath = run(Map.of("VIGIL_DATABASE_PATH", directory.resolve("not-created/child.db").toString()),
+                "case", "discover");
+
+        assertNoSql(success.out() + success.err() + missingCase.out() + missingCase.err()
+                + corruptPath.out() + corruptPath.err());
+    }
+
+    @Test
     void shouldKeepTheHealthCheckWhenNoArgumentsAreGiven() {
         var env = Map.of("VIGIL_DATABASE_PATH", directory.resolve("vigil.db").toString(),
                 "VIGIL_STORAGE_MIN_FREE_BYTES", "1", "VIGIL_TARGET_NAME", "target", "VIGIL_ENVIRONMENT", "test");
@@ -258,6 +293,11 @@ class VigilCliTest {
 
     private static List<String> lines(String text) {
         return text.lines().toList();
+    }
+
+    private static void assertNoSql(String text) {
+        assertFalse(Pattern.compile("(?i)\\b(select|insert|update|create\\s+table|sqlite|SQLException)\\b")
+                .matcher(text).find(), text);
     }
 
     private static Result run(Map<String, String> env, String... args) {
