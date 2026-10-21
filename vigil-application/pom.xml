@@ -40,6 +40,7 @@
                         <param>com.vigil.application.health.*</param>
                         <param>com.vigil.application.configuration.*</param>
                         <param>com.vigil.application.target.*</param>
+                        <param>com.vigil.application.preflight.*</param>
                     </targetClasses>
                     <targetTests>
                         <param>health.*</param>
@@ -48,6 +49,7 @@
                         <param>com.vigil.application.configuration.*</param>
                         <param>target.*</param>
                         <param>com.vigil.application.target.*</param>
+                        <param>com.vigil.application.preflight.*</param>
                     </targetTests>
                 </configuration>
             </plugin>
