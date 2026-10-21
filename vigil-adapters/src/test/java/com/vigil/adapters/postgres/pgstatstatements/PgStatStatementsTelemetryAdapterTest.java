@@ -100,7 +100,10 @@ class PgStatStatementsTelemetryAdapterTest {
         String projection = sql.substring("SELECT ".length(), sql.indexOf(" FROM "));
         assertFalse(Pattern.compile("\\bquery\\b").matcher(projection).find(), projection);
         assertFalse(projection.contains("*"));
+        assertTrue(sql.contains("dbid = (SELECT oid FROM pg_database WHERE datname = current_database())"));
         assertTrue(sql.contains("query IS NOT NULL"));
+        assertTrue(sql.contains("ltrim(query) ~* '^(select|with)\\y'"));
+        assertTrue(sql.contains("query NOT ILIKE '%pg_stat_statements%'"));
         assertFalse(sql.toLowerCase().contains("reset("));
         assertFalse(PgStatStatementsTelemetryAdapter.INFO_SQL.toLowerCase().contains("reset("));
     }
