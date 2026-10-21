@@ -131,6 +131,19 @@ class SchemaBlueprintAssemblerTest {
     }
 
     @Test
+    void indexKeyCountCannotReadPastCatalogAttnums() {
+        var snapshot = new CatalogSnapshot(
+                List.of(new RelationRow(10, "s", "t", "r", 1, 1)),
+                List.of(new ColumnRow(10, 1, "a", "integer", true)), List.of(),
+                List.of(new IndexRow(10, 100, "i", "btree", false, false, false, true, 2, List.of(1))));
+
+        var keys = SchemaBlueprintAssembler.assemble(snapshot, PSEUDONYMS, NOW, 1)
+                .relations().getFirst().indexes().getFirst().keys();
+
+        assertEquals(List.of(IndexKey.ofColumn(PSEUDONYMS.column("s", "t", "a"))), keys);
+    }
+
+    @Test
     void sameIndexCatalogIdentityAppearsOnce() {
         var row = new IndexRow(10, 100, "i", "btree", false, false, true, false, 1, List.of(1));
         var snapshot = new CatalogSnapshot(
@@ -183,14 +196,15 @@ class SchemaBlueprintAssemblerTest {
     @Test
     void outputNeverContainsOriginalNames() {
         var snapshot = new CatalogSnapshot(
-                List.of(new RelationRow(10, SCHEMA, TABLE, "r", 1, 1)),
-                List.of(new ColumnRow(10, 1, "cpf_secret", "text", true)),
+                List.of(new RelationRow(10, "schema secreto", "clientes com espaço", "r", 1, 1)),
+                List.of(new ColumnRow(10, 1, "cpf_cliente salario", "text", true)),
                 List.of(new ConstraintRow(10, "u", List.of(1))),
-                List.of(new IndexRow(10, 100, "idx_secret", "btree", false, false, true, true, 1, List.of(1))));
+                List.of(new IndexRow(10, 100, "idx sensível", "btree", false, false, true, true, 1, List.of(1))));
 
         String rendered = SchemaBlueprintAssembler.assemble(snapshot, PSEUDONYMS, NOW, 1).toString();
 
-        for (String original : List.of("payroll", "salaries", "cpf_secret", "idx_secret", "secret")) {
+        for (String original : List.of("schema secreto", "clientes com espaço", "cpf_cliente salario",
+                "idx sensível")) {
             assertFalse(rendered.contains(original), original);
         }
         assertEquals("RelationRow[redacted]", snapshot.relations().getFirst().toString());

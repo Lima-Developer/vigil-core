@@ -40,6 +40,8 @@ class PseudonymizerTest {
     @Test
     void kindIsPartOfThePseudonymAndFieldBoundariesAreUnambiguous() {
         assertNotEquals(pseudonyms.schema("app").value().substring(7), pseudonyms.relation("app", "x").value().substring(9));
+        assertNotEquals(pseudonyms.relation("app", "same").value().substring(9),
+                pseudonyms.index("app", "same").value().substring(6));
         assertNotEquals(pseudonyms.relation("ab", "c"), pseudonyms.relation("a", "bc"));
         assertNotEquals(pseudonyms.column("a", "b", "c"), pseudonyms.column("a", "bc", ""));
     }

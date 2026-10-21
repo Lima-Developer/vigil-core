@@ -34,6 +34,7 @@ class PostgresSchemaCatalogCollectorTest {
 
     private final List<String> calls = new ArrayList<>();
     private final List<Object> arrays = new ArrayList<>();
+    private final List<Integer> boundArrays = new ArrayList<>();
     private SQLException failure;
 
     @Test
@@ -69,6 +70,7 @@ class PostgresSchemaCatalogCollectorTest {
             assertEquals(List.of(10L), Arrays.asList((Object[]) arrays.get(index)));
         }
         assertEquals(5, arrays.size());
+        assertEquals(List.of(1, 2, 1, 1, 1), boundArrays);
     }
 
     @Test
@@ -115,7 +117,7 @@ class PostgresSchemaCatalogCollectorTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"08006", "57014", "XX000", "42P01"})
+    @ValueSource(strings = {"08001", "08006", "57014", "XX000", "42P01"})
     void otherFailuresKeepOnlyTheSqlStateAndNeverTheDriverMessage(String sqlState) {
         failure = new SQLException("relation payroll_secret.salaries_secret broke", sqlState,
                 new RuntimeException("cause payroll_secret"));
@@ -217,7 +219,11 @@ class PostgresSchemaCatalogCollectorTest {
         return (PreparedStatement) Proxy.newProxyInstance(getClass().getClassLoader(),
                 new Class<?>[]{PreparedStatement.class}, (proxy, method, args) -> switch (method.getName()) {
                     case "setQueryTimeout" -> record("timeout=" + args[0]);
-                    case "setArray", "close" -> null;
+                    case "setArray" -> {
+                        boundArrays.add((int) args[0]);
+                        yield null;
+                    }
+                    case "close" -> null;
                     case "executeQuery" -> {
                         calls.add("query");
                         yield resultSet(rows);
