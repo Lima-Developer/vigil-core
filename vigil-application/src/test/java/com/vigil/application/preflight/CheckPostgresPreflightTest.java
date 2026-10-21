@@ -34,7 +34,11 @@ class CheckPostgresPreflightTest {
         assertEquals(NOW, report.checkedAt());
         assertEquals(140000, report.serverVersionNum());
         assertEquals("vigil", report.databaseName());
-        assertEquals(List.of(CapabilityCode.values()), report.capabilities().stream().map(CapabilityResult::code).toList());
+        assertEquals(List.of(CapabilityCode.CONNECTION, CapabilityCode.SERVER_VERSION,
+                CapabilityCode.PG_STAT_STATEMENTS_AVAILABLE, CapabilityCode.PG_STAT_STATEMENTS_INSTALLED,
+                CapabilityCode.PG_STAT_STATEMENTS_PRELOADED, CapabilityCode.STATS_READABLE,
+                CapabilityCode.COMPUTE_QUERY_ID, CapabilityCode.TRACK_IO_TIMING),
+                report.capabilities().stream().map(CapabilityResult::code).toList());
     }
 
     @ParameterizedTest

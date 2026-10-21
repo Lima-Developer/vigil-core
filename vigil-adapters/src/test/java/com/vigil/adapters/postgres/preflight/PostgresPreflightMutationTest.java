@@ -2,11 +2,13 @@ package com.vigil.adapters.postgres.preflight;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +16,39 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
 class PostgresPreflightMutationTest {
+    @Test
+    void permissionSqlStateIsClassifiedAndConnectionClosed() {
+        assertFailureCategory("42501", com.vigil.application.preflight.CapabilityCode.STATS_READABLE);
+    }
+
+    @Test
+    void otherSqlFailureIsClassifiedAsConnectionAndConnectionClosed() {
+        assertFailureCategory("08006", com.vigil.application.preflight.CapabilityCode.CONNECTION);
+    }
+
+    private void assertFailureCategory(String sqlState, com.vigil.application.preflight.CapabilityCode expected) {
+        var closed = new AtomicBoolean();
+        Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[] {Connection.class}, (proxy, method, args) -> {
+                    if (method.getName().equals("close")) { closed.set(true); return null; }
+                    if (method.getName().equals("createStatement")) {
+                        return Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] {Statement.class},
+                                (statement, statementMethod, statementArgs) -> {
+                                    if (statementMethod.getName().equals("executeQuery"))
+                                        throw new SQLException("private detail", sqlState);
+                                    if (statementMethod.getName().equals("close") || statementMethod.getName().equals("setQueryTimeout")) return null;
+                                    throw new UnsupportedOperationException(statementMethod.getName());
+                                });
+                    }
+                    throw new UnsupportedOperationException(method.getName());
+                });
+        var failure = assertThrows(com.vigil.application.preflight.PreflightProbeException.class,
+                () -> new JdbcPostgresCapabilityProbe(() -> connection).inspect());
+        assertEquals(expected, failure.code());
+        assertTrue(closed.get());
+        assertTrue(failure.getMessage().contains("Falha na inspeção"));
+    }
+
     @Test
     void readsOnlyAllowedMetadataWithTimeoutAndClosesConnection() {
         var sql = new ArrayList<String>();
