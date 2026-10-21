@@ -101,3 +101,27 @@ pode ser zerada. Nenhuma propriedade nem URL é logada.
 - Mutação: `com.vigil.adapters.postgres.Postgres*` (o pacote `lab` fica de fora). Settings e classificador sem
   sobreviventes. Sobreviventes justificados: o `Thread.sleep` do `Sleeper` padrão (sem cobertura unitária; as ITs
   injetam o sleeper) e dois `Arrays.fill` de buffers internos em `PostgresPasswordSource` (efeito não observável).
+
+## 7. Metadados de schema (VIG-035)
+
+- **Código:** `com.vigil.adapters.postgres.schema`. A fachada pública é `PostgresSchemaCatalogCollector`; o restante é
+  package-private. O contrato de domínio (`SchemaBlueprint`, `RelationType`, ...) não conhece JDBC.
+- **Entrada:** `RelationSelector(schema, nome)` reais, só dentro da fronteira confiável (`toString` não os imprime).
+  Somente relações pedidas e dos tipos `r`, `m`, `p`, `f` são coletadas.
+- **SQL:** quatro consultas constantes e parametrizadas, só em `pg_class`, `pg_namespace`, `pg_attribute`, `pg_type`
+  (`format_type`), `pg_constraint`, `pg_index` e `pg_am`. Não há `COUNT(*)`, `SELECT` em tabela do usuário nem DDL; o
+  papel do laboratório (sem grant em tabela) basta. As consultas rodam em uma transação `REPEATABLE READ`
+  somente leitura, com timeout de 10 s, e sofrem rollback.
+- **Privacidade:** `indpred`, `pg_get_indexdef` e `pg_get_constraintdef` nunca são consultados; o predicado vira
+  `partial`. Tipos fora de `pg_catalog` viram `user_defined`. Exceções carregam apenas o SQLSTATE.
+- **Pseudônimos:** HMAC-SHA256 com sal de 32 bytes sorteado por coleta (injetável), formato `relation_<hex32>` para a
+  relação (`SafeRelationReference`) e `schema_`/`column_`/`index_<hex32>` (`SafeCatalogReference`) para o restante.
+- **Índices:** identidade por `indexrelid`. O índice que o PostgreSQL cria em cada partição é uma entrada própria do
+  catálogo e aparece uma vez na relação a que pertence.
+- **Falhas:** `42501` vira blueprint explicitamente incompleto (`CATALOG_PRIVILEGE_DENIED`) com source e instante;
+  relação pedida que não retorna vira `RELATION_NOT_VISIBLE`. Qualquer outro `SQLException` é
+  `SchemaCollectionException` (sem mensagem nem causa do driver).
+- **Limites:** `reltuples`/`relpages` são estimativas; foreign tables são descritas, nunca lidas. Persistência: o
+  `RelationMetadataEvidencePayload` e o `EvidencePayloadCodec` não mudaram; o blueprint ainda não é persistido.
+- **Testes:** unitários sem Docker (pseudonimização, SQL, montagem, leitura JDBC roteirizada) e
+  `PostgresSchemaCatalogCollectorIT` com `schema-catalog-fixture.sql` (PG 14–17 via `-Dvigil.postgres.image`).

@@ -70,6 +70,26 @@ Exemplos:
 - índices existentes;
 - estatísticas disponíveis.
 
+### RelationType
+
+Tipo da Relation: `TABLE`, `MATERIALIZED_VIEW`, `PARTITIONED_TABLE` ou `FOREIGN_TABLE` (`relkind` `r`, `m`, `p`, `f`).
+Views comuns e demais `relkind` não são coletados.
+
+### SchemaBlueprint
+
+Parte relevante do schema do target para um caso, coletada somente dos catálogos em um instante e com uma source
+(`POSTGRESQL_CATALOG`): relações, colunas (tipo SQL e nulabilidade), constraints (tipo e colunas) e índices (método,
+chaves, `unique`, `primary`, `partial`, `valid`).
+
+- Todo nome de schema, relação, coluna e índice é um pseudônimo (HMAC com sal por coleta), estável apenas dentro do
+  blueprint. Nomes de tipos fora de `pg_catalog` saem como `user_defined`.
+- `reltuples` e `relpages` são **estimativas do planner**, nunca contagem exata; `reltuples = -1` (nunca analisada) é
+  desconhecido, não zero.
+- O texto do predicado de um índice parcial, a definição do índice e a expressão de um CHECK não são carregados: um
+  índice parcial só é marcado `partial`, e uma chave por expressão é só uma chave sem coluna.
+- Um blueprint com `incompleteness` não vazia (`CATALOG_PRIVILEGE_DENIED`, `RELATION_NOT_VISIBLE`) é explicitamente
+  incompleto e não significa "não existe".
+
 ### RawSql
 
 Texto original da consulta obtido dentro da fronteira confiável do target.
