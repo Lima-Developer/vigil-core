@@ -71,7 +71,8 @@ Usuário, senha e URL JDBC vêm de `getUsername`, `getPassword` e `getJdbcUrl` d
 
 O `EXPLAIN` usa as formas com literais (`customer_id = 1`, `status = 'PENDING'`), para evitar planos genéricos de
 prepared statement. Em `pg_stat_statements` as entradas são localizadas pelo **texto normalizado** (`$1`), não por
-`queryid`, e devem ter `calls >= 50`.
+`queryid`, e devem ter `calls >= 50`. A leitura desses contadores em produção está descrita em
+[postgres-coleta-pg-stat-statements.md](postgres-coleta-pg-stat-statements.md).
 
 ## 6. Plano esperado e tolerância
 
