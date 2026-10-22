@@ -17,7 +17,7 @@ public class Main {
     private static final String APPLICATION_VERSION = "0.1.0-SNAPSHOT";
 
     public static void main(String[] args) {
-        System.exit(run(System.getenv(), System.out, System.err));
+        System.exit(VigilCli.run(args, System.getenv(), System.out, System.err));
     }
 
     static int run(Map<String, String> environmentVariables, PrintStream output, PrintStream errors) {

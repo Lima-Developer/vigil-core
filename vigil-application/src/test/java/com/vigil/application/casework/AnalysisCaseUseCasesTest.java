@@ -7,6 +7,8 @@ import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
 import com.vigil.application.port.out.interfaces.Clock;
 import com.vigil.application.port.out.interfaces.IdGenerator;
 import com.vigil.core.domain.AnalysisCase;
+import com.vigil.core.domain.AnalysisCaseDiscovered;
+import com.vigil.core.domain.QueryTriaged;
 import com.vigil.core.domain.ObservationWindow;
 import com.vigil.core.domain.ObservedQuery;
 import com.vigil.core.domain.ObservedQueryMetrics;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,12 +35,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AnalysisCaseUseCasesTest {
     private static final Instant NOW = Instant.parse("2026-09-28T12:00:00Z");
     private static final UUID NEW_CASE_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    private static final UUID EVENT_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
     private static final UUID EXISTING_CASE_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
     @Test
     void shouldCreateAndPersistACaseForTheObservedQuery() {
         var repository = new FakeAnalysisCaseRepository();
-        var idGenerator = new FixedIdGenerator(NEW_CASE_ID);
+        var idGenerator = new FixedIdGenerator(NEW_CASE_ID, EVENT_ID);
         var useCase = new DiscoverObservedQueryUseCase(repository, fixedClock(), idGenerator);
 
         var result = useCase.execute(discoveryCommand("observation-1"));
@@ -48,14 +52,17 @@ class AnalysisCaseUseCasesTest {
                 () -> assertTrue(result.created()),
                 () -> assertEquals(NOW, savedCase.createdAt()),
                 () -> assertEquals(observedQuery().fingerprint(), savedCase.queryFingerprint().orElseThrow()),
-                () -> assertEquals(1, idGenerator.calls())
+                () -> assertEquals(2, idGenerator.calls()),
+                () -> assertEquals(
+                        List.of(new AnalysisCaseDiscovered(EVENT_ID, NEW_CASE_ID, "vigil-system", NOW, "1")),
+                        savedCase.pendingEvents())
         );
     }
 
     @Test
     void shouldReturnTheExistingCaseWhenDiscoveryIsRetriedWithTheSameKey() {
         var repository = new FakeAnalysisCaseRepository();
-        var idGenerator = new FixedIdGenerator(NEW_CASE_ID);
+        var idGenerator = new FixedIdGenerator(NEW_CASE_ID, EVENT_ID);
         var useCase = new DiscoverObservedQueryUseCase(repository, fixedClock(), idGenerator);
 
         var first = useCase.execute(discoveryCommand("observation-1"));
@@ -66,7 +73,7 @@ class AnalysisCaseUseCasesTest {
                 () -> assertEquals(first.caseId(), retry.caseId()),
                 () -> assertFalse(retry.created()),
                 () -> assertEquals(1, repository.discoveredSaves()),
-                () -> assertEquals(1, idGenerator.calls())
+                () -> assertEquals(2, idGenerator.calls())
         );
     }
 
@@ -75,7 +82,7 @@ class AnalysisCaseUseCasesTest {
         var repository = new FakeAnalysisCaseRepository();
         var winner = AnalysisCase.discover(EXISTING_CASE_ID, NOW);
         repository.failNextDiscoveryWithWinner("observation-1", winner);
-        var useCase = new DiscoverObservedQueryUseCase(repository, fixedClock(), new FixedIdGenerator(NEW_CASE_ID));
+        var useCase = new DiscoverObservedQueryUseCase(repository, fixedClock(), new FixedIdGenerator(NEW_CASE_ID, EVENT_ID));
 
         var result = useCase.execute(discoveryCommand("observation-1"));
 
@@ -90,7 +97,7 @@ class AnalysisCaseUseCasesTest {
     void shouldPropagateAConflictWhenNoConcurrentWinnerCanBeRead() {
         var repository = new FakeAnalysisCaseRepository();
         repository.failNextDiscoveryWithoutWinner();
-        var useCase = new DiscoverObservedQueryUseCase(repository, fixedClock(), new FixedIdGenerator(NEW_CASE_ID));
+        var useCase = new DiscoverObservedQueryUseCase(repository, fixedClock(), new FixedIdGenerator(NEW_CASE_ID, EVENT_ID));
 
         assertThrows(ConcurrentCaseUpdate.class, () -> useCase.execute(discoveryCommand("observation-1")));
     }
@@ -100,21 +107,24 @@ class AnalysisCaseUseCasesTest {
         var repository = new FakeAnalysisCaseRepository();
         var analysisCase = AnalysisCase.discover(NEW_CASE_ID, NOW);
         repository.save(analysisCase);
-        var useCase = new TriageAnalysisCaseUseCase(repository, fixedClock());
+        var useCase = new TriageAnalysisCaseUseCase(repository, fixedClock(), new FixedIdGenerator(EVENT_ID));
 
         useCase.execute(new TriageAnalysisCaseCommand(NEW_CASE_ID, "Impacto alto.", "operator"));
 
         assertAll(
                 () -> assertEquals(CaseStatus.TRIAGED, analysisCase.status()),
                 () -> assertEquals(2, repository.saves()),
-                () -> assertEquals(NOW, analysisCase.events().getFirst().occuredAt())
+                () -> assertEquals(NOW, analysisCase.events().getFirst().occuredAt()),
+                () -> assertEquals(
+                        List.of(new QueryTriaged(EVENT_ID, NEW_CASE_ID, "operator", NOW, "1")),
+                        analysisCase.pendingEvents())
         );
     }
 
     @Test
     void shouldExposeNotFoundWhenTriagingAnUnknownCase() {
         var repository = new FakeAnalysisCaseRepository();
-        var useCase = new TriageAnalysisCaseUseCase(repository, fixedClock());
+        var useCase = new TriageAnalysisCaseUseCase(repository, fixedClock(), new FixedIdGenerator(EVENT_ID));
 
         assertThrows(
                 CaseNotFound.class,
@@ -129,7 +139,7 @@ class AnalysisCaseUseCasesTest {
         var analysisCase = AnalysisCase.discover(NEW_CASE_ID, NOW);
         analysisCase.triage("Already triaged.", "operator", NOW);
         repository.save(analysisCase);
-        var useCase = new TriageAnalysisCaseUseCase(repository, fixedClock());
+        var useCase = new TriageAnalysisCaseUseCase(repository, fixedClock(), new FixedIdGenerator(EVENT_ID));
 
         var exception = assertThrows(
                 InvalidAnalysisCaseTransition.class,
@@ -164,17 +174,16 @@ class AnalysisCaseUseCasesTest {
     }
 
     private static final class FixedIdGenerator implements IdGenerator {
-        private final UUID id;
+        private final UUID[] ids;
         private int calls;
 
-        private FixedIdGenerator(UUID id) {
-            this.id = id;
+        private FixedIdGenerator(UUID... ids) {
+            this.ids = ids;
         }
 
         @Override
         public UUID nextId() {
-            calls++;
-            return id;
+            return ids[calls++];
         }
 
         private int calls() {

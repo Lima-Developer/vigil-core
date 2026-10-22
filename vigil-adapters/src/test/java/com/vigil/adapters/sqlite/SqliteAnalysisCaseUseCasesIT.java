@@ -9,6 +9,7 @@ import com.vigil.application.exception.CaseNotFound;
 import com.vigil.application.exception.ConcurrentCaseUpdate;
 import com.vigil.application.exception.InvalidAnalysisCaseTransition;
 import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
+import com.vigil.application.port.out.interfaces.AuditedEvent;
 import com.vigil.core.domain.AnalysisCase;
 import com.vigil.core.domain.ObservationWindow;
 import com.vigil.core.domain.ObservedQuery;
@@ -25,6 +26,7 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,15 +41,18 @@ class SqliteAnalysisCaseUseCasesIT {
     private static final Instant NOW = Instant.parse("2026-09-28T12:00:00Z");
     private static final UUID FIRST_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
     private static final UUID SECOND_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
+    private static final UUID THIRD_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
+    private static final UUID FOURTH_ID = UUID.fromString("44444444-4444-4444-4444-444444444444");
 
     @TempDir
     Path directory;
 
+    private SqliteConnectionFactory factory;
     private SqliteAnalysisCaseRepository repository;
 
     @BeforeEach
     void migrate() throws SQLException {
-        var factory = new SqliteConnectionFactory(directory.resolve("vigil.db"));
+        factory = new SqliteConnectionFactory(directory.resolve("vigil.db"));
         try (var connection = factory.open()) {
             new SqlMigrationRunner(() -> NOW).migrate(connection);
         }
@@ -57,14 +62,18 @@ class SqliteAnalysisCaseUseCasesIT {
     @Test
     void shouldDiscoverOncePerKeyAndTriageAgainstTheRealAdapter() {
         var discover = new DiscoverObservedQueryUseCase(repository, () -> NOW, ids(FIRST_ID, SECOND_ID));
-        var triage = new TriageAnalysisCaseUseCase(repository, () -> NOW.plusSeconds(5));
+        var triage = new TriageAnalysisCaseUseCase(repository, () -> NOW.plusSeconds(5), ids(THIRD_ID, FOURTH_ID));
 
         var first = discover.execute(command("observation-1"));
         var retry = discover.execute(command("observation-1"));
         triage.execute(new TriageAnalysisCaseCommand(first.caseId(), "Slow query.", "vigil-core"));
 
         var stored = repository.getById(FIRST_ID);
+        var audit = new SqliteAnalysisCaseAuditReader(factory).eventsOf(FIRST_ID);
         assertAll(
+                () -> assertEquals(List.of(
+                        new AuditedEvent("ANALYSIS_CASE_DISCOVERED", "vigil-system", NOW, "1"),
+                        new AuditedEvent("QUERY_TRIAGED", "vigil-core", NOW.plusSeconds(5), "1")), audit),
                 () -> assertTrue(first.created()),
                 () -> assertFalse(retry.created()),
                 () -> assertEquals(FIRST_ID, retry.caseId()),
@@ -79,7 +88,7 @@ class SqliteAnalysisCaseUseCasesIT {
     @Test
     void shouldReturnTheWinnerWhenDiscoveryConflictsAfterTheLookup() {
         var racing = new RacingRepository(repository);
-        var discover = new DiscoverObservedQueryUseCase(racing, () -> NOW, ids(SECOND_ID));
+        var discover = new DiscoverObservedQueryUseCase(racing, () -> NOW, ids(SECOND_ID, THIRD_ID));
 
         var result = discover.execute(command("observation-1"));
 
@@ -92,7 +101,7 @@ class SqliteAnalysisCaseUseCasesIT {
 
     @Test
     void shouldPropagateCaseNotFoundFromTriage() {
-        var triage = new TriageAnalysisCaseUseCase(repository, () -> NOW);
+        var triage = new TriageAnalysisCaseUseCase(repository, () -> NOW, ids(THIRD_ID));
 
         assertThrows(CaseNotFound.class,
                 () -> triage.execute(new TriageAnalysisCaseCommand(FIRST_ID, "Reason.", "vigil-core")));
