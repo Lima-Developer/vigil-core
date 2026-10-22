@@ -74,10 +74,12 @@
                     <targetClasses>
                         <param>com.vigil.adapters.sqlite.*</param>
                         <param>com.vigil.adapters.postgres.Postgres*</param>
+                        <param>com.vigil.adapters.postgres.preflight.*</param>
                     </targetClasses>
                     <targetTests>
                         <param>com.vigil.adapters.sqlite.*</param>
                         <param>com.vigil.adapters.postgres.Postgres*Test</param>
+                        <param>com.vigil.adapters.postgres.preflight.*</param>
                     </targetTests>
                 </configuration>
             </plugin>

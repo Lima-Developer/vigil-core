@@ -40,6 +40,14 @@ public final class PostgresLaboratory {
         return newContainer(IMAGE);
     }
 
+    static PostgreSQLContainer<?> newContainerWithFlags(String... extraFlags) {
+        String[] command = new String[5 + extraFlags.length];
+        System.arraycopy(new String[] {"postgres", "-c", "shared_preload_libraries=pg_stat_statements",
+                "-c", "pg_stat_statements.track=all"}, 0, command, 0, 5);
+        System.arraycopy(extraFlags, 0, command, 5, extraFlags.length);
+        return new PostgreSQLContainer<>(IMAGE).withCommand(command);
+    }
+
     /** Same laboratory settings on another PostgreSQL image, for the version matrix of the integration tests. */
     public static PostgreSQLContainer<?> newContainer(String image) {
         return new PostgreSQLContainer<>(image).withCommand(
