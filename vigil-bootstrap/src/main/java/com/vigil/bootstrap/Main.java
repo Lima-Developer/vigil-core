@@ -3,6 +3,7 @@ package com.vigil.bootstrap;
 import com.vigil.adapters.SystemClockAdapter;
 import com.vigil.adapters.sqlite.SqliteStorageProbe;
 import com.vigil.application.configuration.StorageConfiguration;
+import com.vigil.application.configuration.TargetProfile;
 import com.vigil.application.configuration.VigilConfiguration;
 import com.vigil.application.health.CheckVigilHealth;
 import com.vigil.application.health.HealthStatus;
@@ -25,8 +26,8 @@ public class Main {
         final VigilConfiguration vigilConfiguration;
         try {
             storageConfiguration = storageConfiguration(environmentVariables);
-            vigilConfiguration = new VigilConfiguration(environmentVariables.get("VIGIL_TARGET_NAME"),
-                    environmentVariables.get("VIGIL_ENVIRONMENT"));
+            TargetProfile targetProfile = TargetProfileLoader.load(environmentVariables);
+            vigilConfiguration = new VigilConfiguration(targetProfile.name(), targetProfile.environment());
         } catch (RuntimeException exception) {
             errors.println("Falha na configuração do Vigil: " + exception.getMessage());
             return 2;

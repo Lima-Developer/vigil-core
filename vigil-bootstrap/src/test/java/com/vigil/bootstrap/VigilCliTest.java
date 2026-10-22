@@ -274,7 +274,8 @@ class VigilCliTest {
     @Test
     void shouldKeepTheHealthCheckWhenNoArgumentsAreGiven() {
         var env = Map.of("VIGIL_DATABASE_PATH", directory.resolve("vigil.db").toString(),
-                "VIGIL_STORAGE_MIN_FREE_BYTES", "1", "VIGIL_TARGET_NAME", "target", "VIGIL_ENVIRONMENT", "test");
+                "VIGIL_STORAGE_MIN_FREE_BYTES", "1", "VIGIL_TARGET_NAME", "target", "VIGIL_ENVIRONMENT", "test",
+                "VIGIL_TARGET_HOST", "localhost", "VIGIL_TARGET_DATABASE", "lab");
 
         var result = run(env);
 
