@@ -135,6 +135,21 @@ class EvidenceTest {
         assertEquals("ProtectedEvidenceReference[redacted]", reference.toString());
     }
 
+    @Test
+    void shouldExposeOpaqueIdentifierExplicitlyWithValueEqualityAndRedactedText() {
+        var reference = new ProtectedEvidenceReference("vault://evidence/plan-42");
+        var same = new ProtectedEvidenceReference("vault://evidence/plan-42");
+
+        assertAll(
+                () -> assertEquals("vault://evidence/plan-42", reference.opaqueIdentifier()),
+                () -> assertEquals(same, reference),
+                () -> assertEquals(same.hashCode(), reference.hashCode()),
+                () -> assertNotEquals(new ProtectedEvidenceReference("other"), reference),
+                () -> assertNotEquals(null, reference),
+                () -> assertFalse(reference.toString().contains("plan-42"))
+        );
+    }
+
     private Evidence metricEvidence() {
         return evidenceWith(EvidenceSource.PG_STAT_STATEMENTS, CAPTURED_AT);
     }

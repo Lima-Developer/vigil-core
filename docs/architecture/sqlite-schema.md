@@ -1,6 +1,6 @@
 # Schema SQLite e migrations
 
-- **Card:** VIG-022
+- **Cards:** VIG-022 (schema base), VIG-023 (evidências, eventos de domínio e repositório)
 - **Módulo:** `vigil-adapters`, pacote `com.vigil.adapters.sqlite` (ADR-003 — não há módulo `vigil-adapter-sqlite`)
 - **Decisões relacionadas:** ADR-002 (SQLite local em WAL), ADR-003 (monólito modular hexagonal)
 
@@ -14,11 +14,13 @@ para `AnalysisCase`, como os tipos Java são representados em SQLite e como o sc
 | `AnalysisCase.caseId()` (`UUID`) | `analysis_case.case_id` | Chave primária textual. |
 | `AnalysisCase.createdAt()` (`Instant`) | `analysis_case.created_at` | Formato canônico da seção 3. |
 | `AnalysisCase.status()` (`CaseStatus`) | `analysis_case.status` | `DISCOVERED`, `TRIAGED` ou `EVIDENCE_COLLECTED`. |
-| — | `analysis_case.version` | Revisão persistente para controle otimista (seção 4). Não existe no agregado atual. |
+| `AnalysisCase.version()` | `analysis_case.version` | Revisão persistente para controle otimista (seção 4). |
 | `QueryFingerprint.value()` | `analysis_case.query_fingerprint` | Opcional; presente somente junto com a versão do algoritmo. |
 | `QueryFingerprint.algorithmVersion()` | `analysis_case.fingerprint_algorithm_version` | String; ausente ou preenchida junto com o fingerprint. |
 | chave de `saveDiscovered(caso, idempotencyKey)` | `analysis_case.discovery_idempotency_key` | Opcional e `UNIQUE`; ausente para casos gravados por `save`. |
 | `AnalysisCase.events()` (`List<CaseEvent>`) | `case_event` | Uma linha por transição, na ordem da lista. |
+| `AnalysisCase.evidences()` (`List<Evidence>`) | `evidence` | Uma linha por evidência, payload seguro em texto (V002). |
+| `DomainEvent` pendentes | `domain_event` | Gravados na mesma transação do caso (V002). |
 
 ### 1.1 Fingerprint não identifica caso
 
@@ -50,16 +52,16 @@ podem ter `discovery_idempotency_key` nula. Somente uma chave de descoberta pres
 
 ### 1.3 O que fica de fora
 
-- `Evidence` e seus payloads: as três tabelas não permitem reidratar evidências. Persistência completa do agregado é
-  trabalho posterior explícito.
-- Reidratação de `AnalysisCase`: o agregado não expõe fábrica de reconstrução nem revisão. Definir essa API e o
-  controle de concorrência do repositório são dependências do futuro adapter de `AnalysisCaseRepository`.
+- Conteúdo de artefatos protegidos: `evidence.protected_reference` guarda somente o identificador opaco.
 - Telemetria, baselines, diagnósticos e estados futuros da máquina de estados.
+
+O contrato de mapeamento, versão e atomicidade do repositório está em
+[analysis-case-persistence.md](analysis-case-persistence.md).
 
 ## 2. Schema
 
-Scripts: `vigil-adapters/src/main/resources/db/migration/V000__create_schema_version.sql` e
-`V001__create_case_schema.sql`.
+Scripts: `vigil-adapters/src/main/resources/db/migration/V000__create_schema_version.sql`,
+`V001__create_case_schema.sql` e `V002__create_evidence_and_domain_event_schema.sql`.
 
 ### 2.1 `analysis_case`
 
@@ -93,7 +95,32 @@ verificam `typeof(...) = 'integer'`.
 imediatamente, por gatilho interno (código `SQLITE_CONSTRAINT_TRIGGER`, mensagem `FOREIGN KEY constraint failed`).
 A máquina de estados continua sendo responsabilidade do domínio; o schema valida apenas que os estados existem.
 
-### 2.3 `schema_version`
+### 2.3 `evidence` e `domain_event` (V002)
+
+| `evidence` | Regras |
+|---|---|
+| `evidence_id` | `TEXT PRIMARY KEY`, texto não vazio |
+| `case_id` | `REFERENCES analysis_case (case_id) ON DELETE RESTRICT` |
+| `sequence` | inteiro `> 0`; `UNIQUE (case_id, sequence)` preserva a ordem de anexação |
+| `type`, `source`, `confidence` | códigos conhecidos (`CHECK ... IN`) |
+| `captured_at` | formato de instante |
+| `collector_version` | texto não vazio |
+| `payload` | texto não vazio, formato `nome=valor;...` por tipo (ver analysis-case-persistence.md) |
+| `protected_reference` | nulo ou identificador opaco não vazio |
+
+| `domain_event` | Regras |
+|---|---|
+| `event_id` | `TEXT PRIMARY KEY`, texto não vazio |
+| `case_id` | `REFERENCES analysis_case (case_id) ON DELETE RESTRICT` |
+| `sequence` | inteiro `> 0`; `UNIQUE (case_id, sequence)` |
+| `event_type` | `ANALYSIS_CASE_DISCOVERED`, `QUERY_TRIAGED` ou `EVIDENCE_COLLECTED` |
+| `actor`, `event_version` | texto não vazio (`event_version` é a versão do evento, não a revisão do caso) |
+| `occurred_at` | formato de instante |
+| `evidence_id` | `REFERENCES evidence (evidence_id) ON DELETE RESTRICT`; preenchido se e somente se `EVIDENCE_COLLECTED` |
+
+Índices adicionais: `idx_evidence_captured_at` e `idx_domain_event_occurred_at`.
+
+### 2.4 `schema_version`
 
 | Coluna | Tipo | Regras |
 |---|---|---|
@@ -102,7 +129,7 @@ A máquina de estados continua sendo responsabilidade do domínio; o schema vali
 | `checksum` | `TEXT NOT NULL` | SHA-256 em 64 caracteres hexadecimais minúsculos |
 | `installed_at` | `TEXT NOT NULL` | formato de instante |
 
-### 2.4 Índices
+### 2.5 Índices
 
 | Índice | Colunas | Uso previsto |
 |---|---|---|
@@ -115,7 +142,7 @@ A máquina de estados continua sendo responsabilidade do domínio; o schema vali
 `(case_id, sequence)` de `case_event`. A PK composta já cobre consultas e a FK por `case_id`; não existe índice
 redundante apenas em `case_id`.
 
-### 2.5 Dados seguros
+### 2.6 Dados seguros
 
 O schema não tem colunas para SQL bruto, parâmetros, resultados de consultas nem payload genérico do agregado.
 `actor`, `reason`, `query_fingerprint` e `discovery_idempotency_key` são metadados sujeitos à política de dados
@@ -150,10 +177,12 @@ o ano `0000`. A validade semântica é garantida por quem grava, usando o codec.
 | Conceito | Onde | Significado |
 |---|---|---|
 | Versão do schema | `schema_version.version` | Migration aplicada. Inteiro positivo, crescente, não necessariamente consecutivo. |
-| Revisão do caso | `analysis_case.version` | Revisão persistente para controle otimista. Começa em `0`; o futuro repositório a incrementa a cada gravação confirmada. **Não** é derivada de `events().size()`. |
+| Revisão do caso | `analysis_case.version` | Revisão persistente para controle otimista. Agregado novo tem `0`; a primeira gravação a torna `1` e `SqliteAnalysisCaseRepository` a incrementa a cada gravação que altera algo. **Não** é derivada de `events().size()`. |
 | Versão do evento de domínio | `DomainEvent.version()` | String de versão do contrato do evento publicado. Não é persistida neste schema. |
 
 ## 5. Conexões — `SqliteConnectionFactory`
+
+- `openForWrite()` abre a conexão com `transaction_mode=IMMEDIATE`: `setAutoCommit(false)` executa `BEGIN IMMEDIATE`, tomando o lock de escrita antes da leitura da versão. O repositório usa essa conexão em `save`/`saveDiscovered`.
 
 - `new SqliteConnectionFactory(Path)` abre o arquivo local via `jdbc:sqlite:<caminho absoluto>`.
 - Antes de devolver a conexão, e ainda em auto-commit (sem transação aberta), a fábrica executa
@@ -174,7 +203,7 @@ o ano `0000`. A validade semântica é garantida por quem grava, usando o codec.
 ### 6.1 Catálogo
 
 - Catálogo explícito de `Migration(version, description, resource)`. O catálogo de produção
-  (`SqlMigrationRunner.catalog()`) contém apenas `V001 — create case schema`. Testes injetam catálogos próprios com
+  (`SqlMigrationRunner.catalog()`) contém `V001 — create case schema` e `V002 — create evidence and domain event schema`. Testes injetam catálogos próprios com
   fixtures em `src/test/resources/db/migration-fixtures`; nenhuma migration fictícia vai para o classpath de produção.
 - O construtor ordena o catálogo numericamente e rejeita catálogo vazio e versões duplicadas.
 - Antes de tocar no banco, `migrate` carrega **todos** os recursos (inclusive V000), rejeita recurso ausente ou bytes
@@ -228,7 +257,7 @@ var factory = new SqliteConnectionFactory(databaseFile);
 try (var connection = factory.open()) {
     new SqlMigrationRunner(new SystemClockAdapter()).migrate(connection);
 }
-// somente depois: criar o adapter de AnalysisCaseRepository com a mesma fábrica
+// somente depois: new SqliteAnalysisCaseRepository(factory)
 ```
 
 Uma `MigrationException` na inicialização deve impedir o start da aplicação; ela não deve ser convertida em resposta

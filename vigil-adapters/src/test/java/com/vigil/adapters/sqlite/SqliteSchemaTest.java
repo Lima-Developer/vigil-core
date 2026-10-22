@@ -61,7 +61,7 @@ class SqliteSchemaTest {
     @Test
     void shouldCreateOnlyTheCaseTablesAndTheMigrationHistory() throws SQLException {
         assertEquals(
-                List.of("analysis_case", "case_event", "schema_version"),
+                List.of("analysis_case", "case_event", "domain_event", "evidence", "schema_version"),
                 rows(connection, "SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name")
         );
     }
@@ -117,7 +117,9 @@ class SqliteSchemaTest {
                 "idx_analysis_case_created_at | analysis_case | created_at",
                 "idx_analysis_case_status_created_at | analysis_case | status,created_at",
                 "idx_case_event_case_id_occurred_at | case_event | case_id,occurred_at",
-                "idx_case_event_occurred_at | case_event | occurred_at"
+                "idx_case_event_occurred_at | case_event | occurred_at",
+                "idx_domain_event_occurred_at | domain_event | occurred_at",
+                "idx_evidence_captured_at | evidence | captured_at"
         ), rows(connection, """
                 SELECT s.name, s.tbl_name, (SELECT group_concat(name, ',') FROM
                     (SELECT name FROM pragma_index_info(s.name) ORDER BY seqno))

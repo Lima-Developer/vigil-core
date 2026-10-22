@@ -8,9 +8,12 @@ import org.sqlite.SQLiteException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +48,47 @@ class SqliteConnectionFactoryTest {
                     () -> assertEquals(databaseFile.toAbsolutePath().normalize(), factory.databaseFile())
             );
         }
+    }
+
+    @Test
+    void shouldRejectAConnectionWhenBusyTimeoutWasNotActuallyApplied() throws SQLException {
+        var opened = new ArrayList<Connection>();
+        var factory = new SqliteConnectionFactory(directory.resolve("vigil.db"), url -> {
+            var connection = DriverManager.getConnection(url);
+            execute(connection, "PRAGMA busy_timeout = 1");
+            opened.add(connection);
+            return (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(),
+                    new Class<?>[]{Connection.class}, (proxy, method, arguments) -> {
+                        if (method.getName().equals("createStatement")) {
+                            var statement = connection.createStatement();
+                            return Proxy.newProxyInstance(Statement.class.getClassLoader(),
+                                    new Class<?>[]{Statement.class}, (statementProxy, statementMethod, statementArgs) -> {
+                                        if (statementMethod.getName().equals("execute") && statementArgs != null
+                                                && statementArgs[0] instanceof String sql
+                                                && sql.equals("PRAGMA busy_timeout = 5000")) {
+                                            return false;
+                                        }
+                                        try {
+                                            return statementMethod.invoke(statement, statementArgs);
+                                        } catch (InvocationTargetException failure) {
+                                            throw failure.getCause();
+                                        }
+                                    });
+                        }
+                        try {
+                            return method.invoke(connection, arguments);
+                        } catch (InvocationTargetException failure) {
+                            throw failure.getCause();
+                        }
+                    });
+        });
+
+        var failure = assertThrows(SQLException.class, factory::open);
+
+        assertAll(
+                () -> assertTrue(failure.getMessage().contains("busy_timeout")),
+                () -> assertTrue(opened.getFirst().isClosed())
+        );
     }
 
     @Test

@@ -55,18 +55,21 @@ class SqlMigrationRunnerTest {
     }
 
     @Test
-    void shouldBringAnEmptyDatabaseToTheCurrentVersionWithASingleHistoryEntry() throws Exception {
+    void shouldBringAnEmptyDatabaseToTheCurrentVersionWithTheShippedHistory() throws Exception {
         var applied = migrate(new SqlMigrationRunner(CLOCK));
 
         try (var connection = factory.open()) {
             assertAll(
-                    () -> assertEquals(List.of(1), applied),
+                    () -> assertEquals(List.of(1, 2), applied),
                     () -> assertEquals(List.of(
                             "1 | create case schema | " + sha256("db/migration/V001__create_case_schema.sql")
+                                    + " | 2026-09-30T12:34:56.123456789Z",
+                            "2 | create evidence and domain event schema | "
+                                    + sha256("db/migration/V002__create_evidence_and_domain_event_schema.sql")
                                     + " | 2026-09-30T12:34:56.123456789Z"
                     ), rows(connection, "SELECT version, description, checksum, installed_at FROM schema_version")),
                     () -> assertEquals(
-                            List.of("analysis_case", "case_event", "schema_version"),
+                            List.of("analysis_case", "case_event", "domain_event", "evidence", "schema_version"),
                             rows(connection, "SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name")
                     ),
                     () -> assertTrue(connection.getAutoCommit())
@@ -76,11 +79,11 @@ class SqlMigrationRunnerTest {
 
     @Test
     void shouldLeaveSchemaHistoryAndDataUntouchedWhenRerunAfterReopening() throws Exception {
-        migrate(new SqlMigrationRunner(CLOCK));
+        migrate(new SqlMigrationRunner(List.of(V001), CLOCK));
         insertSentinelCase();
         var before = snapshotOf();
 
-        var applied = migrate(new SqlMigrationRunner(() -> Instant.parse("2027-01-01T00:00:00Z")));
+        var applied = migrate(new SqlMigrationRunner(List.of(V001), () -> Instant.parse("2027-01-01T00:00:00Z")));
 
         assertAll(
                 () -> assertEquals(List.of(), applied),
@@ -90,7 +93,7 @@ class SqlMigrationRunnerTest {
 
     @Test
     void shouldApplyOnlyPendingMigrationsInNumericOrderPreservingData() throws Exception {
-        migrate(new SqlMigrationRunner(CLOCK));
+        migrate(new SqlMigrationRunner(List.of(V001), CLOCK));
         insertSentinelCase();
 
         var applied = migrate(new SqlMigrationRunner(List.of(V003, V002, V001), CLOCK));
@@ -139,7 +142,7 @@ class SqlMigrationRunnerTest {
 
     @Test
     void shouldRollBackAFailedUpdateAndAllowACorrectedRetry() throws Exception {
-        migrate(new SqlMigrationRunner(CLOCK));
+        migrate(new SqlMigrationRunner(List.of(V001), CLOCK));
         insertSentinelCase();
         var before = snapshotOf();
 
@@ -167,7 +170,7 @@ class SqlMigrationRunnerTest {
                 () -> assertInstanceOf(SQLException.class, failure.getCause()),
                 () -> assertEquals(List.of(), snapshotOf())
         );
-        assertEquals(List.of(1), migrate(new SqlMigrationRunner(CLOCK)));
+        assertEquals(List.of(1), migrate(new SqlMigrationRunner(List.of(V001), CLOCK)));
     }
 
     @Test
@@ -175,7 +178,7 @@ class SqlMigrationRunnerTest {
         try (var connection = factory.open()) {
             var failingCommit = failing(connection, (method, arguments) -> method.equals("commit"));
 
-            var failure = assertThrows(MigrationException.class, () -> new SqlMigrationRunner(CLOCK).migrate(failingCommit));
+            var failure = assertThrows(MigrationException.class, () -> new SqlMigrationRunner(List.of(V001), CLOCK).migrate(failingCommit));
 
             assertAll(
                     () -> assertEquals("Injected commit failure.", failure.getCause().getMessage()),
@@ -187,7 +190,7 @@ class SqlMigrationRunnerTest {
 
     @Test
     void shouldPreserveTheOriginalCauseWhenRollbackFails() throws Exception {
-        migrate(new SqlMigrationRunner(CLOCK));
+        migrate(new SqlMigrationRunner(List.of(V001), CLOCK));
         insertSentinelCase();
         var before = snapshotOf();
 
@@ -212,7 +215,7 @@ class SqlMigrationRunnerTest {
             var failingRestore = failing(connection,
                     (method, arguments) -> method.equals("setAutoCommit") && Boolean.TRUE.equals(arguments[0]));
 
-            var failure = assertThrows(MigrationException.class, () -> new SqlMigrationRunner(CLOCK).migrate(failingRestore));
+            var failure = assertThrows(MigrationException.class, () -> new SqlMigrationRunner(List.of(V001), CLOCK).migrate(failingRestore));
 
             assertEquals("Injected setAutoCommit failure.", failure.getCause().getMessage());
             connection.setAutoCommit(true);
@@ -222,7 +225,7 @@ class SqlMigrationRunnerTest {
 
     @Test
     void shouldKeepTheMigrationFailureWhenAutoCommitCannotBeRestored() throws Exception {
-        migrate(new SqlMigrationRunner(CLOCK));
+        migrate(new SqlMigrationRunner(List.of(V001), CLOCK));
 
         try (var connection = factory.open()) {
             var failingRestore = failing(connection,
@@ -243,7 +246,7 @@ class SqlMigrationRunnerTest {
         try (var connection = factory.open()) {
             var failingStart = failing(connection, (method, arguments) -> method.equals("setAutoCommit"));
 
-            var failure = assertThrows(MigrationException.class, () -> new SqlMigrationRunner(CLOCK).migrate(failingStart));
+            var failure = assertThrows(MigrationException.class, () -> new SqlMigrationRunner(List.of(V001), CLOCK).migrate(failingStart));
 
             assertEquals("Injected setAutoCommit failure.", failure.getCause().getMessage());
         }
@@ -283,7 +286,7 @@ class SqlMigrationRunnerTest {
         }
         var before = snapshotOf();
 
-        var failure = assertThrows(MigrationException.class, () -> migrate(new SqlMigrationRunner(CLOCK)));
+        var failure = assertThrows(MigrationException.class, () -> migrate(new SqlMigrationRunner(List.of(V001), CLOCK)));
 
         assertAll(
                 () -> assertTrue(failure.getMessage().contains("history"), failure.getMessage()),
@@ -294,7 +297,7 @@ class SqlMigrationRunnerTest {
 
     @Test
     void shouldRejectAHistoryThatSkipsACatalogVersion() throws Exception {
-        migrate(new SqlMigrationRunner(CLOCK));
+        migrate(new SqlMigrationRunner(List.of(V001), CLOCK));
         try (var connection = factory.open()) {
             execute(connection, historyEntry(3));
         }
@@ -325,7 +328,7 @@ class SqlMigrationRunnerTest {
 
     @Test
     void shouldRejectAMissingResourceBeforeChangingTheDatabase() throws Exception {
-        migrate(new SqlMigrationRunner(CLOCK));
+        migrate(new SqlMigrationRunner(List.of(V001), CLOCK));
         var before = snapshotOf();
         var missing = fixture(2, "missing", "V002__does_not_exist.sql");
 
@@ -345,7 +348,7 @@ class SqlMigrationRunnerTest {
             "V002__invalid_utf8.sql,        not valid UTF-8"
     })
     void shouldRejectMalformedScriptsBeforeChangingTheDatabase(String resource, String reason) throws Exception {
-        migrate(new SqlMigrationRunner(CLOCK));
+        migrate(new SqlMigrationRunner(List.of(V001), CLOCK));
         var before = snapshotOf();
 
         var failure = assertThrows(MigrationException.class,
@@ -374,9 +377,11 @@ class SqlMigrationRunnerTest {
     }
 
     @Test
-    void shouldShipOnlyTheCaseSchemaMigration() {
+    void shouldShipTheCaseAndEvidenceSchemaMigrations() {
         assertEquals(
-                List.of(new Migration(1, "create case schema", "db/migration/V001__create_case_schema.sql")),
+                List.of(new Migration(1, "create case schema", "db/migration/V001__create_case_schema.sql"),
+                        new Migration(2, "create evidence and domain event schema",
+                                "db/migration/V002__create_evidence_and_domain_event_schema.sql")),
                 SqlMigrationRunner.catalog()
         );
     }
@@ -398,9 +403,9 @@ class SqlMigrationRunnerTest {
             inTransaction.setAutoCommit(false);
 
             assertAll(
-                    () -> assertThrows(MigrationException.class, () -> new SqlMigrationRunner(CLOCK).migrate(inTransaction)),
-                    () -> assertThrows(MigrationException.class, () -> new SqlMigrationRunner(CLOCK).migrate(withoutForeignKeys)),
-                    () -> assertThrows(NullPointerException.class, () -> new SqlMigrationRunner(CLOCK).migrate(null))
+                    () -> assertThrows(MigrationException.class, () -> new SqlMigrationRunner(List.of(V001), CLOCK).migrate(inTransaction)),
+                    () -> assertThrows(MigrationException.class, () -> new SqlMigrationRunner(List.of(V001), CLOCK).migrate(withoutForeignKeys)),
+                    () -> assertThrows(NullPointerException.class, () -> new SqlMigrationRunner(List.of(V001), CLOCK).migrate(null))
             );
         }
         assertEquals(List.of(), snapshotOf());
@@ -411,7 +416,7 @@ class SqlMigrationRunnerTest {
         try (var connection = factory.open()) {
             var closed = failing(connection, (method, arguments) -> method.equals("getAutoCommit"));
 
-            var failure = assertThrows(MigrationException.class, () -> new SqlMigrationRunner(CLOCK).migrate(closed));
+            var failure = assertThrows(MigrationException.class, () -> new SqlMigrationRunner(List.of(V001), CLOCK).migrate(closed));
 
             assertEquals("Injected getAutoCommit failure.", failure.getCause().getMessage());
         }
@@ -430,13 +435,13 @@ class SqlMigrationRunnerTest {
     }
 
     private void assertRejectedAfterTampering(String tampering, String expectedMessage) throws Exception {
-        migrate(new SqlMigrationRunner(CLOCK));
+        migrate(new SqlMigrationRunner(List.of(V001), CLOCK));
         try (var connection = factory.open()) {
             execute(connection, tampering);
         }
         var before = snapshotOf();
 
-        var failure = assertThrows(MigrationException.class, () -> migrate(new SqlMigrationRunner(CLOCK)));
+        var failure = assertThrows(MigrationException.class, () -> migrate(new SqlMigrationRunner(List.of(V001), CLOCK)));
 
         assertAll(
                 () -> assertTrue(failure.getMessage().contains(expectedMessage), failure.getMessage()),
