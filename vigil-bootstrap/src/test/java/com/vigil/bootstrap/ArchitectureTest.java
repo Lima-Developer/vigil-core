@@ -4,6 +4,7 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition;
+import com.vigil.application.fixture.ForbiddenApplicationJdbcDependency;
 import com.vigil.core.domain.fixture.ForbiddenDomainAdapterDependency;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +28,11 @@ class ArchitectureTest {
             .that().resideInAPackage("com.vigil.application..")
             .should().dependOnClassesThat().resideInAnyPackage("com.vigil.adapters..", "com.vigil.bootstrap..")
             .because("a aplicação depende de ports e domínio, nunca de adapters ou bootstrap");
+
+    private static final ArchRule APPLICATION_NEVER_SEES_JDBC = ArchRuleDefinition.noClasses()
+            .that().resideInAPackage("com.vigil.application..")
+            .should().dependOnClassesThat().resideInAnyPackage("java.sql..", "javax.sql..")
+            .because("a conexão JDBC nunca atravessa a fronteira do adapter; o core só vê TargetConnectionFailure");
 
     private static final ArchRule BOOTSTRAP_ONLY_COMPOSES = ArchRuleDefinition.noClasses()
             .that().resideInAPackage("com.vigil.bootstrap..")
@@ -54,10 +60,22 @@ class ArchitectureTest {
     }
 
     @Test
+    void shouldKeepApplicationFreeOfJdbc() {
+        APPLICATION_NEVER_SEES_JDBC.check(productionClasses());
+    }
+
+    @Test
     void shouldFailWhenADomainClassDependsOnAnAdapter() {
         var violatingClass = new ClassFileImporter().importClasses(ForbiddenDomainAdapterDependency.class);
 
         assertThrows(AssertionError.class, () -> DOMAIN_IS_INFRASTRUCTURE_FREE.check(violatingClass));
+    }
+
+    @Test
+    void shouldFailWhenAnApplicationClassLeaksJdbc() {
+        var violatingClass = new ClassFileImporter().importClasses(ForbiddenApplicationJdbcDependency.class);
+
+        assertThrows(AssertionError.class, () -> APPLICATION_NEVER_SEES_JDBC.check(violatingClass));
     }
 
     private static com.tngtech.archunit.core.domain.JavaClasses productionClasses() {

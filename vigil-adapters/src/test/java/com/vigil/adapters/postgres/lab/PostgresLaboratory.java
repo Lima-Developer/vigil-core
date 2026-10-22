@@ -15,9 +15,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * Lifecycle of the reproducible PostgreSQL laboratory. The container itself is owned by the caller (for example by
  * {@code @Container}); this class prepares it. Credentials always come from the container getters.
  */
-final class PostgresLaboratory {
+public final class PostgresLaboratory {
 
-    static final String IMAGE = "postgres:16.4-bookworm";
+    public static final String IMAGE = "postgres:16.4-bookworm";
     static final int WORKLOAD_RUNS = 50;
 
     private static final String SCHEMA_RESOURCE = "/lab/postgres/schema.sql";
@@ -36,11 +36,21 @@ final class PostgresLaboratory {
         this.workload = workload;
     }
 
-    static PostgreSQLContainer<?> newContainer() {
-        return new PostgreSQLContainer<>(IMAGE).withCommand(
+    public static PostgreSQLContainer<?> newContainer() {
+        return newContainer(IMAGE);
+    }
+
+    /** Same laboratory settings on another PostgreSQL image, for the version matrix of the integration tests. */
+    public static PostgreSQLContainer<?> newContainer(String image) {
+        return new PostgreSQLContainer<>(image).withCommand(
                 "postgres",
                 "-c", "shared_preload_libraries=pg_stat_statements",
                 "-c", "pg_stat_statements.track=all");
+    }
+
+    /** Loads the standard dataset and workload into a started container, for tests outside this package. */
+    public static void initializeStandard(PostgreSQLContainer<?> container) throws SQLException {
+        new PostgresLaboratory(container, LaboratoryDataset.standard(), new LaboratoryWorkload()).initialize();
     }
 
     Connection connection() throws SQLException {
