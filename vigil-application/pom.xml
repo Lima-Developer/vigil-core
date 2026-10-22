@@ -29,4 +29,18 @@
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <configuration>
+                    <skip>false</skip>
+                    <targetClasses><param>com.vigil.application.health.*</param></targetClasses>
+                    <targetTests><param>health.*</param><param>com.vigil.application.health.*</param></targetTests>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

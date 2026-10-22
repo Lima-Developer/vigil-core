@@ -196,6 +196,8 @@ o ano `0000`. A validade semântica é garantida por quem grava, usando o codec.
   mantém pool nem referência às conexões.
 - Cada conexão define `busy_timeout` de 5000 ms, para tolerar contenção breve de escrita em vez de falhar de
   imediato com `SQLITE_BUSY`; não torna múltiplos escritores suportados.
+- Cada conexão fixa `wal_autocheckpoint=1000` páginas e `synchronous=FULL` (valor `2`), conferindo os valores antes
+  de retornar ao chamador. O procedimento de volume, health, backup e restauração está em [sqlite-operacao.md](sqlite-operacao.md).
 - Operação conforme ADR-002: um único processo escritor por arquivo e volume local (sem NFS/EFS).
 
 ## 6. Migrations — `SqlMigrationRunner`

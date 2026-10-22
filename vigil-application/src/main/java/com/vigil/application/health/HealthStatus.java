@@ -7,6 +7,7 @@ public record HealthStatus(
         String targetName,
         String environment,
         Instant checkedAt,
-        boolean healthy
+        boolean healthy,
+        StorageHealth storage
 ) {
 }

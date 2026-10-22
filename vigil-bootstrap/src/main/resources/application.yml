@@ -1,3 +1,4 @@
 env:
   VIGIL_TARGET_NAME: "local-postgres"
   VIGIL_ENVIRONMENT: "development"
+  VIGIL_DATABASE_PATH: "/var/lib/vigil/vigil.db"

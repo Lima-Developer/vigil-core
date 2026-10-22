@@ -1,12 +1,15 @@
 package health;
 
 import com.vigil.application.configuration.VigilConfiguration;
+import com.vigil.application.configuration.StorageConfiguration;
+import com.vigil.application.port.out.interfaces.StorageFacts;
 import com.vigil.application.health.CheckVigilHealth;
 import com.vigil.application.health.HealthStatus;
 import com.vigil.application.port.out.interfaces.Clock;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,7 +22,9 @@ public class CheckVigilHealthTest {
         Clock fixedClock = () -> fixedInstant;
 
         CheckVigilHealth healthCheck =
-                new CheckVigilHealth(fixedClock, "0.1.0-SNAPSHOT");
+                new CheckVigilHealth(fixedClock, "0.1.0-SNAPSHOT",
+                        path -> new StorageFacts(true, true, true, 256, "ok", null),
+                        new StorageConfiguration(Path.of("/tmp/vigil.db"), 256));
 
         VigilConfiguration configuration =
                 new VigilConfiguration("local-postgres", "development");
