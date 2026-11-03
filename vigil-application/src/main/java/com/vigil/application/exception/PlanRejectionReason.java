@@ -1,0 +1,6 @@
+package com.vigil.application.exception;
+
+public enum PlanRejectionReason {
+    EMPTY, TOO_LARGE, MULTIPLE_STATEMENTS, NOT_SELECT, FORBIDDEN_CLAUSE,
+    PLACEHOLDERS_UNSUPPORTED, TIMEOUT, PLAN_UNREADABLE, TARGET_UNAVAILABLE
+}
