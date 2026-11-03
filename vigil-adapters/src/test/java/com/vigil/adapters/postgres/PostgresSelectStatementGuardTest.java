@@ -28,6 +28,13 @@ class PostgresSelectStatementGuardTest {
                 Arguments.of("DROP TABLE orders", PlanRejectionReason.NOT_SELECT),
                 Arguments.of("WITH d AS (DELETE FROM orders RETURNING 1) SELECT 1", PlanRejectionReason.NOT_SELECT),
                 Arguments.of("SELECT id INTO t FROM orders", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT 1- INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT 1/ INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT 'plain\\' INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("'SELECT 1'", PlanRejectionReason.NOT_SELECT),
+                Arguments.of("SELECT xE'escaped\\' INTO t' FROM orders", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT 1 /* closed */ INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT 1\n-- comment\n INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
                 Arguments.of("SELECT 1 /* outer /* nested */ tail */ INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
                 Arguments.of("SELECT 1 /* ordinary */ FOR UPDATE", PlanRejectionReason.FORBIDDEN_CLAUSE),
                 Arguments.of("SELECT 1 -- ordinary\n INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
@@ -69,6 +76,13 @@ class PostgresSelectStatementGuardTest {
                 "SELECT id FROM orders ORDER BY placed_at DESC LIMIT 50",
                 "SELECT 'into', 'for update', \"analyze\" FROM orders",
                 "SELECT E'for\\' update', $$into for update$$, $tag$for update$tag$",
+                "SELECT E'escaped\\' INTO t' FROM orders",
+                "SELECT E'escaped\\' FOR UPDATE' FROM orders",
+                "SELECT e'escaped\\' INTO t' FROM orders",
+                "SELECT E'abc\\'into' FROM orders",
+                "SELECT E'abc\\' INTO t' FROM orders",
+                "SELECT 1-- INTO t\n FROM orders",
+                "SELECT 1\n-- INTO t\n FROM orders",
                 "SELECT 1 /* outer /* for update */ into */",
                 "SELECT 1-- comment",
                 "SELECT -- INTO\n 1",
@@ -94,5 +108,19 @@ class PostgresSelectStatementGuardTest {
         assertEquals(8192, PostgresSelectStatementGuard.validate("SELECT " + "x".repeat(8185)).length());
         assertEquals(PlanRejectionReason.TOO_LARGE, assertThrows(PlanCollectionRejected.class,
                 () -> PostgresSelectStatementGuard.validate("SELECT " + "x".repeat(8186))).reason());
+    }
+
+    @Test void trailingHyphenIsNotAComment() {
+        assertEquals("SELECT -", PostgresSelectStatementGuard.validate("SELECT -"));
+    }
+
+    @Test void lineCommentDoesNotExposeForbiddenClause() {
+        assertEquals("SELECT -- INTO t\n 1",
+                PostgresSelectStatementGuard.validate("SELECT -- INTO t\n 1"));
+    }
+
+    @Test void escapeStringConsumesQuoteBeforeForbiddenClause() {
+        assertEquals("SELECT E'abc\\' INTO t' FROM orders",
+                PostgresSelectStatementGuard.validate("SELECT E'abc\\' INTO t' FROM orders"));
     }
 }

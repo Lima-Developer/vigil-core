@@ -35,6 +35,7 @@ public final class PostgresExecutionPlanSource implements ExecutionPlanSource {
     public PlanSummaryEvidencePayload collect(String selectText) {
         String validated = PostgresSelectStatementGuard.validate(selectText);
         try (Connection connection = connections.get()) {
+            Throwable primaryFailure = null;
             try {
                 connection.setAutoCommit(false);
                 try (var statement = connection.createStatement()) {
@@ -46,8 +47,16 @@ public final class PostgresExecutionPlanSource implements ExecutionPlanSource {
                         return PostgresExplainPlanParser.parse(result.getString(1));
                     }
                 }
+            } catch (SQLException | RuntimeException failure) {
+                primaryFailure = failure;
+                throw failure;
             } finally {
-                connection.rollback();
+                try {
+                    connection.rollback();
+                } catch (SQLException rollbackFailure) {
+                    // The original failure determines the rejection reason. JDBC error text can contain SQL.
+                    if (primaryFailure == null) throw rollbackFailure;
+                }
             }
         } catch (SQLException failure) {
             if ("57014".equals(failure.getSQLState()) || "55P03".equals(failure.getSQLState()))

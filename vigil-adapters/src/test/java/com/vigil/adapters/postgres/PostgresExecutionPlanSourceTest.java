@@ -20,10 +20,14 @@ class PostgresExecutionPlanSourceTest {
     private final List<String> calls = new ArrayList<>();
 
     private Connection connection(String state) {
+        return connection(state, false);
+    }
+
+    private Connection connection(String state, boolean rollbackFails) {
         ResultSet rows = (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{ResultSet.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "next" -> { calls.add("next"); yield true; }
-                    case "getString" -> JSON;
+                    case "getString" -> "UNREADABLE".equals(state) ? "{sensitive JSON" : JSON;
                     case "close" -> { calls.add("result.close"); yield null; }
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
@@ -33,7 +37,8 @@ class PostgresExecutionPlanSourceTest {
                     case "execute" -> { calls.add((String) args[0]); yield true; }
                     case "executeQuery" -> {
                         calls.add((String) args[0]);
-                        if (state != null) throw new SQLException("SELECT secret " + JSON, state);
+                        if (state != null && !"UNREADABLE".equals(state))
+                            throw new SQLException("SELECT secret " + JSON, state);
                         yield rows;
                     }
                     case "close" -> { calls.add("statement.close"); yield null; }
@@ -43,7 +48,11 @@ class PostgresExecutionPlanSourceTest {
                 (proxy, method, args) -> switch (method.getName()) {
                     case "setAutoCommit" -> { calls.add("setAutoCommit=" + args[0]); yield null; }
                     case "createStatement" -> statement;
-                    case "rollback" -> { calls.add("rollback"); yield null; }
+                    case "rollback" -> {
+                        calls.add("rollback");
+                        if (rollbackFails) throw new SQLException("SELECT secret " + JSON, "08006");
+                        yield null;
+                    }
                     case "close" -> { calls.add("close"); yield null; }
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
@@ -65,6 +74,24 @@ class PostgresExecutionPlanSourceTest {
         assertFalse(error.getMessage().contains("SELECT"));
         assertFalse(error.getMessage().contains(JSON));
         assertEquals(List.of("rollback", "close"), calls.subList(calls.size()-2, calls.size()));
+    }
+
+    @ParameterizedTest @CsvSource({"57014,TIMEOUT", "55P03,TIMEOUT", "UNREADABLE,PLAN_UNREADABLE"})
+    void preservesPrimaryFailureWhenRollbackFails(String state, PlanRejectionReason reason) {
+        var source = new PostgresExecutionPlanSource(() -> connection(state, true));
+        var error = assertThrows(PlanCollectionRejected.class, () -> source.collect("SELECT secret"));
+        assertEquals(reason, error.reason());
+        assertFalse(error.getMessage().contains("SELECT"));
+        assertFalse(error.getMessage().contains(JSON));
+        assertFalse(error.getMessage().contains("sensitive"));
+        assertEquals(List.of("rollback", "close"), calls.subList(calls.size() - 2, calls.size()));
+    }
+
+    @Test void mapsRollbackFailureAfterSuccessfulRead() {
+        var source = new PostgresExecutionPlanSource(() -> connection(null, true));
+        assertEquals(PlanRejectionReason.TARGET_UNAVAILABLE,
+                assertThrows(PlanCollectionRejected.class, () -> source.collect("SELECT 1")).reason());
+        assertEquals(List.of("rollback", "close"), calls.subList(calls.size() - 2, calls.size()));
     }
 
     @Test void createsTargetPortWithoutOpeningConnection() {
