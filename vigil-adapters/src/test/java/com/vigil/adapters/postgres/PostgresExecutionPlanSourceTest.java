@@ -72,9 +72,12 @@ class PostgresExecutionPlanSourceTest {
                 "vigil_collector", null, java.util.Map.of("VIGIL_PG_PASSWORD", PostgresTestSupport.canary())));
     }
 
-    @Test void rejectsBeforeOpeningConnection() {
+    @ParameterizedTest @CsvSource({
+            "'SELECT 1;',MULTIPLE_STATEMENTS",
+            "'SELECT id AS x$tag$ FROM orders FOR UPDATE -- $tag$',FORBIDDEN_CLAUSE",
+            "'SELECT id AS x$tag$ INTO copied_orders FROM orders -- $tag$',FORBIDDEN_CLAUSE"})
+    void rejectsBeforeOpeningConnection(String sql, PlanRejectionReason reason) {
         var source = new PostgresExecutionPlanSource(() -> { fail("connection opened"); return null; });
-        assertEquals(PlanRejectionReason.MULTIPLE_STATEMENTS,
-                assertThrows(PlanCollectionRejected.class, () -> source.collect("SELECT 1;" )).reason());
+        assertEquals(reason, assertThrows(PlanCollectionRejected.class, () -> source.collect(sql)).reason());
     }
 }

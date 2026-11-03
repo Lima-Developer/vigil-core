@@ -42,7 +42,7 @@ final class PostgresSelectStatementGuard {
             if (c == '\'' || c == '"') {
                 char quote = c;
                 boolean escapes = c == '\'' && i > 0 && (text.charAt(i - 1) == 'E' || text.charAt(i - 1) == 'e')
-                        && (i == 1 || !isWord(text.charAt(i - 2)));
+                        && (i == 1 || !isIdentifierPart(text.charAt(i - 2)));
                 i++;
                 boolean closed = false;
                 while (i < length) {
@@ -73,7 +73,8 @@ final class PostgresSelectStatementGuard {
             }
             if (isWord(c)) {
                 int end = i + 1;
-                while (end < length && isWord(text.charAt(end))) end++;
+                // PostgreSQL allows '$' after an identifier starts; it cannot open a dollar quote here.
+                while (end < length && isIdentifierPart(text.charAt(end))) end++;
                 words.add(text.substring(i, end).toUpperCase(Locale.ROOT));
                 i = end;
                 continue;
@@ -97,6 +98,10 @@ final class PostgresSelectStatementGuard {
 
     private static boolean isWord(char c) {
         return Character.isLetterOrDigit(c) || c == '_';
+    }
+
+    private static boolean isIdentifierPart(char c) {
+        return isWord(c) || c == '$';
     }
 
     private static PlanCollectionRejected reject(PlanRejectionReason reason) {
