@@ -39,6 +39,7 @@ final class PostgresSelectStatementGuard {
                 if (depth != 0) throw reject(PlanRejectionReason.FORBIDDEN_CLAUSE);
                 continue;
             }
+            if (words.isEmpty() && !isWord(c)) throw reject(PlanRejectionReason.NOT_SELECT);
             if (c == '\'' || c == '"') {
                 char quote = c;
                 boolean escapes = c == '\'' && i > 0 && (text.charAt(i - 1) == 'E' || text.charAt(i - 1) == 'e')

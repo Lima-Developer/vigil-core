@@ -37,6 +37,8 @@ class PostgresSelectStatementGuardTest {
                 Arguments.of("SELECT 1\n-- comment\n INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
                 Arguments.of("SELECT 1 /* outer /* nested */ tail */ INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
                 Arguments.of("SELECT 1 /* ordinary */ FOR UPDATE", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT /**/ INTO copied_orders FROM orders", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("-SELECT 1", PlanRejectionReason.NOT_SELECT),
                 Arguments.of("SELECT 1 -- ordinary\n INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
                 Arguments.of("SELECT E'unfinished\\", PlanRejectionReason.FORBIDDEN_CLAUSE),
                 Arguments.of("SELECT * FROM orders FOR UPDATE", PlanRejectionReason.FORBIDDEN_CLAUSE),
@@ -79,8 +81,8 @@ class PostgresSelectStatementGuardTest {
                 "SELECT E'escaped\\' INTO t' FROM orders",
                 "SELECT E'escaped\\' FOR UPDATE' FROM orders",
                 "SELECT e'escaped\\' INTO t' FROM orders",
-                "SELECT E'abc\\'into' FROM orders",
                 "SELECT E'abc\\' INTO t' FROM orders",
+                "SELECT E'abc\\'into' FROM orders",
                 "SELECT 1-- INTO t\n FROM orders",
                 "SELECT 1\n-- INTO t\n FROM orders",
                 "SELECT 1 /* outer /* for update */ into */",
@@ -122,5 +124,17 @@ class PostgresSelectStatementGuardTest {
     @Test void escapeStringConsumesQuoteBeforeForbiddenClause() {
         assertEquals("SELECT E'abc\\' INTO t' FROM orders",
                 PostgresSelectStatementGuard.validate("SELECT E'abc\\' INTO t' FROM orders"));
+    }
+
+    @Test void commentClosureRestoresClauseScanning() {
+        assertEquals(PlanRejectionReason.FORBIDDEN_CLAUSE, assertThrows(PlanCollectionRejected.class,
+                () -> PostgresSelectStatementGuard.validate("SELECT /**/ INTO copied_orders FROM orders")).reason());
+    }
+
+    @Test void escapePrefixDependsOnTheCharacterBeforeTheQuote() {
+        assertEquals("SELECT E'ab\\' INTO t' FROM orders",
+                PostgresSelectStatementGuard.validate("SELECT E'ab\\' INTO t' FROM orders"));
+        assertEquals("SELECT e'ab\\' INTO t' FROM orders",
+                PostgresSelectStatementGuard.validate("SELECT e'ab\\' INTO t' FROM orders"));
     }
 }

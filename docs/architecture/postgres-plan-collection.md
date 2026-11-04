@@ -18,4 +18,17 @@ O scanner ignora palavras de literais simples, literais `E'…'`, identificadore
 
 A fábrica de conexão exige TLS verificado, sessão read-only, `statement_timeout` de 5 s e `lock_timeout` de 200 ms. A coleta abre transação explícita, aplica `SET LOCAL statement_timeout = '2s'`, configura `setQueryTimeout(2)`, e executa rollback e fechamento em todos os caminhos. O papel de leitura da IT é criado apenas no teste, sem ampliar o papel compartilhado do laboratório.
 
-Se a consulta ou leitura do plano falhar e o rollback também falhar, a rejeição conserva o motivo da primeira falha. O erro JDBC do rollback não é anexado à exceção, pois sua mensagem pode conter SQL sensível. Uma falha isolada de rollback é tratada como `TARGET_UNAVAILABLE`.
+Se a consulta ou leitura do plano falhar e o rollback ou fechamento também falhar, a rejeição conserva o motivo da primeira falha. Erros JDBC de limpeza não são anexados à exceção, pois suas mensagens podem conter SQL sensível. Uma falha isolada de rollback ou fechamento é tratada como `TARGET_UNAVAILABLE`. A falha de abertura preserva a classificação e o SQLSTATE em uma nova `TargetConnectionFailure`, sem causa JDBC.
+
+## Justificativa dos mutantes de fronteira
+
+O PIT do guard deixa quatro mutantes `SURVIVED` de `ConditionalsBoundaryMutator`, todos equivalentes para as entradas que chegam aos respectivos ramos:
+
+| Linha do guard | Limite alterado | Por que o resultado é igual |
+|---|---|---|
+| Loop de comentário de bloco | `i < length` para `i <= length` | Com comentário fechado, `depth` é zero e o loop termina. Sem fechamento, ambos os caminhos rejeitam `FORBIDDEN_CLAUSE`; a versão mutada faz uma iteração adicional. |
+| Detecção do prefixo `E` | `i > 0` para `i >= 0` | Uma aspa na posição zero é rejeitada antes desse ramo pela regra do primeiro token. Nas demais posições as condições são iguais. |
+| Barra invertida em `E'…'` | `i < length` para `i <= length` | No fim do texto, ambos deixam o literal sem fechamento e rejeitam `FORBIDDEN_CLAUSE`. |
+| Fechamento de dollar quote | `close < 0` para `close <= 0` | A busca começa após o delimitador de abertura, então um fechamento encontrado nunca está na posição zero. |
+
+Os testes diretos de fechamento de comentário, prefixo `e` e caracteres antes de `SELECT` matam as mutações comportamentais adjacentes. O relatório PIT das três classes de VIG-036 não apresenta outros sobreviventes.

@@ -3,6 +3,8 @@ package com.vigil.adapters.postgres;
 import static org.junit.jupiter.api.Assertions.*;
 import com.vigil.application.exception.PlanCollectionRejected;
 import com.vigil.application.exception.PlanRejectionReason;
+import com.vigil.application.exception.TargetConnectionFailure;
+import com.vigil.application.exception.TargetFailureReason;
 import com.vigil.core.domain.enums.PlanNodeType;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
@@ -24,11 +26,19 @@ class PostgresExecutionPlanSourceTest {
     }
 
     private Connection connection(String state, boolean rollbackFails) {
+        return connection(state, rollbackFails, false);
+    }
+
+    private Connection connection(String state, boolean rollbackFails, boolean closeFails) {
         ResultSet rows = (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{ResultSet.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "next" -> { calls.add("next"); yield true; }
                     case "getString" -> "UNREADABLE".equals(state) ? "{sensitive JSON" : JSON;
-                    case "close" -> { calls.add("result.close"); yield null; }
+                    case "close" -> {
+                        calls.add("result.close");
+                        if (closeFails) throw new SQLException("SELECT secret " + JSON);
+                        yield null;
+                    }
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
         Statement statement = (Statement) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{Statement.class},
@@ -41,7 +51,11 @@ class PostgresExecutionPlanSourceTest {
                             throw new SQLException("SELECT secret " + JSON, state);
                         yield rows;
                     }
-                    case "close" -> { calls.add("statement.close"); yield null; }
+                    case "close" -> {
+                        calls.add("statement.close");
+                        if (closeFails) throw new SQLException("SELECT secret " + JSON);
+                        yield null;
+                    }
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
         return (Connection) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[]{Connection.class},
@@ -53,7 +67,11 @@ class PostgresExecutionPlanSourceTest {
                         if (rollbackFails) throw new SQLException("SELECT secret " + JSON, "08006");
                         yield null;
                     }
-                    case "close" -> { calls.add("close"); yield null; }
+                    case "close" -> {
+                        calls.add("close");
+                        if (closeFails) throw new SQLException("SELECT secret " + JSON);
+                        yield null;
+                    }
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
     }
@@ -92,6 +110,32 @@ class PostgresExecutionPlanSourceTest {
         assertEquals(PlanRejectionReason.TARGET_UNAVAILABLE,
                 assertThrows(PlanCollectionRejected.class, () -> source.collect("SELECT 1")).reason());
         assertEquals(List.of("rollback", "close"), calls.subList(calls.size() - 2, calls.size()));
+    }
+
+    @Test void parsingAndAllClosesFailWithoutExposingJdbcErrors() {
+        var source = new PostgresExecutionPlanSource(() -> connection("UNREADABLE", false, true));
+        var error = assertThrows(PlanCollectionRejected.class, () -> source.collect("SELECT 1"));
+        assertEquals(PlanRejectionReason.PLAN_UNREADABLE, error.reason());
+        assertNull(error.getCause());
+        assertEquals(0, error.getSuppressed().length);
+        assertFalse(error.toString().contains("SELECT secret"));
+        assertFalse(error.toString().contains(JSON));
+        assertEquals(List.of("result.close", "statement.close", "rollback", "close"),
+                calls.subList(calls.size() - 4, calls.size()));
+    }
+
+    @Test void sanitizesOpeningFailureWhilePreservingClassificationAndSqlState() {
+        var source = new PostgresExecutionPlanSource(() -> {
+            throw new TargetConnectionFailure(TargetFailureReason.TIMEOUT, "target", "08006",
+                    new SQLException("SELECT secret " + JSON, "08006"));
+        });
+        var error = assertThrows(TargetConnectionFailure.class, () -> source.collect("SELECT 1"));
+        assertEquals(TargetFailureReason.TIMEOUT, error.reason());
+        assertEquals("08006", error.sqlState().orElseThrow());
+        assertNull(error.getCause());
+        assertEquals(0, error.getSuppressed().length);
+        assertFalse(error.toString().contains("SELECT secret"));
+        assertFalse(error.toString().contains(JSON));
     }
 
     @Test void createsTargetPortWithoutOpeningConnection() {

@@ -8,7 +8,9 @@ import com.vigil.application.port.out.interfaces.ExecutionPlanSource;
 import com.vigil.core.domain.PlanSummaryEvidencePayload;
 import java.nio.file.Path;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -34,36 +36,61 @@ public final class PostgresExecutionPlanSource implements ExecutionPlanSource {
     @Override
     public PlanSummaryEvidencePayload collect(String selectText) {
         String validated = PostgresSelectStatementGuard.validate(selectText);
-        try (Connection connection = connections.get()) {
-            Throwable primaryFailure = null;
-            try {
-                connection.setAutoCommit(false);
-                try (var statement = connection.createStatement()) {
-                    statement.setEscapeProcessing(false);
-                    statement.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
-                    statement.execute(LOCAL_TIMEOUT_SQL);
-                    try (var result = statement.executeQuery(EXPLAIN_PREFIX + validated)) {
-                        if (!result.next()) throw new PlanCollectionRejected(PlanRejectionReason.PLAN_UNREADABLE);
-                        return PostgresExplainPlanParser.parse(result.getString(1));
-                    }
-                }
-            } catch (SQLException | RuntimeException failure) {
-                primaryFailure = failure;
-                throw failure;
-            } finally {
+        Connection connection = null;
+        Statement statement = null;
+        ResultSet result = null;
+        PlanSummaryEvidencePayload plan = null;
+        RuntimeException rejection = null;
+        try {
+            connection = connections.get();
+            connection.setAutoCommit(false);
+            statement = connection.createStatement();
+            statement.setEscapeProcessing(false);
+            statement.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
+            statement.execute(LOCAL_TIMEOUT_SQL);
+            result = statement.executeQuery(EXPLAIN_PREFIX + validated);
+            if (!result.next()) throw new PlanCollectionRejected(PlanRejectionReason.PLAN_UNREADABLE);
+            plan = PostgresExplainPlanParser.parse(result.getString(1));
+        } catch (PlanCollectionRejected failure) {
+            rejection = failure;
+        } catch (TargetConnectionFailure failure) {
+            rejection = new TargetConnectionFailure(failure.reason(), failure.targetName(),
+                    failure.sqlState().orElse(null), null);
+        } catch (SQLException failure) {
+            rejection = sqlFailure(failure);
+        } finally {
+            rejection = close(result, rejection);
+            rejection = close(statement, rejection);
+            if (connection != null) {
                 try {
                     connection.rollback();
-                } catch (SQLException rollbackFailure) {
-                    // The original failure determines the rejection reason. JDBC error text can contain SQL.
-                    if (primaryFailure == null) throw rollbackFailure;
+                } catch (SQLException | RuntimeException failure) {
+                    rejection = firstFailure(rejection);
                 }
             }
-        } catch (SQLException failure) {
-            if ("57014".equals(failure.getSQLState()) || "55P03".equals(failure.getSQLState()))
-                throw new PlanCollectionRejected(PlanRejectionReason.TIMEOUT);
-            throw new PlanCollectionRejected(PlanRejectionReason.TARGET_UNAVAILABLE);
-        } catch (TargetConnectionFailure failure) {
-            throw failure;
+            rejection = close(connection, rejection);
         }
+        if (rejection != null) throw rejection;
+        return plan;
+    }
+
+    private static PlanCollectionRejected sqlFailure(SQLException failure) {
+        if ("57014".equals(failure.getSQLState()) || "55P03".equals(failure.getSQLState()))
+            return new PlanCollectionRejected(PlanRejectionReason.TIMEOUT);
+        return new PlanCollectionRejected(PlanRejectionReason.TARGET_UNAVAILABLE);
+    }
+
+    private static RuntimeException firstFailure(RuntimeException rejection) {
+        return rejection == null ? new PlanCollectionRejected(PlanRejectionReason.TARGET_UNAVAILABLE) : rejection;
+    }
+
+    private static RuntimeException close(AutoCloseable resource, RuntimeException rejection) {
+        if (resource == null) return rejection;
+        try {
+            resource.close();
+        } catch (Exception failure) {
+            return firstFailure(rejection);
+        }
+        return rejection;
     }
 }
