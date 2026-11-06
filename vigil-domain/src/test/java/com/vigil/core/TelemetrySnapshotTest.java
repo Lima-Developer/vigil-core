@@ -70,6 +70,15 @@ class TelemetrySnapshotTest {
         assertTrue(result.delta().isEmpty());
     }
 
+    @Test void identityAbsentAtBothEndpointsIsNotARemoval() {
+        var before = snapshot(START, 0, true, 0);
+        var after = snapshot(END, 0, true, 0);
+        var result = QueryWindowMetrics.between(Optional.of(before), after, KEY);
+        assertEquals(QueryWindowMetrics.Status.ENTRY_ABSENT, result.status());
+        assertTrue(result.delta().isEmpty());
+        assertTrue(result.meanExecutionMillis().isEmpty());
+    }
+
     @Test void resetAndRegressionsNeverProduceNegativeMetrics() {
         var before = snapshot(START, 0, true, 0, counters(2, "2.0", 5, 5, 5, 5, 5));
         var reset = new TelemetrySnapshot(END, Optional.of(RESET.plusSeconds(1)), 0, true, 0,

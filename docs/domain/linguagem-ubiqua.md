@@ -171,7 +171,8 @@ Resultado puro da comparação entre dois snapshots: início exclusivo e fim inc
 e blocos são deltas inteiros não negativos; tempo total permanece em `BigDecimal` de milissegundos. A média por
 execução é `tempo total delta / chamadas delta`, com seis casas decimais e `HALF_EVEN`, somente se houver chamadas.
 
-`NO_BASELINE` (primeira coleta), `ENTRY_NEW` (identidade nova), `ENTRY_MISSING` (identidade removida), `RESET`,
+`NO_BASELINE` (primeira coleta), `ENTRY_NEW` (identidade nova), `ENTRY_MISSING` (identidade removida),
+`ENTRY_ABSENT` (identidade ausente nos dois extremos), `RESET`,
 `EVICTION`, `INCOMPLETE` e `INVALID_WINDOW` não possuem delta. Uma janela `COMPLETE` com delta zero é válida e
 diferente da ausência de baseline. Crescimento de `dealloc` invalida conservadoramente a janela inteira porque a
 fonte não identifica qual entrada foi desalocada; regressão de contador ou mudança em `stats_reset` indica reset.

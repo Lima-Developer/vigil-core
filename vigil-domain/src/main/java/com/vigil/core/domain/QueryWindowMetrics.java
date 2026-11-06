@@ -8,7 +8,7 @@ import java.util.Optional;
 /** Delta for one query in an observation window (start exclusive, end inclusive). */
 public record QueryWindowMetrics(Status status, Optional<ObservationWindow> window,
                                  Optional<QueryCounters> delta, Optional<BigDecimal> meanExecutionMillis) {
-    public enum Status { COMPLETE, NO_BASELINE, ENTRY_NEW, ENTRY_MISSING, INVALID_WINDOW, RESET, EVICTION, INCOMPLETE }
+    public enum Status { COMPLETE, NO_BASELINE, ENTRY_NEW, ENTRY_MISSING, ENTRY_ABSENT, INVALID_WINDOW, RESET, EVICTION, INCOMPLETE }
 
     public QueryWindowMetrics {
         Objects.requireNonNull(status, "Status must not be null.");
@@ -17,8 +17,9 @@ public record QueryWindowMetrics(Status status, Optional<ObservationWindow> wind
         Objects.requireNonNull(meanExecutionMillis, "Mean optional must not be null.");
         if (status == Status.COMPLETE) {
             if (window.isEmpty() || delta.isEmpty()) throw new IllegalArgumentException("Complete window needs a delta.");
-            if (meanExecutionMillis.isPresent() != (delta.orElseThrow().calls() > 0)) {
-                throw new IllegalArgumentException("Mean is defined exactly when calls delta is positive.");
+            Optional<BigDecimal> expectedMean = meanFor(delta.orElseThrow());
+            if (!meanExecutionMillis.equals(expectedMean)) {
+                throw new IllegalArgumentException("Mean must equal total execution milliseconds divided by calls at scale 6.");
             }
         } else if (delta.isPresent() || meanExecutionMillis.isPresent()) {
             throw new IllegalArgumentException("Incomplete windows cannot have numeric deltas.");
@@ -55,12 +56,18 @@ public record QueryWindowMetrics(Status status, Optional<ObservationWindow> wind
         }
         Optional<QueryCounters> old = before.query(key);
         Optional<QueryCounters> latest = current.query(key);
+        if (old.isEmpty() && latest.isEmpty()) return unavailable(Status.ENTRY_ABSENT, window);
         if (latest.isEmpty()) return unavailable(Status.ENTRY_MISSING, window);
         if (old.isEmpty()) return unavailable(Status.ENTRY_NEW, window);
         QueryCounters delta = latest.orElseThrow().minus(old.orElseThrow());
-        Optional<BigDecimal> mean = delta.calls() == 0 ? Optional.empty() : Optional.of(
-                delta.totalExecutionMillis().divide(BigDecimal.valueOf(delta.calls()), 6, RoundingMode.HALF_EVEN));
-        return new QueryWindowMetrics(Status.COMPLETE, window, Optional.of(delta), mean);
+        return new QueryWindowMetrics(Status.COMPLETE, window, Optional.of(delta), meanFor(delta));
+    }
+
+    /** Mean execution milliseconds per call, rounded to six decimal places with HALF_EVEN. */
+    private static Optional<BigDecimal> meanFor(QueryCounters delta) {
+        if (delta.calls() == 0) return Optional.empty();
+        return Optional.of(delta.totalExecutionMillis()
+                .divide(BigDecimal.valueOf(delta.calls()), 6, RoundingMode.HALF_EVEN));
     }
 
     private static QueryWindowMetrics unavailable(Status status, Optional<ObservationWindow> window) {
