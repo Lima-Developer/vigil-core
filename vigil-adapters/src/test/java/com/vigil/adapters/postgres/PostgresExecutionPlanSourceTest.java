@@ -13,9 +13,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class PostgresExecutionPlanSourceTest {
     private static final String JSON = "[{\"Plan\":{\"Node Type\":\"Seq Scan\",\"Plan Rows\":1}}]";
@@ -143,10 +146,18 @@ class PostgresExecutionPlanSourceTest {
                 "vigil_collector", null, java.util.Map.of("VIGIL_PG_PASSWORD", PostgresTestSupport.canary())));
     }
 
-    @ParameterizedTest @CsvSource({
-            "'SELECT 1;',MULTIPLE_STATEMENTS",
-            "'SELECT id AS x$tag$ FROM orders FOR UPDATE -- $tag$',FORBIDDEN_CLAUSE",
-            "'SELECT id AS x$tag$ INTO copied_orders FROM orders -- $tag$',FORBIDDEN_CLAUSE"})
+    static Stream<Arguments> rejectedBeforeConnection() {
+        return Stream.of(
+                Arguments.of("SELECT 1;", PlanRejectionReason.MULTIPLE_STATEMENTS),
+                Arguments.of("SELECT 1 -- comment\r INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT 1 -- comment\r FOR UPDATE", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT 1 -- comment\n INTO t", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT 1 -- comment\n FOR UPDATE", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT id AS x$tag$ FROM orders FOR UPDATE -- $tag$", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT id AS x$tag$ INTO copied_orders FROM orders -- $tag$", PlanRejectionReason.FORBIDDEN_CLAUSE));
+    }
+
+    @ParameterizedTest @MethodSource("rejectedBeforeConnection")
     void rejectsBeforeOpeningConnection(String sql, PlanRejectionReason reason) {
         var source = new PostgresExecutionPlanSource(() -> { fail("connection opened"); return null; });
         assertEquals(reason, assertThrows(PlanCollectionRejected.class, () -> source.collect(sql)).reason());

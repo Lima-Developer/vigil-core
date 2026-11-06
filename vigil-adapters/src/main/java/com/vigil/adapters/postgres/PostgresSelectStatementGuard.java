@@ -25,7 +25,7 @@ final class PostgresSelectStatementGuard {
             if (Character.isWhitespace(c)) { i++; continue; }
             if (c == '-' && i + 1 < length && text.charAt(i + 1) == '-') {
                 i += 2;
-                while (i < length && text.charAt(i) != '\n') i++;
+                while (i < length && text.charAt(i) != '\n' && text.charAt(i) != '\r') i++;
                 continue;
             }
             if (c == '/' && i + 1 < length && text.charAt(i + 1) == '*') {
