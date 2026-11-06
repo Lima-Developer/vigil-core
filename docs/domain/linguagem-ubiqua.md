@@ -161,6 +161,21 @@ Registro de métricas acumuladas ou instantâneas coletadas em um instante.
 
 No PostgreSQL, `pg_stat_statements` oferece contadores acumulados. Portanto, um snapshot não representa sozinho o comportamento recente de uma consulta.
 
+No modelo executável, o snapshot guarda o instante, o marco opcional de `stats_reset`, o contador global de `dealloc`,
+a visibilidade da coleta e uma lista imutável de `QueryCounters`. A identidade de cada série é
+`(dbid, userid, queryId, topLevel)`; `queryId` pode ter sinal. O snapshot não contém SQL.
+
+### QueryWindowMetrics
+
+Resultado puro da comparação entre dois snapshots: início exclusivo e fim inclusivo. Contadores de chamadas, linhas
+e blocos são deltas inteiros não negativos; tempo total permanece em `BigDecimal` de milissegundos. A média por
+execução é `tempo total delta / chamadas delta`, com seis casas decimais e `HALF_EVEN`, somente se houver chamadas.
+
+`NO_BASELINE` (primeira coleta), `ENTRY_NEW` (identidade nova), `ENTRY_MISSING` (identidade removida), `RESET`,
+`EVICTION`, `INCOMPLETE` e `INVALID_WINDOW` não possuem delta. Uma janela `COMPLETE` com delta zero é válida e
+diferente da ausência de baseline. Crescimento de `dealloc` invalida conservadoramente a janela inteira porque a
+fonte não identifica qual entrada foi desalocada; regressão de contador ou mudança em `stats_reset` indica reset.
+
 ### ObservationWindow
 
 Intervalo calculado a partir de snapshots compatíveis.
