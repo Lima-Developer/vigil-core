@@ -60,6 +60,8 @@ class PostgresSelectStatementGuardTest {
                 Arguments.of("SELECT /*/", PlanRejectionReason.FORBIDDEN_CLAUSE),
                 Arguments.of("SELECT /**", PlanRejectionReason.FORBIDDEN_CLAUSE),
                 Arguments.of("SELECT 'unterminated", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT $tag$unterminated", PlanRejectionReason.FORBIDDEN_CLAUSE),
+                Arguments.of("SELECT 1\0 + 2", PlanRejectionReason.FORBIDDEN_CLAUSE),
                 Arguments.of("SELECT " + " ".repeat(8187), PlanRejectionReason.TOO_LARGE));
     }
 
@@ -81,6 +83,8 @@ class PostgresSelectStatementGuardTest {
                 "SELECT id FROM orders WHERE status = 'PENDING'",
                 "SELECT id FROM orders ORDER BY placed_at DESC LIMIT 50",
                 "SELECT 'into', 'for update', \"analyze\" FROM orders",
+                "SELECT \"into\", \"for update\", \"analyze\" FROM orders",
+                "SELECT 'analyze into for update' FROM orders",
                 "SELECT E'for\\' update', $$into for update$$, $tag$for update$tag$",
                 "SELECT E'escaped\\' INTO t' FROM orders",
                 "SELECT E'escaped\\' FOR UPDATE' FROM orders",

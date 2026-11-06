@@ -55,7 +55,9 @@ class PostgresExecutionPlanSourceIT {
     @Test void collectsLaboratoryPlans() {
         assertTrue(source().collect("SELECT id, status, total_cents FROM orders WHERE customer_id = 1").nodeTypes().contains(PlanNodeType.INDEX_SCAN));
         assertTrue(source().collect("SELECT id, total_cents FROM orders WHERE status = 'PENDING'").nodeTypes().contains(PlanNodeType.SEQUENTIAL_SCAN));
-        assertFalse(source().collect("SELECT id, customer_id FROM orders ORDER BY placed_at DESC LIMIT 50").nodeTypes().isEmpty());
+        var p2 = source().collect("SELECT id, customer_id FROM orders ORDER BY placed_at DESC LIMIT 50");
+        assertFalse(p2.nodeTypes().isEmpty());
+        assertTrue(p2.estimatedRows() >= 0);
     }
 
     @Test void lockTimeoutRollsBackAndLeavesNoIdleTransaction() throws SQLException {
@@ -66,7 +68,8 @@ class PostgresExecutionPlanSourceIT {
             var failure = assertThrows(PlanCollectionRejected.class,
                     () -> source().collect("SELECT id, status, total_cents FROM orders WHERE customer_id = 1"));
             assertEquals(PlanRejectionReason.TIMEOUT, failure.reason());
-            assertTrue(Duration.ofNanos(System.nanoTime() - started).toSeconds() < 2);
+            assertTrue(Duration.ofNanos(System.nanoTime() - started).toMillis() < 1500,
+                    "lock timeout should fail near the configured 200 ms, not the 2 s statement timeout");
             locker.rollback();
         }
         assertFalse(source().collect("SELECT id, status, total_cents FROM orders WHERE customer_id = 1").nodeTypes().isEmpty());
