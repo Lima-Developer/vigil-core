@@ -8,7 +8,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -114,6 +118,42 @@ class TelemetrySnapshotTest {
         assertTrue(result.delta().isEmpty());
         assertEquals(QueryWindowMetrics.Status.RESET,
                 QueryWindowMetrics.between(Optional.of(before), snapshot(END, 0, true, 0, counters(1, "3", 6, 6, 6, 6, 6)), KEY).status());
+    }
+
+    private static Stream<Arguments> counterRegressions() {
+        return Stream.of(
+                Arguments.of("calls", counters(4, "6", 6, 6, 6, 6, 6)),
+                Arguments.of("totalExecutionMillis", counters(6, "4", 6, 6, 6, 6, 6)),
+                Arguments.of("rows", counters(6, "6", 4, 6, 6, 6, 6)),
+                Arguments.of("sharedBlksHit", counters(6, "6", 6, 4, 6, 6, 6)),
+                Arguments.of("sharedBlksRead", counters(6, "6", 6, 6, 4, 6, 6)),
+                Arguments.of("tempBlksRead", counters(6, "6", 6, 6, 6, 4, 6)),
+                Arguments.of("tempBlksWritten", counters(6, "6", 6, 6, 6, 6, 4)));
+    }
+
+    @ParameterizedTest(name = "{0} regression invalidates the window")
+    @MethodSource("counterRegressions")
+    void eachCounterRegressionInvalidatesMetrics(String counter, QueryCounters regressed) {
+        var before = snapshot(START, 0, true, 0, counters(5, "5", 5, 5, 5, 5, 5));
+        var after = snapshot(END, 0, true, 0, regressed);
+        var result = QueryWindowMetrics.between(Optional.of(before), after, KEY);
+        assertEquals(QueryWindowMetrics.Status.RESET, result.status(), counter);
+        assertTrue(result.delta().isEmpty(), counter);
+        assertTrue(result.meanExecutionMillis().isEmpty(), counter);
+        assertEquals(result, QueryWindowMetrics.betweenAll(Optional.of(before), after).get(KEY), counter);
+    }
+
+    @Test void regressionOnAnotherIdentityInvalidatesUnchangedQuery() {
+        var unchanged = counters(5, "5", 5, 5, 5, 5, 5);
+        var other = new QueryCounters(11, 20, -30, true, 5, new BigDecimal("5"), 5, 5, 5, 5, 5);
+        var regressedOther = new QueryCounters(11, 20, -30, true, 6, new BigDecimal("6"), 6, 6, 6, 6, 4);
+        var before = snapshot(START, 0, true, 0, unchanged, other);
+        var after = snapshot(END, 0, true, 0, unchanged, regressedOther);
+        var result = QueryWindowMetrics.between(Optional.of(before), after, KEY);
+        assertEquals(QueryWindowMetrics.Status.RESET, result.status());
+        assertTrue(result.delta().isEmpty());
+        assertTrue(result.meanExecutionMillis().isEmpty());
+        assertEquals(result, QueryWindowMetrics.betweenAll(Optional.of(before), after).get(KEY));
     }
 
     @Test void globalEvictionAndIncompleteReadInvalidateWindow() {
