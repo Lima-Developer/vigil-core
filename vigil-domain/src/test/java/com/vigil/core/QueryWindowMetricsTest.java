@@ -45,4 +45,18 @@ class QueryWindowMetricsTest {
                 QueryWindowMetrics.Status.COMPLETE, Optional.of(WINDOW), Optional.of(delta(0)),
                 Optional.of(BigDecimal.ZERO)));
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"NO_BASELINE", "INVALID_WINDOW"})
+    void statusWithoutValidWindowRejectsWindow(String status) {
+        assertThrows(IllegalArgumentException.class, () -> new QueryWindowMetrics(
+                QueryWindowMetrics.Status.valueOf(status), Optional.of(WINDOW), Optional.empty(), Optional.empty()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ENTRY_NEW", "ENTRY_MISSING", "ENTRY_ABSENT", "RESET", "EVICTION", "INCOMPLETE"})
+    void statusWithKnownEndpointsRequiresWindow(String status) {
+        assertThrows(IllegalArgumentException.class, () -> new QueryWindowMetrics(
+                QueryWindowMetrics.Status.valueOf(status), Optional.empty(), Optional.empty(), Optional.empty()));
+    }
 }

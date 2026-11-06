@@ -2,6 +2,9 @@ package com.vigil.core.domain;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -24,6 +27,11 @@ public record QueryWindowMetrics(Status status, Optional<ObservationWindow> wind
         } else if (delta.isPresent() || meanExecutionMillis.isPresent()) {
             throw new IllegalArgumentException("Incomplete windows cannot have numeric deltas.");
         }
+        if (status == Status.NO_BASELINE || status == Status.INVALID_WINDOW) {
+            if (window.isPresent()) throw new IllegalArgumentException("This status cannot have an observation window.");
+        } else if (window.isEmpty()) {
+            throw new IllegalArgumentException("This status requires an observation window.");
+        }
     }
 
     /**
@@ -35,32 +43,69 @@ public record QueryWindowMetrics(Status status, Optional<ObservationWindow> wind
         Objects.requireNonNull(previous, "Previous snapshot optional must not be null.");
         Objects.requireNonNull(current, "Current snapshot must not be null.");
         Objects.requireNonNull(key, "Query identity must not be null.");
-        if (previous.isEmpty()) return unavailable(Status.NO_BASELINE, Optional.empty());
+        return compare(previous, current).resultFor(key);
+    }
+
+    /** Computes all observed identities in one pass, including entries that appear or disappear. */
+    public static Map<QueryCounters.Key, QueryWindowMetrics> betweenAll(Optional<TelemetrySnapshot> previous,
+                                                                         TelemetrySnapshot current) {
+        Objects.requireNonNull(previous, "Previous snapshot optional must not be null.");
+        Objects.requireNonNull(current, "Current snapshot must not be null.");
+        Comparison comparison = compare(previous, current);
+        Map<QueryCounters.Key, QueryWindowMetrics> results = new LinkedHashMap<>();
+        comparison.before().keySet().forEach(key -> results.put(key, comparison.resultFor(key)));
+        comparison.after().keySet().forEach(key -> {
+            if (!results.containsKey(key)) results.put(key, comparison.resultFor(key));
+        });
+        return Collections.unmodifiableMap(results);
+    }
+
+    private static Comparison compare(Optional<TelemetrySnapshot> previous, TelemetrySnapshot current) {
+        Map<QueryCounters.Key, QueryCounters> after = index(current);
+        if (previous.isEmpty()) {
+            return new Comparison(Status.NO_BASELINE, Optional.empty(), Map.of(), after);
+        }
         TelemetrySnapshot before = previous.orElseThrow();
+        Map<QueryCounters.Key, QueryCounters> prior = index(before);
         if (!current.collectedAt().isAfter(before.collectedAt())) {
-            return unavailable(Status.INVALID_WINDOW, Optional.empty());
+            return new Comparison(Status.INVALID_WINDOW, Optional.empty(), prior, after);
         }
         Optional<ObservationWindow> window = Optional.of(new ObservationWindow(before.collectedAt(), current.collectedAt()));
         if (!before.fullVisibility() || !current.fullVisibility() || before.skippedRows() > 0 || current.skippedRows() > 0) {
-            return unavailable(Status.INCOMPLETE, window);
+            return new Comparison(Status.INCOMPLETE, window, prior, after);
         }
         if (!before.statsReset().equals(current.statsReset()) || current.dealloc() < before.dealloc()) {
-            return unavailable(Status.RESET, window);
+            return new Comparison(Status.RESET, window, prior, after);
         }
-        if (current.dealloc() > before.dealloc()) return unavailable(Status.EVICTION, window);
-        for (QueryCounters old : before.queries()) {
-            Optional<QueryCounters> latest = current.query(old.key());
-            if (latest.isPresent() && latest.orElseThrow().regressedFrom(old)) {
-                return unavailable(Status.RESET, window);
+        if (current.dealloc() > before.dealloc()) return new Comparison(Status.EVICTION, window, prior, after);
+        for (var entry : prior.entrySet()) {
+            QueryCounters latest = after.get(entry.getKey());
+            if (latest != null && latest.regressedFrom(entry.getValue())) {
+                return new Comparison(Status.RESET, window, prior, after);
             }
         }
-        Optional<QueryCounters> old = before.query(key);
-        Optional<QueryCounters> latest = current.query(key);
-        if (old.isEmpty() && latest.isEmpty()) return unavailable(Status.ENTRY_ABSENT, window);
-        if (latest.isEmpty()) return unavailable(Status.ENTRY_MISSING, window);
-        if (old.isEmpty()) return unavailable(Status.ENTRY_NEW, window);
-        QueryCounters delta = latest.orElseThrow().minus(old.orElseThrow());
-        return new QueryWindowMetrics(Status.COMPLETE, window, Optional.of(delta), meanFor(delta));
+        return new Comparison(null, window, prior, after);
+    }
+
+    private static Map<QueryCounters.Key, QueryCounters> index(TelemetrySnapshot snapshot) {
+        Map<QueryCounters.Key, QueryCounters> indexed = new LinkedHashMap<>();
+        for (QueryCounters query : snapshot.queries()) indexed.put(query.key(), query);
+        return indexed;
+    }
+
+    private record Comparison(Status invalidStatus, Optional<ObservationWindow> window,
+                              Map<QueryCounters.Key, QueryCounters> before,
+                              Map<QueryCounters.Key, QueryCounters> after) {
+        QueryWindowMetrics resultFor(QueryCounters.Key key) {
+            if (invalidStatus != null) return unavailable(invalidStatus, window);
+            QueryCounters old = before.get(key);
+            QueryCounters latest = after.get(key);
+            if (old == null && latest == null) return unavailable(Status.ENTRY_ABSENT, window);
+            if (latest == null) return unavailable(Status.ENTRY_MISSING, window);
+            if (old == null) return unavailable(Status.ENTRY_NEW, window);
+            QueryCounters delta = latest.minus(old);
+            return new QueryWindowMetrics(Status.COMPLETE, window, Optional.of(delta), meanFor(delta));
+        }
     }
 
     /** Mean execution milliseconds per call, rounded to six decimal places with HALF_EVEN. */

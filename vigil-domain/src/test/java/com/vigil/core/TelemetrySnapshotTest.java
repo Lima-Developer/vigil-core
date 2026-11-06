@@ -79,6 +79,30 @@ class TelemetrySnapshotTest {
         assertTrue(result.meanExecutionMillis().isEmpty());
     }
 
+    @Test void batchComparisonReusesGlobalValidationAndPreservesAllIdentities() {
+        var unchanged = counters(2, "2", 2, 2, 2, 2, 2);
+        var removed = new QueryCounters(11, 20, -30, true, 1, BigDecimal.ONE, 1, 1, 1, 1, 1);
+        var added = new QueryCounters(10, 20, -31, true, 1, BigDecimal.ONE, 1, 1, 1, 1, 1);
+        var before = snapshot(START, 0, true, 0, unchanged, removed);
+        var after = snapshot(END, 0, true, 0, unchanged, added);
+
+        var results = QueryWindowMetrics.betweenAll(Optional.of(before), after);
+        assertEquals(3, results.size());
+        assertEquals(QueryWindowMetrics.Status.COMPLETE, results.get(KEY).status());
+        assertEquals(QueryWindowMetrics.Status.ENTRY_MISSING, results.get(removed.key()).status());
+        assertEquals(QueryWindowMetrics.Status.ENTRY_NEW, results.get(added.key()).status());
+        assertEquals(QueryWindowMetrics.between(Optional.of(before), after, KEY), results.get(KEY));
+        assertEquals(results, QueryWindowMetrics.betweenAll(Optional.of(before), after));
+        assertThrows(UnsupportedOperationException.class, () -> results.clear());
+
+        var regressed = snapshot(END, 0, true, 0, unchanged,
+                new QueryCounters(11, 20, -30, true, 0, BigDecimal.ONE, 1, 1, 1, 1, 1));
+        assertEquals(QueryWindowMetrics.Status.RESET,
+                QueryWindowMetrics.betweenAll(Optional.of(before), regressed).get(KEY).status());
+        assertEquals(QueryWindowMetrics.Status.NO_BASELINE,
+                QueryWindowMetrics.betweenAll(Optional.empty(), after).get(KEY).status());
+    }
+
     @Test void resetAndRegressionsNeverProduceNegativeMetrics() {
         var before = snapshot(START, 0, true, 0, counters(2, "2.0", 5, 5, 5, 5, 5));
         var reset = new TelemetrySnapshot(END, Optional.of(RESET.plusSeconds(1)), 0, true, 0,
