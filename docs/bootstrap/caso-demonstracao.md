@@ -14,7 +14,7 @@ VIGIL_DEMO_SELECT='SELECT 1' \
   --spring.profiles.active=local --server.port=8080
 ```
 
-Abra `http://127.0.0.1:8080/`, clique em **Iniciar avaliação do caso** e registre uma triagem justificada. O serviço escuta apenas `127.0.0.1`. O profile local aceita `VIGIL_TARGET_HOST`, `VIGIL_TARGET_DATABASE`, `VIGIL_TARGET_NAME`, `VIGIL_ENVIRONMENT` e `VIGIL_DATABASE_PATH`. A conexão exige exatamente uma entre `VIGIL_PG_PASSWORD` e `VIGIL_PG_PASSWORD_FILE`; para CA personalizada, passe `--vigil.demo.ssl-root-cert=/caminho/ca.crt`. O modo TLS padrão é `verify-full`.
+Abra `http://127.0.0.1:8080/`, clique em **Iniciar avaliação do caso** e registre uma triagem justificada. Em cada ensaio da defesa, use um **novo nome de arquivo SQLite** para repetir o fluxo desde o início; assim o histórico anterior permanece intacto. O serviço escuta apenas `127.0.0.1`. O profile local aceita `VIGIL_TARGET_HOST`, `VIGIL_TARGET_DATABASE`, `VIGIL_TARGET_NAME`, `VIGIL_ENVIRONMENT` e `VIGIL_DATABASE_PATH`. A conexão exige exatamente uma entre `VIGIL_PG_PASSWORD` e `VIGIL_PG_PASSWORD_FILE`; para CA personalizada, passe `--vigil.demo.ssl-root-cert=/caminho/ca.crt`. O modo TLS padrão é `verify-full`.
 
 A consulta inicial e suas métricas são **fixture de laboratório**, explicitamente marcada na página. O caso e a auditoria são persistidos. Sem usuário/target configurado, a página mostra um plano de **fixture**, explicitamente identificado como não coletado; com eles, mostra nós, linhas e custo do EXPLAIN **estimados**, nunca ganho medido. Não há baseline. `?demo=1` abre um protótipo inteiramente sintético, cuja triagem não é persistida.
 
