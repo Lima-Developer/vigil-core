@@ -24,15 +24,8 @@ public class Main {
         final StorageConfiguration storageConfiguration;
         try {
             storageConfiguration = storageConfiguration(environmentVariables);
-            // Preserve the legacy diagnostics for an explicitly supplied target.
-            // With no target variables, Spring resolves the selected profile defaults.
-            if (environmentVariables.keySet().stream().anyMatch(key -> key.equals("VIGIL_TARGET_NAME")
-                    || key.equals("VIGIL_ENVIRONMENT") || key.equals("VIGIL_TARGET_HOST")
-                    || key.equals("VIGIL_TARGET_DATABASE"))) {
-                TargetProfileLoader.load(environmentVariables);
-            } else {
-                TargetProfileLoader.rejectMultipleTargets(environmentVariables);
-            }
+            // Validate every explicit override before touching storage. Omitted values come from the active profile.
+            TargetProfileLoader.validateOverrides(environmentVariables);
         } catch (RuntimeException exception) {
             errors.println("Falha na configuração do Vigil: " + exception.getMessage());
             return 2;

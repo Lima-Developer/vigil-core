@@ -7,6 +7,11 @@ import com.tngtech.archunit.lang.syntax.ArchRuleDefinition;
 import com.vigil.application.fixture.ForbiddenApplicationJdbcDependency;
 import com.vigil.core.domain.fixture.ForbiddenDomainAdapterDependency;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -55,6 +60,28 @@ class ArchitectureTest {
     }
 
     @Test
+    void shouldKeepSpringDependenciesOutOfCoreModulePoms() throws Exception {
+        var moduleDirectory = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        var root = Files.isDirectory(moduleDirectory.resolve("vigil-domain"))
+                ? moduleDirectory : moduleDirectory.getParent();
+        for (var module : new String[]{"vigil-domain", "vigil-application", "vigil-adapters"}) {
+            assertPomHasNoSpringDependency(root.resolve(module).resolve("pom.xml"));
+        }
+    }
+
+    @Test
+    void pomCheckDetectsADeclaredSpringDependency(@TempDir Path directory) throws Exception {
+        var pom = directory.resolve("pom.xml");
+        Files.writeString(pom, """
+                <project><dependencies><dependency>
+                  <groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter</artifactId>
+                </dependency></dependencies></project>
+                """);
+
+        assertThrows(AssertionError.class, () -> assertPomHasNoSpringDependency(pom));
+    }
+
+    @Test
     void shouldKeepDomainClassesInExpectedPackages() {
         DOMAIN_STAYS_IN_ITS_PACKAGES.check(productionClasses());
     }
@@ -92,5 +119,23 @@ class ArchitectureTest {
         return new ClassFileImporter()
                 .withImportOption(new ImportOption.DoNotIncludeTests())
                 .importPackages("com.vigil");
+    }
+
+    private static void assertPomHasNoSpringDependency(Path pom) throws Exception {
+        var factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        var dependencies = factory.newDocumentBuilder().parse(pom.toFile())
+                .getElementsByTagNameNS("*", "dependency");
+        for (int index = 0; index < dependencies.getLength(); index++) {
+            var dependency = dependencies.item(index);
+            var children = dependency.getChildNodes();
+            for (int child = 0; child < children.getLength(); child++) {
+                var node = children.item(child);
+                if ("groupId".equals(node.getLocalName())
+                        && node.getTextContent().strip().startsWith("org.springframework")) {
+                    throw new AssertionError("Spring dependency outside vigil-bootstrap: " + pom);
+                }
+            }
+        }
     }
 }

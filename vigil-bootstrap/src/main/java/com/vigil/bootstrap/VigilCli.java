@@ -129,13 +129,10 @@ public final class VigilCli {
         } catch (IllegalArgumentException invalid) {
             throw new UsageException(invalid.getMessage());
         }
-        if (env.keySet().stream().anyMatch(key -> key.startsWith("VIGIL_TARGET_")
-                || key.equals("VIGIL_TARGETS") || key.equals("VIGIL_ENVIRONMENT"))) {
-            try {
-                TargetProfileLoader.load(env);
-            } catch (IllegalArgumentException invalid) {
-                throw new UsageException(invalid.getMessage());
-            }
+        try {
+            TargetProfileLoader.validateOverrides(env);
+        } catch (IllegalArgumentException invalid) {
+            throw new UsageException(invalid.getMessage());
         }
     }
 

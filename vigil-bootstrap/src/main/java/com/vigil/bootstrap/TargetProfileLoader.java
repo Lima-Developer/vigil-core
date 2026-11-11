@@ -37,6 +37,19 @@ final class TargetProfileLoader {
         return build(name, environment, host, port, database, sslMode, timeoutSeconds);
     }
 
+    /** Validates only explicit overrides while profiles continue to supply omitted values. */
+    static void validateOverrides(Map<String, String> environmentVariables) {
+        rejectMultipleTargets(environmentVariables);
+        String name = optional(environmentVariables, NAME, "local");
+        String environment = optional(environmentVariables, ENVIRONMENT, "local");
+        String host = optional(environmentVariables, HOST, "localhost");
+        String database = optional(environmentVariables, DATABASE, "postgres");
+        int port = integer(environmentVariables, PORT, TargetProfile.DEFAULT_PORT);
+        int timeoutSeconds = integer(environmentVariables, CONNECT_TIMEOUT, DEFAULT_CONNECT_TIMEOUT_SECONDS);
+        TargetSslMode sslMode = sslMode(environmentVariables);
+        build(name, environment, host, port, database, sslMode, timeoutSeconds);
+    }
+
     private static TargetProfile build(String name, String environment, String host, int port, String database,
                                        TargetSslMode sslMode, int timeoutSeconds) {
         // Nome e ambiente já foram validados como não vazios; cada campo restante é validado
@@ -75,6 +88,10 @@ final class TargetProfileLoader {
             throw new IllegalArgumentException(variable + " é obrigatória e não pode estar em branco.");
         }
         return value;
+    }
+
+    private static String optional(Map<String, String> environmentVariables, String variable, String defaultValue) {
+        return environmentVariables.containsKey(variable) ? required(environmentVariables, variable) : defaultValue;
     }
 
     private static int integer(Map<String, String> environmentVariables, String variable, int defaultValue) {

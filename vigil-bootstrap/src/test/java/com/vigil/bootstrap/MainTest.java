@@ -80,12 +80,34 @@ class MainTest {
     }
 
     @Test
-    void returnsConfigurationExitCodeForMissingTargetHost() {
+    void acceptsPartialTargetOverrideWithProfileDefaults() {
         var variables = Map.of("VIGIL_DATABASE_PATH", directory.resolve("vigil.db").toString(),
-                "VIGIL_TARGET_NAME", "target", "VIGIL_ENVIRONMENT", "test", "VIGIL_TARGET_DATABASE", "lab");
+                "VIGIL_STORAGE_MIN_FREE_BYTES", "1", "SPRING_PROFILES_ACTIVE", "test",
+                "VIGIL_TARGET_NAME", "target");
         var errors = new ByteArrayOutputStream();
-        assertEquals(2, Main.run(variables, new PrintStream(new ByteArrayOutputStream()), new PrintStream(errors)));
-        assertTrue(errors.toString().contains("VIGIL_TARGET_HOST"));
+        assertEquals(0, Main.run(variables, new PrintStream(new ByteArrayOutputStream()), new PrintStream(errors)));
+        assertEquals("", errors.toString());
+    }
+
+    @Test
+    void rejectsEachInvalidTargetOverrideBeforeStorage() {
+        var invalidOverrides = Map.of(
+                "VIGIL_TARGET_SSL_MODE", "disable",
+                "VIGIL_TARGET_PORT", "invalid",
+                "VIGIL_TARGET_CONNECT_TIMEOUT_SECONDS", "0");
+        invalidOverrides.forEach((key, value) -> {
+            var database = directory.resolve(key + ".db");
+            var variables = new java.util.HashMap<String, String>();
+            variables.put("VIGIL_DATABASE_PATH", database.toString());
+            variables.put(key, value);
+            var output = new ByteArrayOutputStream();
+            var errors = new ByteArrayOutputStream();
+
+            assertEquals(2, Main.run(Map.copyOf(variables), new PrintStream(output), new PrintStream(errors)), key);
+            assertEquals("", output.toString(), key);
+            assertTrue(errors.toString().contains(key), errors.toString());
+            assertFalse(java.nio.file.Files.exists(database), key);
+        });
     }
 
     @Test

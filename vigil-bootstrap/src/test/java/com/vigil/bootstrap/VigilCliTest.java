@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -103,6 +104,35 @@ class VigilCliTest {
         assertEquals("", result.err());
         assertTrue(result.out().contains("healthy=true"), result.out());
         assertTrue(Files.exists(directory.resolve(profile + ".db")));
+    }
+
+    @Test
+    void caseCommandAcceptsPartialTargetOverrideWithProfileDefaults() {
+        var variables = new HashMap<>(env());
+        variables.put("SPRING_PROFILES_ACTIVE", "test");
+        variables.put("VIGIL_TARGET_NAME", "case-demo");
+
+        var result = run(Map.copyOf(variables), "case", "discover");
+
+        assertEquals(0, result.exit(), result.err());
+        assertTrue(result.out().contains("created=true"));
+    }
+
+    @Test
+    void caseCommandRejectsInvalidIsolatedTargetOverridesBeforeStorage() {
+        Map.of("VIGIL_TARGET_SSL_MODE", "disable", "VIGIL_TARGET_PORT", "invalid",
+                "VIGIL_TARGET_CONNECT_TIMEOUT_SECONDS", "0").forEach((key, value) -> {
+            var database = directory.resolve("case-" + key + ".db");
+            var variables = new HashMap<String, String>();
+            variables.put("VIGIL_DATABASE_PATH", database.toString());
+            variables.put(key, value);
+
+            var result = run(Map.copyOf(variables), "case", "discover");
+
+            assertEquals(2, result.exit(), key + ": " + result.err());
+            assertTrue(result.err().contains(key), result.err());
+            assertFalse(Files.exists(database), key);
+        });
     }
 
     @Test
