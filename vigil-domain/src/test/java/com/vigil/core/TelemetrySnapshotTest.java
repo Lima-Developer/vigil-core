@@ -216,6 +216,15 @@ class TelemetrySnapshotTest {
         assertThrows(IllegalArgumentException.class, () -> snapshot(START, 0, true, 0, query, query));
     }
 
+    @Test void snapshotQueryFindsOnlyTheExactCompositeIdentity() {
+        var query = counters(1, "1", 1, 1, 1, 1, 1);
+        var snapshot = snapshot(START, 0, true, 0, query);
+
+        assertEquals(Optional.of(query), snapshot.query(KEY));
+        assertTrue(snapshot.query(new QueryCounters.Key(10, 20, -30, false)).isEmpty());
+        assertThrows(NullPointerException.class, () -> snapshot.query(null));
+    }
+
     @Test void constructorsRejectInvalidAndIncompleteValues() {
         assertThrows(IllegalArgumentException.class, () -> counters(-1, "1", 1, 1, 1, 1, 1));
         assertThrows(IllegalArgumentException.class, () -> counters(1, "-0.1", 1, 1, 1, 1, 1));
