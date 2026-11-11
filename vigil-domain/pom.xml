@@ -23,4 +23,25 @@
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <configuration>
+                    <skip>false</skip>
+                    <targetClasses>
+                        <param>com.vigil.core.domain.QueryCounters</param>
+                        <param>com.vigil.core.domain.TelemetrySnapshot</param>
+                        <param>com.vigil.core.domain.QueryWindowMetrics</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>com.vigil.core.TelemetrySnapshotTest</param>
+                        <param>com.vigil.core.QueryWindowMetricsTest</param>
+                    </targetTests>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>
