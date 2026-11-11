@@ -35,13 +35,15 @@ public class Main {
 
         try {
             Clock clock = new SystemClockAdapter();
-            CheckVigilHealth checkVigilHealth = new CheckVigilHealth(clock, APPLICATION_VERSION,
-                    new SqliteStorageProbe(), storageConfiguration);
-            HealthStatus healthStatus = checkVigilHealth.check(vigilConfiguration);
+            HealthStatus healthStatus = new CheckVigilHealth(clock, APPLICATION_VERSION,
+                    new SqliteStorageProbe(), storageConfiguration).check(vigilConfiguration);
             output.println(healthStatus);
             if (!healthStatus.healthy()) {
                 healthStatus.storage().problems().forEach(errors::println);
                 return 1;
+            }
+            try (var context = VigilContext.open(environmentVariables)) {
+                context.getBean(CheckVigilHealth.class);
             }
             return 0;
         } catch (RuntimeException exception) {
@@ -68,6 +70,15 @@ public class Main {
         if (minimum <= 0) {
             throw new IllegalArgumentException("VIGIL_STORAGE_MIN_FREE_BYTES deve ser um número inteiro positivo.");
         }
-        return new StorageConfiguration(Path.of(databasePath), minimum);
+        final Path path;
+        try {
+            path = Path.of(databasePath);
+        } catch (RuntimeException invalid) {
+            throw new IllegalArgumentException("VIGIL_DATABASE_PATH deve ser um caminho absoluto válido.");
+        }
+        if (!path.isAbsolute()) {
+            throw new IllegalArgumentException("VIGIL_DATABASE_PATH deve ser um caminho absoluto válido.");
+        }
+        return new StorageConfiguration(path, minimum);
     }
 }

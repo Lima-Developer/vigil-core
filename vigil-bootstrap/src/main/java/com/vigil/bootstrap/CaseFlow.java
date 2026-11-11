@@ -1,11 +1,5 @@
 package com.vigil.bootstrap;
 
-import com.vigil.adapters.SystemClockAdapter;
-import com.vigil.adapters.UuidIdGeneratorAdapter;
-import com.vigil.adapters.sqlite.SqliteAnalysisCaseAuditReader;
-import com.vigil.adapters.sqlite.SqliteAnalysisCaseRepository;
-import com.vigil.adapters.sqlite.SqliteConnectionFactory;
-import com.vigil.adapters.sqlite.SqliteDatabaseInitializer;
 import com.vigil.application.casework.DiscoverObservedQueryCommand;
 import com.vigil.application.casework.DiscoverObservedQueryResult;
 import com.vigil.application.casework.DiscoverObservedQueryUseCase;
@@ -14,7 +8,6 @@ import com.vigil.application.casework.TriageAnalysisCaseUseCase;
 import com.vigil.application.port.out.interfaces.AnalysisCaseAuditReader;
 import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
 import com.vigil.application.port.out.interfaces.AuditedEvent;
-import com.vigil.application.port.out.interfaces.Clock;
 import com.vigil.core.domain.AnalysisCase;
 import com.vigil.core.domain.ObservationWindow;
 import com.vigil.core.domain.ObservedQuery;
@@ -23,7 +16,6 @@ import com.vigil.core.domain.QueryFingerprint;
 import com.vigil.core.domain.enums.CommandType;
 import com.vigil.core.domain.enums.TelemetrySource;
 
-import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -45,18 +37,12 @@ final class CaseFlow {
     private final AnalysisCaseRepository repository;
     private final AnalysisCaseAuditReader audit;
 
-    private CaseFlow(SqliteConnectionFactory connections, Clock clock) {
-        var ids = new UuidIdGeneratorAdapter();
-        this.repository = new SqliteAnalysisCaseRepository(connections);
-        this.audit = new SqliteAnalysisCaseAuditReader(connections);
-        this.discover = new DiscoverObservedQueryUseCase(repository, clock, ids);
-        this.triage = new TriageAnalysisCaseUseCase(repository, clock, ids);
-    }
-
-    /** Migrates the database at {@code databaseFile} (closing the connection, even on failure) and composes the flow. */
-    static CaseFlow open(Path databaseFile) {
-        var clock = new SystemClockAdapter();
-        return new CaseFlow(SqliteDatabaseInitializer.initialize(databaseFile, clock), clock);
+    CaseFlow(DiscoverObservedQueryUseCase discover, TriageAnalysisCaseUseCase triage,
+             AnalysisCaseRepository repository, AnalysisCaseAuditReader audit) {
+        this.repository = repository;
+        this.audit = audit;
+        this.discover = discover;
+        this.triage = triage;
     }
 
     DiscoverObservedQueryResult discover() {

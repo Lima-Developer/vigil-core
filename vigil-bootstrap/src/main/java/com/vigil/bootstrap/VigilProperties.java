@@ -10,5 +10,15 @@ public record VigilProperties(Target target, Sqlite sqlite, Inference inference)
     public record Target(String name, String environment, String host, Integer port, String database,
                          String sslMode, Duration connectTimeout) { }
     public record Sqlite(Path path, Long minimumFreeBytes) { }
-    public record Inference(Boolean enabled, String model, Duration timeout) { }
+    public record Inference(Boolean enabled, String model, Duration timeout) {
+        public Inference {
+            if (Boolean.TRUE.equals(enabled) && (model == null || model.isBlank())) {
+                throw new IllegalArgumentException("vigil.inference.model é obrigatório quando inferência está ativa");
+            }
+            if (timeout != null && (timeout.compareTo(Duration.ofSeconds(1)) < 0
+                    || timeout.compareTo(Duration.ofMinutes(1)) > 0)) {
+                throw new IllegalArgumentException("vigil.inference.timeout deve estar entre 1 segundo e 1 minuto");
+            }
+        }
+    }
 }

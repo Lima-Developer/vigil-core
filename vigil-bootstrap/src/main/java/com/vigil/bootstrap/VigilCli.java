@@ -88,9 +88,11 @@ public final class VigilCli {
         return switch (args[1]) {
             case "discover" -> {
                 options(args, Set.of());
-                var flow = CaseFlow.open(databaseFile(env));
-                var result = flow.discover();
-                out.println("case=" + result.caseId() + " created=" + result.created());
+                validateConfiguration(env);
+                try (var context = VigilContext.open(env)) {
+                    var result = context.getBean(CaseFlow.class).discover();
+                    out.println("case=" + result.caseId() + " created=" + result.created());
+                }
                 yield 0;
             }
             case "triage" -> {
@@ -100,18 +102,41 @@ public final class VigilCli {
                 if (reason == null || reason.isBlank()) {
                     throw new UsageException("Informe --reason com um motivo não vazio.");
                 }
-                var flow = CaseFlow.open(databaseFile(env));
-                flow.triage(caseId, reason);
-                out.println("case=" + caseId + " status=" + flow.find(caseId).status());
+                validateConfiguration(env);
+                try (var context = VigilContext.open(env)) {
+                    var flow = context.getBean(CaseFlow.class);
+                    flow.triage(caseId, reason);
+                    out.println("case=" + caseId + " status=" + flow.find(caseId).status());
+                }
                 yield 0;
             }
             case "show" -> {
                 var caseId = caseId(options(args, Set.of("--case")));
-                show(CaseFlow.open(databaseFile(env)), caseId, out);
+                validateConfiguration(env);
+                try (var context = VigilContext.open(env)) {
+                    show(context.getBean(CaseFlow.class), caseId, out);
+                }
                 yield 0;
             }
             default -> throw new UsageException(USAGE);
         };
+    }
+
+    private static void validateConfiguration(Map<String, String> env) {
+        databaseFile(env);
+        try {
+            Main.storageConfiguration(env);
+        } catch (IllegalArgumentException invalid) {
+            throw new UsageException(invalid.getMessage());
+        }
+        if (env.keySet().stream().anyMatch(key -> key.startsWith("VIGIL_TARGET_")
+                || key.equals("VIGIL_TARGETS") || key.equals("VIGIL_ENVIRONMENT"))) {
+            try {
+                TargetProfileLoader.load(env);
+            } catch (IllegalArgumentException invalid) {
+                throw new UsageException(invalid.getMessage());
+            }
+        }
     }
 
     private static void show(CaseFlow flow, UUID caseId, PrintStream out) {

@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+vigil:
+  target:
+    name: ${VIGIL_TARGET_NAME:local-postgres}
+    environment: ${VIGIL_ENVIRONMENT:development}
+    database: ${VIGIL_TARGET_DATABASE:vigil_lab}

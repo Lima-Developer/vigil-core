@@ -34,6 +34,11 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage("java.sql..", "javax.sql..")
             .because("a conexão JDBC nunca atravessa a fronteira do adapter; o core só vê TargetConnectionFailure");
 
+    private static final ArchRule SPRING_ONLY_IN_BOOTSTRAP = ArchRuleDefinition.noClasses()
+            .that().resideInAnyPackage("com.vigil.core..", "com.vigil.application..", "com.vigil.adapters..")
+            .should().dependOnClassesThat().resideInAnyPackage("org.springframework..")
+            .because("Spring pertence somente ao composition root");
+
     private static final ArchRule BOOTSTRAP_ONLY_COMPOSES = ArchRuleDefinition.noClasses()
             .that().resideInAPackage("com.vigil.bootstrap..")
             .should().dependOnClassesThat().resideInAnyPackage("java.sql..", "javax.sql..", "org.sqlite..")
@@ -42,6 +47,11 @@ class ArchitectureTest {
     @Test
     void shouldKeepBootstrapFreeOfJdbc() {
         BOOTSTRAP_ONLY_COMPOSES.check(productionClasses());
+    }
+
+    @Test
+    void shouldKeepSpringOnlyInBootstrap() {
+        SPRING_ONLY_IN_BOOTSTRAP.check(productionClasses());
     }
 
     @Test

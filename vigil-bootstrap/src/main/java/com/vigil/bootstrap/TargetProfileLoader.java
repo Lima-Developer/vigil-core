@@ -59,7 +59,7 @@ final class TargetProfileLoader {
         }
     }
 
-    private static void rejectMultipleTargets(Map<String, String> environmentVariables) {
+    static void rejectMultipleTargets(Map<String, String> environmentVariables) {
         environmentVariables.keySet().stream().sorted()
                 .filter(key -> TARGETS.equals(key) || INDEXED_TARGET.matcher(key).matches())
                 .findFirst()

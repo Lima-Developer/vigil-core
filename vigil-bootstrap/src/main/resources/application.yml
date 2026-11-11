@@ -1,8 +1,23 @@
-env:
-  VIGIL_TARGET_NAME: "local-postgres"
-  VIGIL_ENVIRONMENT: "development"
-  VIGIL_DATABASE_PATH: "/var/lib/vigil/vigil.db"
-  VIGIL_TARGET_HOST: "localhost"
-  VIGIL_TARGET_PORT: "5432"
-  VIGIL_TARGET_DATABASE: "vigil_lab"
-  VIGIL_TARGET_SSL_MODE: "verify-full"
+spring:
+  main:
+    web-application-type: none
+    banner-mode: off
+    log-startup-info: false
+logging:
+  level:
+    root: OFF
+vigil:
+  target:
+    name: ${VIGIL_TARGET_NAME:local}
+    environment: ${VIGIL_ENVIRONMENT:local}
+    host: ${VIGIL_TARGET_HOST:localhost}
+    port: ${VIGIL_TARGET_PORT:5432}
+    database: ${VIGIL_TARGET_DATABASE:postgres}
+    ssl-mode: ${VIGIL_TARGET_SSL_MODE:verify-full}
+    connect-timeout: ${VIGIL_TARGET_CONNECT_TIMEOUT_SECONDS:5}s
+  sqlite:
+    path: ${VIGIL_DATABASE_PATH:}
+    minimum-free-bytes: ${VIGIL_STORAGE_MIN_FREE_BYTES:268435456}
+  inference:
+    enabled: false
+    timeout: 5s

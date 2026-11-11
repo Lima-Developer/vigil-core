@@ -1,0 +1,12 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+vigil:
+  target:
+    name: test
+    environment: test
+    host: localhost
+    database: postgres
+  inference:
+    enabled: false

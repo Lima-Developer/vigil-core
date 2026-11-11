@@ -1,12 +1,11 @@
 package com.vigil.bootstrap;
 
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-/** Spring is deliberately confined to the composition root. The CLI remains independently runnable. */
+/** Spring is deliberately confined to the composition root. */
 @SpringBootApplication
 public class VigilApplication {
     public static void main(String[] args) {
-        SpringApplication.run(VigilApplication.class, args);
+        Main.main(args);
     }
 }
