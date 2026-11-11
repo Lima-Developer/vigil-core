@@ -29,13 +29,17 @@ function render(data) {
   list.replaceChildren();
   for (const event of data.events || []) {
     const item = document.createElement('li');
-    const heading = document.createElement('strong'); heading.textContent = event.type || 'Evento';
+    const heading = document.createElement('strong');
+    heading.textContent = ({ ANALYSIS_CASE_DISCOVERED: 'Consulta descoberta', QUERY_TRIAGED: 'Consulta triada' })[event.type] || event.type || 'Evento';
     const details = document.createElement('div'); details.textContent = event.detail || '';
     const when = document.createElement('time'); when.dateTime = event.at || ''; when.textContent = date(event.at);
     item.append(heading, details, when); list.append(item);
   }
   if (!list.children.length) { const item = document.createElement('li'); item.textContent = 'Ainda não há eventos registrados.'; list.append(item); }
-  $('triage-button').disabled = data.status === 'TRIAGED';
+  const triaged = data.status === 'TRIAGED';
+  $('triage-button').disabled = triaged;
+  $('triage-button').firstChild.textContent = triaged ? 'Triagem registrada ' : 'Registrar triagem ';
+  $('reason').disabled = triaged;
 }
 async function load() {
   if (demo) {

@@ -107,7 +107,7 @@ class DemoCaseController {
         var demo = properties.demo();
         if (demo == null || demo.select() == null || demo.select().isBlank()
                 || demo.postgresUser() == null || demo.postgresUser().isBlank())
-            return new PlanView(true, "EXPLAIN indisponível: configure um target de laboratório e usuário de leitura.");
+            return new PlanView(true, "Plano de fixture de laboratório: Seq Scan, 100 linhas e custo estimado 12,00. Não é EXPLAIN coletado; configure um target de leitura para coletá-lo.");
         try {
             var source = PostgresExecutionPlanSource.forTarget(target, demo.postgresUser(),
                     demo.sslRootCert(), System.getenv());

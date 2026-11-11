@@ -1,6 +1,6 @@
 # Coleta de plano PostgreSQL (VIG-036)
 
-O port `ExecutionPlanSource` recebe um SELECT literal e devolve apenas `PlanSummaryEvidencePayload`: tipos de nós e estimativa de linhas da raiz. `Index Scan`, `Index Only Scan` e `Bitmap Index Scan` são classificados como `INDEX_SCAN`; o último aparece na consulta H do laboratório. O JSON de `EXPLAIN` fica em memória no adapter e não integra retorno, log ou mensagens de erro. A coleta usa `EXPLAIN (FORMAT JSON)` sem `ANALYZE`, `BUFFERS` ou `VERBOSE`.
+O port `ExecutionPlanSource` recebe um SELECT literal e devolve apenas `PlanSummaryEvidencePayload`: tipos de nós, estimativa de linhas e custo total estimado da raiz (quando fornecido pelo PostgreSQL). `Index Scan`, `Index Only Scan` e `Bitmap Index Scan` são classificados como `INDEX_SCAN`; o último aparece na consulta H do laboratório. O JSON de `EXPLAIN` fica em memória no adapter e não integra retorno, log ou mensagens de erro. A coleta usa `EXPLAIN (FORMAT JSON)` sem `ANALYZE`, `BUFFERS` ou `VERBOSE`.
 
 | Política | Rejeição |
 |---|---|
