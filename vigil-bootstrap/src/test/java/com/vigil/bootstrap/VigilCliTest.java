@@ -91,6 +91,20 @@ class VigilCliTest {
         );
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"local", "test"})
+    void applicationEntryUsesProfileTargetDefaults(String profile) throws Exception {
+        var env = Map.of("VIGIL_DATABASE_PATH", directory.resolve(profile + ".db").toString(),
+                "VIGIL_STORAGE_MIN_FREE_BYTES", "1", "SPRING_PROFILES_ACTIVE", profile);
+
+        var result = runInChildJvm(VigilApplication.class, env);
+
+        assertEquals(0, result.exit(), result.err());
+        assertEquals("", result.err());
+        assertTrue(result.out().contains("healthy=true"), result.out());
+        assertTrue(Files.exists(directory.resolve(profile + ".db")));
+    }
+
     @Test
     void shouldNotExposeSqlInOutputOrErrors() {
         var env = env();
@@ -310,12 +324,16 @@ class VigilCliTest {
     }
 
     private static Result runInChildJvm(Map<String, String> env, String... args) throws Exception {
+        return runInChildJvm(Main.class, env, args);
+    }
+
+    private static Result runInChildJvm(Class<?> entry, Map<String, String> env, String... args) throws Exception {
         var command = new java.util.ArrayList<String>();
         command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
         command.add("-Djava.io.tmpdir=" + System.getProperty("java.io.tmpdir"));
         command.add("-cp");
         command.add(System.getProperty("java.class.path"));
-        command.add(Main.class.getName());
+        command.add(entry.getName());
         command.addAll(List.of(args));
         var builder = new ProcessBuilder(command);
         builder.environment().putAll(env);

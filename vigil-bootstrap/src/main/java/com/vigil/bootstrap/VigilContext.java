@@ -19,6 +19,7 @@ final class VigilContext {
         values.put("spring.main.log-startup-info", "false");
         values.put("spring.main.register-shutdown-hook", "false");
         values.put("logging.level.root", "OFF");
+        copy(variables, values, "SPRING_PROFILES_ACTIVE", "spring.profiles.active");
         copy(variables, values, "VIGIL_DATABASE_PATH", "vigil.sqlite.path");
         copy(variables, values, "VIGIL_STORAGE_MIN_FREE_BYTES", "vigil.sqlite.minimum-free-bytes");
         copy(variables, values, "VIGIL_TARGET_NAME", "vigil.target.name");

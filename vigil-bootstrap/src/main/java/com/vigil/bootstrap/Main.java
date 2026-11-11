@@ -3,7 +3,6 @@ package com.vigil.bootstrap;
 import com.vigil.adapters.SystemClockAdapter;
 import com.vigil.adapters.sqlite.SqliteStorageProbe;
 import com.vigil.application.configuration.StorageConfiguration;
-import com.vigil.application.configuration.TargetProfile;
 import com.vigil.application.configuration.VigilConfiguration;
 import com.vigil.application.health.CheckVigilHealth;
 import com.vigil.application.health.HealthStatus;
@@ -23,27 +22,37 @@ public class Main {
 
     static int run(Map<String, String> environmentVariables, PrintStream output, PrintStream errors) {
         final StorageConfiguration storageConfiguration;
-        final VigilConfiguration vigilConfiguration;
         try {
             storageConfiguration = storageConfiguration(environmentVariables);
-            TargetProfile targetProfile = TargetProfileLoader.load(environmentVariables);
-            vigilConfiguration = new VigilConfiguration(targetProfile.name(), targetProfile.environment());
+            // Preserve the legacy diagnostics for an explicitly supplied target.
+            // With no target variables, Spring resolves the selected profile defaults.
+            if (environmentVariables.keySet().stream().anyMatch(key -> key.equals("VIGIL_TARGET_NAME")
+                    || key.equals("VIGIL_ENVIRONMENT") || key.equals("VIGIL_TARGET_HOST")
+                    || key.equals("VIGIL_TARGET_DATABASE"))) {
+                TargetProfileLoader.load(environmentVariables);
+            } else {
+                TargetProfileLoader.rejectMultipleTargets(environmentVariables);
+            }
         } catch (RuntimeException exception) {
             errors.println("Falha na configuração do Vigil: " + exception.getMessage());
             return 2;
         }
 
         try {
-            Clock clock = new SystemClockAdapter();
-            HealthStatus healthStatus = new CheckVigilHealth(clock, APPLICATION_VERSION,
-                    new SqliteStorageProbe(), storageConfiguration).check(vigilConfiguration);
-            output.println(healthStatus);
+            // A read-only preflight preserves detailed storage diagnostics without creating SQLite.
+            HealthStatus healthStatus = new CheckVigilHealth(new SystemClockAdapter(), APPLICATION_VERSION,
+                    new SqliteStorageProbe(), storageConfiguration)
+                    .check(new VigilConfiguration("local", "local"));
             if (!healthStatus.healthy()) {
+                output.println(healthStatus);
                 healthStatus.storage().problems().forEach(errors::println);
                 return 1;
             }
             try (var context = VigilContext.open(environmentVariables)) {
-                context.getBean(CheckVigilHealth.class);
+                // Context startup includes the SQLite migrations. Report success only afterwards.
+                healthStatus = context.getBean(CheckVigilHealth.class)
+                        .check(context.getBean(VigilConfiguration.class));
+                output.println(healthStatus);
             }
             return 0;
         } catch (RuntimeException exception) {

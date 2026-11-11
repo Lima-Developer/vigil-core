@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
+import java.sql.DriverManager;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -96,5 +97,24 @@ class MainTest {
         var errors = new ByteArrayOutputStream();
         assertEquals(2, Main.run(variables, new PrintStream(new ByteArrayOutputStream()), new PrintStream(errors)));
         assertTrue(errors.toString().contains("VIGIL_TARGET_2_HOST"));
+    }
+
+    @Test
+    void doesNotReportHealthyBeforeAnIncompatibleMigrationFails() throws Exception {
+        var database = directory.resolve("vigil.db");
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+             var statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE schema_version (version INTEGER PRIMARY KEY)");
+            statement.execute("INSERT INTO schema_version (version) VALUES (1)");
+        }
+        var output = new ByteArrayOutputStream();
+        var errors = new ByteArrayOutputStream();
+        var variables = Map.of("VIGIL_DATABASE_PATH", database.toString(),
+                "VIGIL_STORAGE_MIN_FREE_BYTES", "1", "SPRING_PROFILES_ACTIVE", "test");
+
+        assertEquals(1, Main.run(variables, new PrintStream(output), new PrintStream(errors)));
+        assertEquals("", output.toString());
+        assertTrue(errors.toString().contains("Falha ao verificar armazenamento"));
+        assertFalse(errors.toString().contains("CREATE TABLE"));
     }
 }
