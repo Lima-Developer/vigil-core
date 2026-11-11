@@ -7,3 +7,6 @@ vigil:
     name: ${VIGIL_TARGET_NAME:local-postgres}
     environment: ${VIGIL_ENVIRONMENT:development}
     database: ${VIGIL_TARGET_DATABASE:vigil_lab}
+  sqlite:
+    path: ${VIGIL_DATABASE_PATH:/tmp/vigil-local.db}
+    minimum-free-bytes: ${VIGIL_STORAGE_MIN_FREE_BYTES:1048576}

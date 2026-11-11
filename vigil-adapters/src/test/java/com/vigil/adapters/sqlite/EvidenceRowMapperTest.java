@@ -49,6 +49,19 @@ class EvidenceRowMapperTest {
     }
 
     @Test
+    void shouldRoundTripOptionalEstimatedPlanCostWithoutBreakingLegacyRows() {
+        var payload = new com.vigil.core.domain.PlanSummaryEvidencePayload(
+                java.util.List.of(com.vigil.core.domain.enums.PlanNodeType.INDEX_SCAN), 12,
+                Optional.of(new java.math.BigDecimal("18.75")));
+        var encoded = EvidencePayloadCodec.encode(payload);
+        assertEquals("nodes=INDEX_SCAN;estimatedRows=12;estimatedTotalCost=18.75", encoded);
+        assertEquals(payload, EvidencePayloadCodec.decode(EvidenceType.PLAN_SUMMARY, encoded));
+        assertEquals(Optional.empty(), ((com.vigil.core.domain.PlanSummaryEvidencePayload)
+                EvidencePayloadCodec.decode(EvidenceType.PLAN_SUMMARY,
+                        "nodes=INDEX_SCAN;estimatedRows=12")).estimatedTotalCost());
+    }
+
+    @Test
     void shouldPreserveFalseForRelationCompatibilityFlag() {
         var payload = new com.vigil.core.domain.RelationMetadataEvidencePayload(
                 new com.vigil.core.domain.SafeRelationReference("relation_orders"), 42L, 3, false);

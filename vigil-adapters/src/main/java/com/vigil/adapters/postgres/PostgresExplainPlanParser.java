@@ -8,6 +8,7 @@ import com.vigil.core.domain.PlanSummaryEvidencePayload;
 import com.vigil.core.domain.enums.PlanNodeType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /** Only the safe, aggregate fields cross the adapter boundary. */
 final class PostgresExplainPlanParser {
@@ -27,7 +28,14 @@ final class PostgresExplainPlanParser {
                     || rows.decimalValue().compareTo(java.math.BigDecimal.valueOf(Long.MAX_VALUE)) > 0) throw new IllegalArgumentException();
             List<PlanNodeType> types = new ArrayList<>();
             collect(root, types);
-            return new PlanSummaryEvidencePayload(types, Math.round(rows.doubleValue()));
+            JsonNode cost = root.path("Total Cost");
+            Optional<java.math.BigDecimal> estimatedCost = Optional.empty();
+            if (!cost.isMissingNode()) {
+                if (!cost.isNumber() || !Double.isFinite(cost.doubleValue()) || cost.decimalValue().signum() < 0)
+                    throw new IllegalArgumentException();
+                estimatedCost = Optional.of(cost.decimalValue());
+            }
+            return new PlanSummaryEvidencePayload(types, Math.round(rows.doubleValue()), estimatedCost);
         } catch (Exception failure) {
             throw new PlanCollectionRejected(PlanRejectionReason.PLAN_UNREADABLE);
         }

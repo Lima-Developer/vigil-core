@@ -12,11 +12,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 class PostgresExplainPlanParserTest {
     @Test void mapsNestedNodesAndRoundsRootRows() {
         String json = """
-                [{"Plan":{"Node Type":"Hash Join","Plan Rows":1234.5,"Filter":"secret",
+                [{"Plan":{"Node Type":"Hash Join","Plan Rows":1234.5,"Total Cost":18.75,"Filter":"secret",
                  "Plans":[{"Node Type":"Index Only Scan"},{"Node Type":"Seq Scan","Plans":[{"Node Type":"Other"}]}]}}]
                 """;
         var summary = PostgresExplainPlanParser.parse(json);
         assertEquals(1235, summary.estimatedRows());
+        assertEquals(0, new java.math.BigDecimal("18.75").compareTo(summary.estimatedTotalCost().orElseThrow()));
         assertEquals(List.of(PlanNodeType.HASH_JOIN, PlanNodeType.INDEX_SCAN,
                 PlanNodeType.SEQUENTIAL_SCAN, PlanNodeType.UNKNOWN), summary.nodeTypes());
         assertFalse(summary.toString().contains("secret"));

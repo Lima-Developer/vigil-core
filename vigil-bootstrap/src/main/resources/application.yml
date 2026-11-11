@@ -1,8 +1,14 @@
 spring:
+  application:
+    name: vigil
   main:
-    web-application-type: none
     banner-mode: off
     log-startup-info: false
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+server:
+  address: 127.0.0.1
+  shutdown: graceful
 logging:
   level:
     root: OFF
@@ -21,3 +27,6 @@ vigil:
   inference:
     enabled: false
     timeout: 5s
+  demo:
+    select: ${VIGIL_DEMO_SELECT:SELECT 1}
+    postgres-user: ${VIGIL_TARGET_USER:}

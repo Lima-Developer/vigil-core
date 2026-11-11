@@ -47,10 +47,20 @@ async function load() {
   }
   try {
     const response = await fetch('/api/cases/demo', { headers: { Accept: 'application/json' } });
+    if (response.status === 404) {
+      $('source-label').textContent = 'Caso ainda não criado';
+      $('notice').textContent = 'Inicie uma avaliação local. Identidade e triagem serão persistidas; métricas iniciais são uma fixture de laboratório.';
+      $('notice').classList.add('demo');
+      $('create-case').hidden = false;
+      $('case-status').textContent = 'Não iniciado';
+      $('triage-button').disabled = true;
+      return;
+    }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     render(await response.json());
-    $('source-label').textContent = 'Dados persistidos';
-    $('notice').textContent = 'Dados lidos do caso persistido. A triagem exige uma justificativa.';
+    $('source-label').textContent = 'Caso persistido · métricas de fixture';
+    $('notice').textContent = 'Identidade e auditoria persistidas em SQLite. Métricas iniciais de fixture de laboratório; não são medições atuais do target.';
+    $('notice').classList.add('demo');
   } catch {
     $('source-label').textContent = 'Sem conexão com a API';
     $('notice').textContent = 'A API do caso ainda não está disponível. Para visualizar o protótipo com dados sintéticos, abra esta página com ?demo=1.';
@@ -58,6 +68,22 @@ async function load() {
     $('triage-button').disabled = true;
   }
 }
+$('create-case').addEventListener('click', async () => {
+  $('create-case').disabled = true;
+  $('notice').textContent = 'Criando caso…';
+  try {
+    const response = await fetch('/api/cases/demo', { method: 'POST', headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    $('create-case').hidden = true;
+    render(await response.json());
+    $('source-label').textContent = 'Caso persistido · métricas de fixture';
+    $('notice').textContent = 'Caso criado em SQLite. Métricas iniciais de fixture de laboratório; não são medições atuais do target.';
+  } catch {
+    $('notice').textContent = 'Não foi possível criar o caso. Verifique o serviço local e tente novamente.';
+    $('notice').classList.add('error');
+    $('create-case').disabled = false;
+  }
+});
 $('triage-form').addEventListener('submit', async event => {
   event.preventDefault();
   const reason = $('reason').value.trim();

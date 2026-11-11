@@ -37,9 +37,12 @@ final class EvidencePayloadCodec {
                     "unit", metric.unit().name(),
                     "windowStart", SqliteInstantCodec.encode(metric.observationWindow().startedAtExclusive()),
                     "windowEnd", SqliteInstantCodec.encode(metric.observationWindow().endedAtInclusive()));
-            case PlanSummaryEvidencePayload plan -> join(
-                    "nodes", String.join(",", plan.nodeTypes().stream().map(Enum::name).toList()),
-                    "estimatedRows", Long.toString(plan.estimatedRows()));
+            case PlanSummaryEvidencePayload plan -> plan.estimatedTotalCost().isPresent()
+                    ? join("nodes", String.join(",", plan.nodeTypes().stream().map(Enum::name).toList()),
+                            "estimatedRows", Long.toString(plan.estimatedRows()),
+                            "estimatedTotalCost", plan.estimatedTotalCost().orElseThrow().toPlainString())
+                    : join("nodes", String.join(",", plan.nodeTypes().stream().map(Enum::name).toList()),
+                            "estimatedRows", Long.toString(plan.estimatedRows()));
             case RelationMetadataEvidencePayload relation -> join(
                     "relation", relation.relation().value(),
                     "estimatedRows", Long.toString(relation.estimatedRows()),
@@ -62,12 +65,17 @@ final class EvidencePayloadCodec {
                                     SqliteInstantCodec.decode(f.get("windowEnd"))));
                 }
                 case PLAN_SUMMARY -> {
-                    var f = fields(text, "nodes", "estimatedRows");
+                    var f = text.split(SEPARATOR, -1).length == 3
+                            ? fields(text, "nodes", "estimatedRows", "estimatedTotalCost")
+                            : fields(text, "nodes", "estimatedRows");
                     var nodes = new ArrayList<PlanNodeType>();
                     for (var node : f.get("nodes").split(",", -1)) {
                         nodes.add(PersistedValues.code(PlanNodeType.class, node, "payload"));
                     }
-                    yield new PlanSummaryEvidencePayload(nodes, Long.parseLong(f.get("estimatedRows")));
+                    yield new PlanSummaryEvidencePayload(nodes, Long.parseLong(f.get("estimatedRows")),
+                            f.containsKey("estimatedTotalCost")
+                                    ? java.util.Optional.of(new BigDecimal(f.get("estimatedTotalCost")))
+                                    : java.util.Optional.empty());
                 }
                 case RELATION_METADATA -> {
                     var f = fields(text, "relation", "estimatedRows", "indexCount", "compatibleIndexExists");
