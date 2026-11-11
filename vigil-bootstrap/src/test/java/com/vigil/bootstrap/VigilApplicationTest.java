@@ -70,6 +70,60 @@ class VigilApplicationTest {
         });
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"PT0.5S", "PT61S"})
+    void inferenceTimeoutOutsideSupportedBoundsFailsBinding(String timeout) {
+        var database = directory.resolve("vigil.db");
+        runner(database).withPropertyValues("vigil.inference.timeout=" + timeout).run(context -> {
+            assertNotNull(context.getStartupFailure());
+            assertFalse(java.nio.file.Files.exists(database));
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"0", "-1"})
+    void nonPositiveSqliteFreeSpaceFailsBeforeCreatingStorage(String minimum) {
+        var database = directory.resolve("vigil.db");
+        runner(database).withPropertyValues("vigil.sqlite.minimum-free-bytes=" + minimum).run(context -> {
+            assertNotNull(context.getStartupFailure());
+            assertFalse(java.nio.file.Files.exists(database));
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"0", "65536", "-1"})
+    void outOfRangeTargetPortFailsBeforeCreatingStorage(String port) {
+        var database = directory.resolve("vigil.db");
+        runner(database).withPropertyValues("vigil.target.port=" + port).run(context -> {
+            assertNotNull(context.getStartupFailure());
+            assertFalse(java.nio.file.Files.exists(database));
+        });
+    }
+
+    @Test void missingRequiredTargetPropertyFailsBeforeCreatingStorage() {
+        var database = directory.resolve("vigil.db");
+        new ApplicationContextRunner().withUserConfiguration(VigilApplication.class)
+                .withPropertyValues("spring.profiles.active=test", "vigil.target.name=test",
+                        "vigil.target.environment=test", "vigil.target.database=postgres",
+                        "vigil.sqlite.path=" + database,
+                        "vigil.sqlite.minimum-free-bytes=1", "vigil.inference.enabled=false")
+                .run(context -> {
+                    assertNotNull(context.getStartupFailure());
+                    assertFalse(java.nio.file.Files.exists(database));
+                    assertTrue(rootMessage(context.getStartupFailure()).contains("vigil.target.host"));
+                });
+    }
+
+    @Test void invalidTargetBindingDoesNotEchoConfiguredSecret() {
+        var secret = "senha-super-secreta";
+        var database = directory.resolve("vigil.db");
+        runner(database).withPropertyValues("vigil.target.port=" + secret).run(context -> {
+            assertNotNull(context.getStartupFailure());
+            assertFalse(rootMessage(context.getStartupFailure()).contains(secret));
+            assertFalse(java.nio.file.Files.exists(database));
+        });
+    }
+
     @Test void multipleTargetsFailBeforeCreatingStorage() {
         var database = directory.resolve("vigil.db");
         runner(database).withPropertyValues("VIGIL_TARGET_1_HOST=other").run(context -> {
@@ -84,5 +138,13 @@ class VigilApplicationTest {
                         "vigil.target.environment=test", "vigil.target.host=localhost",
                         "vigil.target.database=postgres", "vigil.sqlite.path=" + database,
                         "vigil.sqlite.minimum-free-bytes=1", "vigil.inference.enabled=false");
+    }
+
+    private static String rootMessage(Throwable failure) {
+        var messages = new StringBuilder();
+        for (var cause = failure; cause != null; cause = cause.getCause()) {
+            messages.append(cause.getMessage()).append('\n');
+        }
+        return messages.toString();
     }
 }
