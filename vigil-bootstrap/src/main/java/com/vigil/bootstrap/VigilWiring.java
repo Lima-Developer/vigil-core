@@ -55,7 +55,7 @@ class VigilWiring {
         return new TargetProfile(required(target.name(), "vigil.target.name"),
                 required(target.environment(), "vigil.target.environment"),
                 required(target.host(), "vigil.target.host"),
-                target.port() == null ? TargetProfile.DEFAULT_PORT : target.port(),
+                targetPort(target.port()),
                 required(target.database(), "vigil.target.database"),
                 TargetSslMode.fromConfigValue(target.sslMode() == null ? "verify-full" : target.sslMode()),
                 target.connectTimeout() == null ? Duration.ofSeconds(5) : target.connectTimeout());
@@ -138,5 +138,14 @@ class VigilWiring {
     private static String required(String value, String key) {
         if (value == null || value.isBlank()) throw new IllegalArgumentException(key + " é obrigatório");
         return value;
+    }
+
+    private static int targetPort(String value) {
+        if (value == null) return TargetProfile.DEFAULT_PORT;
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException invalid) {
+            throw new IllegalArgumentException("vigil.target.port deve ser um número inteiro entre 1 e 65535");
+        }
     }
 }

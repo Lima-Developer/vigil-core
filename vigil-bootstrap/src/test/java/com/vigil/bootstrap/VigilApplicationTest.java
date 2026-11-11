@@ -119,7 +119,9 @@ class VigilApplicationTest {
         var database = directory.resolve("vigil.db");
         runner(database).withPropertyValues("vigil.target.port=" + secret).run(context -> {
             assertNotNull(context.getStartupFailure());
-            assertFalse(rootMessage(context.getStartupFailure()).contains(secret));
+            var messages = rootMessage(context.getStartupFailure());
+            assertTrue(messages.contains("vigil.target.port"));
+            assertFalse(messages.contains(secret));
             assertFalse(java.nio.file.Files.exists(database));
         });
     }
