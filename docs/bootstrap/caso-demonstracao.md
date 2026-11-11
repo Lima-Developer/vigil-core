@@ -8,12 +8,13 @@ A aplicação web local oferece uma página de um único caso. Identidade, estad
 ./mvnw verify
 VIGIL_DATABASE_PATH=/caminho/absoluto/vigil-demo.db \
 VIGIL_TARGET_USER=usuario_somente_leitura \
+VIGIL_PG_PASSWORD_FILE=/caminho/para/segredo \
 VIGIL_DEMO_SELECT='SELECT 1' \
   java -jar vigil-bootstrap/target/vigil-bootstrap-0.1.0-SNAPSHOT.jar \
   --spring.profiles.active=local --server.port=8080
 ```
 
-Abra `http://127.0.0.1:8080/`, clique em **Iniciar avaliação do caso** e registre uma triagem justificada. O serviço escuta apenas `127.0.0.1`. O profile local aceita `VIGIL_TARGET_HOST`, `VIGIL_TARGET_DATABASE`, `VIGIL_TARGET_NAME`, `VIGIL_ENVIRONMENT`, `VIGIL_DATABASE_PATH` e a credencial PostgreSQL suportada pelo adapter.
+Abra `http://127.0.0.1:8080/`, clique em **Iniciar avaliação do caso** e registre uma triagem justificada. O serviço escuta apenas `127.0.0.1`. O profile local aceita `VIGIL_TARGET_HOST`, `VIGIL_TARGET_DATABASE`, `VIGIL_TARGET_NAME`, `VIGIL_ENVIRONMENT` e `VIGIL_DATABASE_PATH`. A conexão exige exatamente uma entre `VIGIL_PG_PASSWORD` e `VIGIL_PG_PASSWORD_FILE`; para CA personalizada, passe `--vigil.demo.ssl-root-cert=/caminho/ca.crt`. O modo TLS padrão é `verify-full`.
 
 A consulta inicial e suas métricas são **fixture de laboratório**, explicitamente marcada na página. O caso e a auditoria são persistidos. Sem usuário/target configurado, a página mostra um plano de **fixture**, explicitamente identificado como não coletado; com eles, mostra nós, linhas e custo do EXPLAIN **estimados**, nunca ganho medido. Não há baseline. `?demo=1` abre um protótipo inteiramente sintético, cuja triagem não é persistida.
 
