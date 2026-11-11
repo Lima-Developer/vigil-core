@@ -10,7 +10,7 @@ VIGIL_DATABASE_PATH=/caminho/absoluto/vigil-demo.db \
 VIGIL_TARGET_USER=usuario_somente_leitura \
 VIGIL_PG_PASSWORD_FILE=/caminho/para/segredo \
 VIGIL_DEMO_SELECT='SELECT 1' \
-  java -jar vigil-bootstrap/target/vigil-bootstrap-0.1.0-SNAPSHOT.jar \
+  java -jar vigil-bootstrap/target/vigil-bootstrap-0.1.0-SNAPSHOT-exec.jar \
   --spring.profiles.active=local --server.port=8080
 ```
 
