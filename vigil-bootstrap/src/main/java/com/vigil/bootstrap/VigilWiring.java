@@ -41,6 +41,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(VigilProperties.class)
 class VigilWiring {
+    @Bean com.vigil.application.port.out.interfaces.LocalVolumeSpaceReader localVolumeSpaceReader() {
+        return new com.vigil.adapters.FileSystemVolumeSpaceReader();
+    }
     @Bean Clock clock() { return new SystemClockAdapter(); }
     @Bean IdGenerator idGenerator() { return new UuidIdGeneratorAdapter(); }
 

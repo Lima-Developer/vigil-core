@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Vigil workspace telemetry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "metrics"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sqlCalls",
+        "meanExecutionMillis",
+        "waitingSessions",
+        "freeLocalStorage",
+        "localUsableBytes"
+      ],
+      "properties": {
+        "sqlCalls": {
+          "$ref": "#/$defs/metric"
+        },
+        "meanExecutionMillis": {
+          "$ref": "#/$defs/metric"
+        },
+        "waitingSessions": {
+          "$ref": "#/$defs/metric"
+        },
+        "freeLocalStorage": {
+          "$ref": "#/$defs/metric"
+        },
+        "localUsableBytes": {
+          "$ref": "#/$defs/metric"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "targetId",
+        "observedAt",
+        "window",
+        "unit",
+        "state",
+        "quality",
+        "value",
+        "reason"
+      ],
+      "properties": {
+        "source": {
+          "enum": [
+            "filesystem",
+            "pg_stat_statements",
+            "pg_stat_activity",
+            "provider"
+          ]
+        },
+        "targetId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "window": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "start",
+                "end"
+              ],
+              "properties": {
+                "start": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "end": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          ]
+        },
+        "unit": {
+          "enum": [
+            "bytes",
+            "calls",
+            "ms",
+            "sessions"
+          ]
+        },
+        "state": {
+          "enum": [
+            "available",
+            "stale",
+            "unsupported",
+            "error",
+            "warming_up"
+          ]
+        },
+        "quality": {
+          "enum": [
+            "measured",
+            "partial",
+            "unknown"
+          ]
+        },
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "available",
+                  "stale"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "observedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "quality": {
+                "enum": [
+                  "measured",
+                  "partial"
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "observedAt": {
+                "type": "null"
+              },
+              "window": {
+                "type": "null"
+              },
+              "quality": {
+                "const": "unknown"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "available"
+              },
+              "quality": {
+                "const": "measured"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

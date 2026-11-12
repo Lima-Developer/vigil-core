@@ -40,6 +40,7 @@ function render(data) {
   $('triage-button').disabled = triaged;
   $('triage-button').firstChild.textContent = triaged ? 'Triagem registrada ' : 'Registrar triagem ';
   $('reason').disabled = triaged;
+  window.dispatchEvent(new CustomEvent('vigil:case-updated', { detail: data }));
 }
 async function load() {
   if (demo) {
