@@ -1,0 +1,17 @@
+{
+  "queryId": "Q08",
+  "decision": "candidate",
+  "rationale": [
+    "A variante candidate preservou o multiconjunto de resultados nos dois seeds testados e teve mediana exploratória de 14,95 ms, ante 117,365 ms da original.",
+    "A escolha depende de o.id ser não nulo em todos os pedidos; sem essa garantia, count(o.id) pode diferir de count(*)."
+  ],
+  "planEvidence": [
+    "O plano da original executa três agregações correlacionadas 6.000 vezes cada; o da candidate agrega após uma junção com 60.000 pedidos e retorna 6.000 clientes.",
+    "O custo estimado pelo planner caiu de 1.421.854,52 para 2.540,61; esses valores não representam preço nem tempo de execução."
+  ],
+  "semanticRisks": [
+    "A equivalência observada nos seeds 42 e 43 é limitada e não prova equivalência geral.",
+    "O LEFT JOIN inclui clientes sem pedidos; count(o.id) produz zero e sum(...) produz NULL, desde que o.id seja não nulo para pedidos existentes."
+  ],
+  "confidence": 0.83
+}

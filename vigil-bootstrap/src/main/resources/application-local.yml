@@ -10,3 +10,10 @@ vigil:
   sqlite:
     path: ${VIGIL_DATABASE_PATH:/tmp/vigil-local.db}
     minimum-free-bytes: ${VIGIL_STORAGE_MIN_FREE_BYTES:1048576}
+  telemetry:
+    enabled: ${VIGIL_TELEMETRY_ENABLED:false}
+    postgres-user: ${VIGIL_TELEMETRY_POSTGRES_USER:}
+    ssl-root-cert: ${VIGIL_TELEMETRY_SSL_ROOT_CERT:}
+    interval: ${VIGIL_TELEMETRY_INTERVAL:30s}
+    retention: ${VIGIL_TELEMETRY_RETENTION:24h}
+    maximum-samples: ${VIGIL_TELEMETRY_MAXIMUM_SAMPLES:2880}

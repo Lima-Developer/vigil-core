@@ -1,0 +1,17 @@
+{
+  "queryId": "Q02",
+  "decision": "candidate",
+  "rationale": [
+    "A variante candidate preserva uma linha por cliente NORTH, inclusive os sem pedidos, com LEFT JOIN; SUM sem correspondências continua NULL.",
+    "A mediana exploratória caiu de 25,474 ms para 7,635 ms nas sete repetições."
+  ],
+  "planEvidence": [
+    "O original executa duas agregações correlacionadas 1.500 vezes cada; o candidate agrega pedidos COMPLETED uma vez e retorna 1.500 linhas.",
+    "O custo estimado do planner cai de 237121,92 para 1837,0; são unidades de planejamento, sem interpretação monetária."
+  ],
+  "semanticRisks": [
+    "A equivalência de multiconjuntos foi observada apenas nos seeds 42 e 43.",
+    "A pré-agregação lê 50.919 pedidos COMPLETED; sua vantagem pode variar com a seletividade e a distribuição dos dados."
+  ],
+  "confidence": 0.86
+}

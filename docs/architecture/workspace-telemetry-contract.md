@@ -1,8 +1,13 @@
 # Contrato de telemetria do workspace — v1
 
-Endpoint implementado: `GET /api/workspace/telemetry`, com `Cache-Control: no-store`.
-Não executa SQL no target. Nesta entrega somente `localUsableBytes` faz uma leitura real do volume
-que contém o SQLite do Vigil, sem criar arquivos de sonda. As demais fontes estão explicitamente indisponíveis.
+Endpoints:
+
+- `GET /api/workspace/telemetry`: snapshot sem cache com métricas atuais, até 120 amostras persistidas e estado do coletor;
+- `POST /api/workspace/telemetry/pause`: pausa novas leituras do target;
+- `POST /api/workspace/telemetry/resume`: retoma imediatamente o ciclo serial.
+
+Nenhuma resposta expõe caminho local, senha, URL JDBC, nome de usuário ou texto SQL. O coletor usa o perfil de
+menor privilégio já existente e persiste somente agregados no SQLite local.
 
 ## Envelope e semântica
 
@@ -10,71 +15,74 @@ que contém o SQLite do Vigil, sem criar arquivos de sonda. As demais fontes est
 {
   "schemaVersion": 1,
   "generatedAt": "2026-11-12T15:00:00Z",
-  "metrics": {
-    "localUsableBytes": {
-      "source": "filesystem",
-      "targetId": "vigil-local-storage",
-      "observedAt": "2026-11-12T15:00:00Z",
-      "window": null,
-      "unit": "bytes",
-      "state": "available",
-      "quality": "measured",
-      "value": 0,
-      "reason": null
-    }
+  "metrics": {},
+  "samples": [],
+  "collector": {
+    "enabled": false,
+    "paused": false,
+    "collecting": false,
+    "lastSuccess": null,
+    "lastFailure": null,
+    "consecutiveFailures": 0,
+    "reason": "DISABLED"
   }
 }
 ```
 
-Exemplo abreviado: zero bytes é um valor válido e não representa ausência de leitura. O payload real contém
-as cinco métricas da tabela abaixo. Nenhuma resposta expõe caminho local, senha, URL JDBC ou SQL do target.
-
 | Métrica | Fonte | Unidade | Escopo |
 |---|---|---|---|
-| sqlCalls | pg_stat_statements | calls | Delta de execuções SQL, não requests HTTP |
-| meanExecutionMillis | pg_stat_statements | ms | Soma dos deltas de tempo / soma dos deltas de chamadas |
-| waitingSessions | pg_stat_activity | sessions | Sessões com espera observada, não fila de pool |
-| localUsableBytes | filesystem | bytes | Espaço utilizável no volume local do Vigil |
-| freeLocalStorage | provider | bytes | Métrica do provedor do banco; nunca derivada do filesystem local |
+| `sqlCalls` | `pg_stat_statements` | calls | Delta de execuções SQL, não requests HTTP |
+| `meanExecutionMillis` | `pg_stat_statements` | ms | Soma dos deltas de tempo / soma dos deltas de chamadas |
+| `waitingSessions` | `pg_stat_activity` | sessions | Gauge de sessões com espera observada, não fila de pool |
+| `localUsableBytes` | filesystem | bytes | Espaço utilizável no volume local do Vigil |
+| `freeLocalStorage` | provider | bytes | Métrica do provedor do banco; nunca derivada do filesystem local |
 
-Cada métrica carrega `source`, `targetId`, `observedAt`, `window`, `unit`, `state`, `quality`,
-`value` e `reason`. `generatedAt` indica a montagem da resposta, não a última observação.
-Gauges pontuais têm `window=null`; deltas usam `{start,end}` em UTC com `start<end`.
+Cada métrica carrega origem, target, instante, janela, unidade, estado, qualidade, valor e razão. Deltas usam
+`{start,end}` em UTC; gauges têm `window=null`. `generatedAt` é o instante de montagem da resposta.
 
-Estados e valores:
+Estados:
 
-- `available`: valor numérico finito >= 0, timestamp válido, razão nula.
-- `stale`: último valor conhecido e timestamp original, com razão explícita; nunca atualizar artificialmente a data.
-- `unsupported`: fonte/capacidade não conectada; valor, timestamp e janela nulos.
-- `error`: falha de leitura; valor e timestamp nulos, código de razão sem detalhes sensíveis.
-- `warming_up` (reservado ao futuro coletor): ainda sem duas amostras válidas após início/reset; valor nulo.
+- `available`: valor medido e instante original;
+- `stale`: reservado ao último valor conhecido quando uma política de idade for configurada;
+- `warming_up`: ainda não existem duas amostras compatíveis ou não houve chamada concluída para calcular média;
+- `unsupported`: fonte não configurada ou sem adapter suportado;
+- `error`: falha de leitura sem detalhes sensíveis.
 
-Qualidade: `measured`, `partial` ou `unknown`. Qualidade parcial requer razão explicando cobertura.
-Ausência, permissão parcial e zero devem continuar distinguíveis. O backend atual emite `measured` ou `unknown`.
+Qualidade é `measured`, `partial` ou `unknown`. Ausência, zero, cobertura parcial e falha permanecem distintos.
 
-## Atualização da interface implementada
+## Coleta contínua
 
-Fora da prévia visual, a aba Telemetria lê o endpoint a cada 30 s, somente enquanto estiver visível.
-Existe pausa manual, cancelamento ao trocar de aba, timeout de 8 s e proibição de requests sobrepostos.
-O gráfico local retém no máximo 60 pontos **em memória da sessão do navegador**. Recarregar limpa esse histórico.
-Séries de prévia são separadas, identificadas e não são acrescentadas ao histórico real.
-Falhas exibem indisponibilidade; os pontos anteriores, quando existentes, continuam identificados por horário.
+Quando `vigil.telemetry.enabled=true`, o backend:
 
-Isto ainda **não é um scheduler de coleta de PostgreSQL no backend**, nem persistência/retencão histórica.
+1. lê contadores cumulativos de `pg_stat_statements`, sem carregar texto SQL;
+2. identifica entradas por `(dbid, userid, queryid, toplevel)`;
+3. calcula deltas apenas entre baselines monotônicos do mesmo epoch;
+4. invalida a janela após primeira leitura, `stats_reset`, deallocation ou regressão de contador;
+5. marca como parcial quando há visibilidade limitada, linhas descartadas ou churn de entradas;
+6. lê apenas contagens agregadas de sessões ativas, em espera e bloqueadas em `pg_stat_activity`;
+7. persiste amostras limitadas por idade e quantidade no SQLite;
+8. executa serialmente, aplica backoff exponencial limitado a 15 minutos e fecha o executor no shutdown.
 
-## Próxima implementação: coletor do target
+Configuração local padrão:
 
-1. Reusar a porta de telemetria e as conexões de menor privilégio já existentes, sem coletar texto SQL bruto.
-2. Identificar cada contador por banco/usuário/queryid/toplevel; comparar amostras de uma mesma origem.
-3. Na primeira amostra, reinício, alteração de stats_reset, regressão de contadores ou eviction/dealloc,
-   invalidar a janela afetada e reconstruir baseline. Não representar deltas negativos como zero.
-4. Uma entrada nova não tem baseline confiável; uma entrada ausente pode ter sido removida. A soma somente
-   pode representar o total se a cobertura for conhecida; caso contrário, marcar parcial ou indisponível.
-5. Latência agregada é ponderada por chamadas. Com delta de chamadas zero, a latência é ausente,
-   não zero e não média simples de médias. Definir tempo e escopo para chamadas concluídas.
-6. Sessões/esperas e bloqueios são gauges de fontes próprias; leituras não atômicas devem declarar timestamps.
-7. Introduzir execução serial, intervalo configurável, timeout, backoff limitado, pausa e retenção persistida.
-   Testar falha de conexão, recuperação, resets, permissão parcial e encerramento ordenado.
-8. Integrar provedor cloud apenas mediante adapter específico. Deixar `freeLocalStorage` indisponível onde não houver suporte.
+```properties
+vigil.telemetry.enabled=${VIGIL_TELEMETRY_ENABLED:false}
+vigil.telemetry.postgres-user=${VIGIL_TELEMETRY_POSTGRES_USER:}
+vigil.telemetry.ssl-root-cert=${VIGIL_TELEMETRY_SSL_ROOT_CERT:}
+vigil.telemetry.interval=${VIGIL_TELEMETRY_INTERVAL:30s}
+vigil.telemetry.retention=${VIGIL_TELEMETRY_RETENTION:24h}
+vigil.telemetry.maximum-samples=${VIGIL_TELEMETRY_MAXIMUM_SAMPLES:2880}
+```
+
+A senha continua sendo lida pela política existente de ambiente; não há senha em propriedades ou histórico.
+`freeLocalStorage` permanece `unsupported` até existir adapter oficial para um provedor escolhido. O espaço do
+filesystem do processo não é apresentado como capacidade livre do banco remoto.
+
+## Interface
+
+A aba Telemetria consulta o endpoint a cada 30 segundos enquanto visível, sem requisições concorrentes, com timeout
+de 8 segundos. Os gráficos usam o histórico persistido retornado pelo backend. Pausar/retomar atua no scheduler
+quando ele está habilitado; com o coletor desabilitado, o botão pausa apenas a atualização da tela. Gráficos têm
+resumo textual, tabela acessível e traços diferentes, sem depender apenas de cor.
 
 O schema executável está em [workspace-telemetry-v1.schema.json](workspace-telemetry-v1.schema.json).

@@ -1,6 +1,6 @@
 # Schema SQLite e migrations
 
-- **Cards:** VIG-022 (schema base), VIG-023 (evidências, eventos de domínio e repositório)
+- **Cards:** VIG-022 (schema base), VIG-023 (evidências/eventos) e VIG-087 (histórico agregado de telemetria)
 - **Módulo:** `vigil-adapters`, pacote `com.vigil.adapters.sqlite` (ADR-003 — não há módulo `vigil-adapter-sqlite`)
 - **Decisões relacionadas:** ADR-002 (SQLite local em WAL), ADR-003 (monólito modular hexagonal)
 
@@ -21,6 +21,7 @@ para `AnalysisCase`, como os tipos Java são representados em SQLite e como o sc
 | `AnalysisCase.events()` (`List<CaseEvent>`) | `case_event` | Uma linha por transição, na ordem da lista. |
 | `AnalysisCase.evidences()` (`List<Evidence>`) | `evidence` | Uma linha por evidência, payload seguro em texto (V002). |
 | `DomainEvent` pendentes | `domain_event` | Gravados na mesma transação do caso (V002). |
+| amostra agregada do coletor | `workspace_telemetry_sample` | Sem SQL, usuário, endereço ou credencial; retenção limitada (V003). |
 
 ### 1.1 Fingerprint não identifica caso
 
@@ -53,7 +54,7 @@ podem ter `discovery_idempotency_key` nula. Somente uma chave de descoberta pres
 ### 1.3 O que fica de fora
 
 - Conteúdo de artefatos protegidos: `evidence.protected_reference` guarda somente o identificador opaco.
-- Telemetria, baselines, diagnósticos e estados futuros da máquina de estados.
+- Baselines cumulativos transitórios do PostgreSQL, diagnósticos sensíveis e estados futuros da máquina de estados.
 
 O contrato de mapeamento, versão e atomicidade do repositório está em
 [analysis-case-persistence.md](analysis-case-persistence.md).
@@ -61,7 +62,8 @@ O contrato de mapeamento, versão e atomicidade do repositório está em
 ## 2. Schema
 
 Scripts: `vigil-adapters/src/main/resources/db/migration/V000__create_schema_version.sql`,
-`V001__create_case_schema.sql` e `V002__create_evidence_and_domain_event_schema.sql`.
+`V001__create_case_schema.sql`, `V002__create_evidence_and_domain_event_schema.sql` e
+`V003__create_workspace_telemetry_schema.sql`.
 
 ### 2.1 `analysis_case`
 
@@ -129,7 +131,18 @@ A máquina de estados continua sendo responsabilidade do domínio; o schema vali
 | `checksum` | `TEXT NOT NULL` | SHA-256 em 64 caracteres hexadecimais minúsculos |
 | `installed_at` | `TEXT NOT NULL` | formato de instante |
 
-### 2.5 Índices
+### 2.5 `workspace_telemetry_sample` (V003)
+
+Uma linha por observação do scheduler, com `observed_at` como chave temporal. Amostras `available` têm
+`window_start` e deltas agregados de chamadas, duração, linhas e buffers; `warming_up` e `error` não inventam deltas.
+Gauges agregados de sessões ativas, em espera e bloqueadas podem existir durante aquecimento. `state`, `quality` e
+`reason` distinguem medição, cobertura parcial, reset e falha. O adapter exclui por idade e mantém no máximo o total
+configurado em cada append transacional.
+
+Não existem colunas para query text, banco/usuário individual, endereço cliente, senha ou URL JDBC. O identificador
+do target é a referência lógica já configurada no Vigil.
+
+### 2.6 Índices
 
 | Índice | Colunas | Uso previsto |
 |---|---|---|
@@ -142,7 +155,7 @@ A máquina de estados continua sendo responsabilidade do domínio; o schema vali
 `(case_id, sequence)` de `case_event`. A PK composta já cobre consultas e a FK por `case_id`; não existe índice
 redundante apenas em `case_id`.
 
-### 2.6 Dados seguros
+### 2.7 Dados seguros
 
 O schema não tem colunas para SQL bruto, parâmetros, resultados de consultas nem payload genérico do agregado.
 `actor`, `reason`, `query_fingerprint` e `discovery_idempotency_key` são metadados sujeitos à política de dados
@@ -205,7 +218,8 @@ o ano `0000`. A validade semântica é garantida por quem grava, usando o codec.
 ### 6.1 Catálogo
 
 - Catálogo explícito de `Migration(version, description, resource)`. O catálogo de produção
-  (`SqlMigrationRunner.catalog()`) contém `V001 — create case schema` e `V002 — create evidence and domain event schema`. Testes injetam catálogos próprios com
+  (`SqlMigrationRunner.catalog()`) contém `V001 — create case schema`, `V002 — create evidence and domain event schema`
+  e `V003 — create workspace telemetry schema`. Testes injetam catálogos próprios com
   fixtures em `src/test/resources/db/migration-fixtures`; nenhuma migration fictícia vai para o classpath de produção.
 - O construtor ordena o catálogo numericamente e rejeita catálogo vazio e versões duplicadas.
 - Antes de tocar no banco, `migrate` carrega **todos** os recursos (inclusive V000), rejeita recurso ausente ou bytes

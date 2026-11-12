@@ -6,7 +6,9 @@
   "required": [
     "schemaVersion",
     "generatedAt",
-    "metrics"
+    "metrics",
+    "samples",
+    "collector"
   ],
   "properties": {
     "schemaVersion": {
@@ -43,9 +45,65 @@
           "$ref": "#/$defs/metric"
         }
       }
+    },
+    "samples": {
+      "type": "array",
+      "maxItems": 120,
+      "items": {
+        "$ref": "#/$defs/sample"
+      }
+    },
+    "collector": {
+      "$ref": "#/$defs/collector"
     }
   },
   "$defs": {
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observedAt", "windowStart", "targetId", "state", "quality", "calls",
+        "executionMillis", "meanExecutionMillis", "rows", "sharedHits", "sharedReads",
+        "tempReads", "tempWrites", "activeSessions", "waitingSessions", "blockedSessions", "reason"
+      ],
+      "properties": {
+        "observedAt": {"type": "string", "format": "date-time"},
+        "windowStart": {"type": ["string", "null"], "format": "date-time"},
+        "targetId": {"type": "string", "minLength": 1},
+        "state": {"enum": ["available", "warming_up", "error"]},
+        "quality": {"enum": ["measured", "partial", "unknown"]},
+        "calls": {"$ref": "#/$defs/nullableNonNegativeNumber"},
+        "executionMillis": {"$ref": "#/$defs/nullableNonNegativeNumber"},
+        "meanExecutionMillis": {"$ref": "#/$defs/nullableNonNegativeNumber"},
+        "rows": {"$ref": "#/$defs/nullableNonNegativeNumber"},
+        "sharedHits": {"$ref": "#/$defs/nullableNonNegativeNumber"},
+        "sharedReads": {"$ref": "#/$defs/nullableNonNegativeNumber"},
+        "tempReads": {"$ref": "#/$defs/nullableNonNegativeNumber"},
+        "tempWrites": {"$ref": "#/$defs/nullableNonNegativeNumber"},
+        "activeSessions": {"$ref": "#/$defs/nullableNonNegativeNumber"},
+        "waitingSessions": {"$ref": "#/$defs/nullableNonNegativeNumber"},
+        "blockedSessions": {"$ref": "#/$defs/nullableNonNegativeNumber"},
+        "reason": {"type": ["string", "null"]}
+      }
+    },
+    "collector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "paused", "collecting", "lastSuccess", "lastFailure", "consecutiveFailures", "reason"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "paused": {"type": "boolean"},
+        "collecting": {"type": "boolean"},
+        "lastSuccess": {"type": ["string", "null"], "format": "date-time"},
+        "lastFailure": {"type": ["string", "null"]},
+        "consecutiveFailures": {"type": "integer", "minimum": 0},
+        "reason": {"type": ["string", "null"]}
+      }
+    },
+    "nullableNonNegativeNumber": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
     "metric": {
       "type": "object",
       "additionalProperties": false,

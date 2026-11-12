@@ -1,0 +1,303 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "docs/experiments/llm-curation/codex-gpt-6-sol",
+  "actualExecution": {
+    "provider": "openai-codex-cli",
+    "model": "gpt-6-sol",
+    "reasoningEffort": "low",
+    "runs": 10,
+    "tokens": {
+      "input_tokens": 144011,
+      "cached_input_tokens": 80000,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2236,
+      "reasoning_output_tokens": 158
+    },
+    "durationMs": 83928,
+    "billedCostUsd": null,
+    "billingReason": "The local CLI used the user subscription; no invoice amount was reported per run."
+  },
+  "pricing": {
+    "effectiveDate": "2026-11-12",
+    "currency": "USD",
+    "projections": {
+      "gpt-6-sol": {
+        "usd": 0.083191,
+        "uncachedInputTokens": 64011,
+        "cachedInputTokens": 80000,
+        "outputTokens": 2236,
+        "method": "same-token projection; output already includes the reported reasoning subset",
+        "source": "https://developers.openai.com/api/docs/pricing?tab=suite",
+        "note": "Standard, short-context API token-equivalent rate; not the user's subscription invoice."
+      },
+      "claude-sonnet-5-5": {
+        "usd": 0.158382,
+        "uncachedInputTokens": 64011,
+        "cachedInputTokens": 80000,
+        "outputTokens": 2236,
+        "method": "same-token projection; output already includes the reported reasoning subset",
+        "source": "https://www.anthropic.com/claude-sonnet-5-5",
+        "note": "Cross-provider projection only; Claude was not executed and can tokenize differently."
+      }
+    }
+  },
+  "providerAvailability": {
+    "claude-code": {
+      "status": "not_executed",
+      "reason": "CLI_NOT_INSTALLED_ON_2026-11-12"
+    }
+  },
+  "decisions": [
+    {
+      "queryId": "Q01",
+      "decision": "original",
+      "confidence": 0.86,
+      "durationMs": 8548,
+      "usage": {
+        "input_tokens": 14593,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 211,
+        "reasoning_output_tokens": 0
+      },
+      "rationale": [
+        "A candidate teve mediana de 8,968 ms contra 7,664 ms da original nas sete repetições; seu p95 também foi maior (9,108 ms contra 8,683 ms).",
+        "A equivalência de resultados em dois seeds apoia a semântica esperada, mas não a comprova em todos os dados."
+      ],
+      "planEvidence": [
+        "A candidate agrega 33.946 linhas após o join; a original agrega 50.919 linhas antes do join. A antecipação do filtro não melhorou o tempo observado.",
+        "O custo estimado da candidate é 1.676,31 contra 1.858,40 da original; essas unidades do planner não têm preço e não prevalecem sobre as medições exploratórias."
+      ],
+      "semanticRisks": [
+        "A equivalência foi verificada apenas nos seeds 42 e 43; diferenças podem surgir com outros dados."
+      ]
+    },
+    {
+      "queryId": "Q02",
+      "decision": "candidate",
+      "confidence": 0.86,
+      "durationMs": 8915,
+      "usage": {
+        "input_tokens": 14104,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 202,
+        "reasoning_output_tokens": 0
+      },
+      "rationale": [
+        "A variante candidate preserva uma linha por cliente NORTH, inclusive os sem pedidos, com LEFT JOIN; SUM sem correspondências continua NULL.",
+        "A mediana exploratória caiu de 25,474 ms para 7,635 ms nas sete repetições."
+      ],
+      "planEvidence": [
+        "O original executa duas agregações correlacionadas 1.500 vezes cada; o candidate agrega pedidos COMPLETED uma vez e retorna 1.500 linhas.",
+        "O custo estimado do planner cai de 237121,92 para 1837,0; são unidades de planejamento, sem interpretação monetária."
+      ],
+      "semanticRisks": [
+        "A equivalência de multiconjuntos foi observada apenas nos seeds 42 e 43.",
+        "A pré-agregação lê 50.919 pedidos COMPLETED; sua vantagem pode variar com a seletividade e a distribuição dos dados."
+      ]
+    },
+    {
+      "queryId": "Q03",
+      "decision": "original",
+      "confidence": 0.94,
+      "durationMs": 7608,
+      "usage": {
+        "input_tokens": 14190,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 201,
+        "reasoning_output_tokens": 0
+      },
+      "rationale": [
+        "A candidate foi mais lenta nas sete repetições: mediana de 15,979 ms contra 11,509 ms; p95 de 19,399 ms contra 11,658 ms.",
+        "O menor custo estimado da candidate não se traduziu em ganho observado e não representa preço."
+      ],
+      "planEvidence": [
+        "A candidate estimou 1 linha, mas produziu 10.673 antes da agregação; seu plano inclui Nested Loop com 10.673 buscas por índice e Sort.",
+        "A original produziu 10.673 linhas com junções hash e apresentou tempos menores."
+      ],
+      "semanticRisks": [
+        "A equivalência de multiconjuntos em apenas dois seeds é evidência limitada.",
+        "Pagamentos PAID duplicados não devem inflar contagens ou somas; a condição de ausência da candidate depende de p.id IS NULL."
+      ]
+    },
+    {
+      "queryId": "Q04",
+      "decision": "candidate",
+      "confidence": 0.86,
+      "durationMs": 8241,
+      "usage": {
+        "input_tokens": 14276,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 239,
+        "reasoning_output_tokens": 32
+      },
+      "rationale": [
+        "A pré-agregação produz uma linha por pedido com itens, preservando a exclusão de pedidos sem itens e permitindo count(*) por região.",
+        "A soma usa quantity × unit_cents, conforme a semântica esperada."
+      ],
+      "planEvidence": [
+        "O join processa cerca de 50.919 linhas na candidate, ante 152.759 na original.",
+        "O custo estimado cai de 24.477,22 para 14.228,52; é uma unidade do planner, sem interpretação monetária.",
+        "A mediana observada cai de 126,436 ms para 54,811 ms em sete repetições; os tempos são evidência exploratória."
+      ],
+      "semanticRisks": [
+        "A equivalência de multiconjuntos em dois seeds é evidência limitada.",
+        "A vantagem pode variar com a seletividade dos pedidos concluídos e o skew dos itens."
+      ]
+    },
+    {
+      "queryId": "Q05",
+      "decision": "original",
+      "confidence": 0.99,
+      "durationMs": 8900,
+      "usage": {
+        "input_tokens": 14653,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 210,
+        "reasoning_output_tokens": 0
+      },
+      "rationale": [
+        "A candidate é textualmente idêntica à original; este caso é um controle negativo.",
+        "A diferença de 0,055 ms nas medianas é evidência exploratória compatível com ruído, sem ganho demonstrado."
+      ],
+      "planEvidence": [
+        "Os planos informados são idênticos, inclusive custo estimado de 6651,8 unidades do planner e 121 linhas reais no WindowAgg.",
+        "As medições têm sete repetições por variante; p95 de 33,996 ms na original e 32,042 ms na candidate não estabelece vantagem para SQL idêntico."
+      ],
+      "semanticRisks": [
+        "DENSE_RANK preserva todos os empates nas três primeiras posições por categoria; trocar por ROW_NUMBER mudaria o resultado.",
+        "Equivalência de multiconjuntos nos seeds 42 e 43 é evidência limitada, embora as consultas sejam textualmente idênticas."
+      ]
+    },
+    {
+      "queryId": "Q06",
+      "decision": "candidate",
+      "confidence": 0.83,
+      "durationMs": 8640,
+      "usage": {
+        "input_tokens": 14377,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 250,
+        "reasoning_output_tokens": 54
+      },
+      "rationale": [
+        "A variante candidate preserva a contagem por categoria e descendentes, inclusive zero, para a árvore acíclica avaliada.",
+        "A mediana exploratória caiu de 0,562 ms para 0,333 ms; o custo estimado do planner caiu de 2513,89 para 228,22, em unidades sem preço."
+      ],
+      "planEvidence": [
+        "O plano da original executa a recursão 41 vezes; o da candidate constrói o fechamento em uma Recursive Union com um loop.",
+        "A equivalência de multiconjuntos foi observada nos seeds 42 e 43."
+      ],
+      "semanticRisks": [
+        "Dois seeds oferecem evidência limitada de equivalência.",
+        "Em grafos com ciclos, a recursão exige uma política própria; caminhos múltiplos também podem alterar a multiplicidade."
+      ]
+    },
+    {
+      "queryId": "Q07",
+      "decision": "original",
+      "confidence": 0.94,
+      "durationMs": 8291,
+      "usage": {
+        "input_tokens": 14699,
+        "cached_input_tokens": 13184,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 239,
+        "reasoning_output_tokens": 0
+      },
+      "rationale": [
+        "O original foi mais rápido neste experimento: mediana de 7,848 ms contra 17,925 ms da candidate; p95 de 8,082 ms contra 21,209 ms.",
+        "A candidate preserva o limite por cliente e o desempate por id, mas seu plano repete a busca e a ordenação 2.000 vezes.",
+        "Não há evidência de ganho que justifique substituir o original."
+      ],
+      "planEvidence": [
+        "Original: Hash Join, Sort de 8.487 linhas e WindowAgg; custo estimado 3.267,69.",
+        "Candidate: Nested Loop com Limit, Sort e Bitmap Heap Scan em 2.000 loops; custo estimado 158.570,09, em unidades do planner sem preço monetário."
+      ],
+      "semanticRisks": [
+        "A equivalência multiconjunto foi observada apenas nos seeds 42 e 43.",
+        "A concentração de pedidos no cliente 1 pode afetar a comparação; os resultados não garantem o mesmo desempenho em outras distribuições ou com outro índice."
+      ]
+    },
+    {
+      "queryId": "Q08",
+      "decision": "candidate",
+      "confidence": 0.83,
+      "durationMs": 9489,
+      "usage": {
+        "input_tokens": 14744,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 295,
+        "reasoning_output_tokens": 56
+      },
+      "rationale": [
+        "A variante candidate preservou o multiconjunto de resultados nos dois seeds testados e teve mediana exploratória de 14,95 ms, ante 117,365 ms da original.",
+        "A escolha depende de o.id ser não nulo em todos os pedidos; sem essa garantia, count(o.id) pode diferir de count(*)."
+      ],
+      "planEvidence": [
+        "O plano da original executa três agregações correlacionadas 6.000 vezes cada; o da candidate agrega após uma junção com 60.000 pedidos e retorna 6.000 clientes.",
+        "O custo estimado pelo planner caiu de 1.421.854,52 para 2.540,61; esses valores não representam preço nem tempo de execução."
+      ],
+      "semanticRisks": [
+        "A equivalência observada nos seeds 42 e 43 é limitada e não prova equivalência geral.",
+        "O LEFT JOIN inclui clientes sem pedidos; count(o.id) produz zero e sum(...) produz NULL, desde que o.id seja não nulo para pedidos existentes."
+      ]
+    },
+    {
+      "queryId": "Q09",
+      "decision": "candidate",
+      "confidence": 0.88,
+      "durationMs": 7521,
+      "usage": {
+        "input_tokens": 14164,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 172,
+        "reasoning_output_tokens": 0
+      },
+      "rationale": [
+        "No runner com timezone UTC, o intervalo semiaberto preserva o filtro de junho/2024; a equivalência de multiconjuntos foi observada em dois seeds, com alcance limitado.",
+        "A mediana exploratória caiu de 7,546 ms para 3,122 ms."
+      ],
+      "planEvidence": [
+        "O candidate usa Bitmap Index Scan em vez de Seq Scan nos pedidos.",
+        "O custo estimado do planner caiu de 1737,09 para 1139,39 unidades sem preço."
+      ],
+      "semanticRisks": [
+        "A equivalência depende do timezone UTC fixado pelo runner; não deve ser generalizada para outros fusos.",
+        "Dois seeds não demonstram equivalência para todos os dados."
+      ]
+    },
+    {
+      "queryId": "Q10",
+      "decision": "candidate",
+      "confidence": 0.82,
+      "durationMs": 7775,
+      "usage": {
+        "input_tokens": 14211,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 217,
+        "reasoning_output_tokens": 16
+      },
+      "rationale": [
+        "Preserva a seleção do último checkout premium por cliente e o desempate por id no domínio JSON controlado.",
+        "A mediana observada foi 1,532 ms contra 3,836 ms da original; os tempos são evidência exploratória."
+      ],
+      "planEvidence": [
+        "O plano da candidate usa Bitmap Index Scan para o filtro JSONB e Hash Join; a original usa Seq Scan e Nested Loop.",
+        "O custo estimado foi 730,53 contra 1209,43, em unidades do planner sem valor monetário."
+      ],
+      "semanticRisks": [
+        "A equivalência de resultados foi observada apenas nos seeds 42 e 43.",
+        "A equivalência entre contenção JSONB e extração de texto depende do schema controlado com objetos e strings; JSON arbitrário exige novos testes, inclusive para chaves ausentes e JSON null."
+      ]
+    }
+  ]
+}

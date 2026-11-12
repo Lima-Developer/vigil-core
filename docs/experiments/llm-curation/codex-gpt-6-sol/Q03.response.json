@@ -1,0 +1,17 @@
+{
+  "queryId": "Q03",
+  "decision": "original",
+  "rationale": [
+    "A candidate foi mais lenta nas sete repetições: mediana de 15,979 ms contra 11,509 ms; p95 de 19,399 ms contra 11,658 ms.",
+    "O menor custo estimado da candidate não se traduziu em ganho observado e não representa preço."
+  ],
+  "planEvidence": [
+    "A candidate estimou 1 linha, mas produziu 10.673 antes da agregação; seu plano inclui Nested Loop com 10.673 buscas por índice e Sort.",
+    "A original produziu 10.673 linhas com junções hash e apresentou tempos menores."
+  ],
+  "semanticRisks": [
+    "A equivalência de multiconjuntos em apenas dois seeds é evidência limitada.",
+    "Pagamentos PAID duplicados não devem inflar contagens ou somas; a condição de ausência da candidate depende de p.id IS NULL."
+  ],
+  "confidence": 0.94
+}

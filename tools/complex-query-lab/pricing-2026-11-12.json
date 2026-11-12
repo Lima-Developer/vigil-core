@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "effectiveDate": "2026-11-12",
+  "currency": "USD",
+  "unit": "per_1m_tokens",
+  "models": {
+    "gpt-6-sol": {
+      "input": 1.0,
+      "cachedInput": 0.1,
+      "output": 5.0,
+      "source": "https://developers.openai.com/api/docs/pricing?tab=suite",
+      "note": "Standard, short-context API token-equivalent rate; not the user's subscription invoice."
+    },
+    "claude-sonnet-5-5": {
+      "input": 2.0,
+      "cachedInput": 0.1,
+      "output": 10.0,
+      "source": "https://www.anthropic.com/claude-sonnet-5-5",
+      "note": "Cross-provider projection only; Claude was not executed and can tokenize differently."
+    }
+  }
+}

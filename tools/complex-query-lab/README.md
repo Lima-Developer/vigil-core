@@ -2,7 +2,8 @@
 
 Laboratório complementar ao VIG-030, exclusivamente sintético e independente do banco monitorado.
 Contém **10 consultas originais e 10 alternativas candidatas**, descritas no [catálogo](catalog.json).
-As candidatas foram escritas manualmente: **não são saídas de LLM**, e esta etapa não consome nem estima tokens de um provedor.
+As candidatas foram escritas manualmente: **não são saídas de LLM**. Uma etapa posterior usa o Codex apenas para
+curar essas duas alternativas versionadas e registra usage real; ela não executa SQL produzido por modelo.
 
 ## Executar
 
@@ -90,9 +91,18 @@ Custos do planner são unidades estimadas, **não dinheiro nem tempo medido**. O
 separados de milissegundos reais. Buffers não equivalem a CPU, consumo energético ou cobrança de cloud.
 Cache aquecido e armazenamento tmpfs devem ser considerados antes de extrapolar qualquer ganho.
 
-## Evidências e próximas etapas
+## Evidências e curadoria por IA
 
-Veja [a execução inicial](../../docs/experiments/complex-query-corpus/README.md), incluindo regressões e controle.
-Ainda faltam integrar este corpus ao fluxo visual, acionar LLM com contexto sanitizado e usage real,
-revisar propostas, ampliar escalas/repetições e registrar decisões humanas por query. Nenhuma query deste
-diretório é enviada automaticamente ao banco original ou ao provedor de IA.
+Veja [as execuções](../../docs/experiments/complex-query-corpus/README.md), incluindo regressões, controle, escala 3,
+dois seeds, sete repetições e 280 planos. A [curadoria assistida](../../docs/experiments/llm-curation/README.md)
+registra dez chamadas reais, contexto sanitizado, usage bruto e projeções de custo datadas. O modelo escolhe apenas
+entre `original` e `candidate`; não cria uma terceira query e nenhuma query é enviada ao banco original.
+
+Reprodução da curadoria (consome allowance do Codex):
+
+```sh
+python3 tools/complex-query-lab/run_codex_curation.py \
+  --output /tmp/vigil-curation-$(date +%Y%m%d%H%M%S)
+```
+
+Cada diretório é exclusivo para impedir sobrescrita silenciosa. A aprovação humana continua obrigatória.

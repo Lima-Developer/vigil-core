@@ -9,6 +9,7 @@ import com.vigil.adapters.sqlite.SqliteDatabaseInitializer;
 import com.vigil.adapters.sqlite.SqliteStorageProbe;
 import com.vigil.adapters.postgres.PostgresPreflightProbes;
 import com.vigil.adapters.postgres.PostgresExecutionPlanSource;
+import com.vigil.adapters.sqlite.SqliteWorkspaceTelemetryHistory;
 import com.vigil.application.casework.DiscoverObservedQueryUseCase;
 import com.vigil.application.casework.TriageAnalysisCaseUseCase;
 import com.vigil.application.configuration.StorageConfiguration;
@@ -24,6 +25,7 @@ import com.vigil.application.port.out.interfaces.AnalysisCaseAuditReader;
 import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
 import com.vigil.application.port.out.interfaces.Clock;
 import com.vigil.application.port.out.interfaces.IdGenerator;
+import com.vigil.application.port.out.interfaces.WorkspaceTelemetryHistory;
 import java.time.Duration;
 import java.util.Objects;
 import org.springframework.core.env.Environment;
@@ -101,6 +103,9 @@ class VigilWiring {
 
     @Bean AnalysisCaseRepository analysisCaseRepository(SqliteConnectionFactory connections) {
         return new SqliteAnalysisCaseRepository(connections);
+    }
+    @Bean WorkspaceTelemetryHistory workspaceTelemetryHistory(SqliteConnectionFactory connections) {
+        return new SqliteWorkspaceTelemetryHistory(connections);
     }
     @Bean AnalysisCaseAuditReader analysisCaseAuditReader(SqliteConnectionFactory connections) {
         return new SqliteAnalysisCaseAuditReader(connections);

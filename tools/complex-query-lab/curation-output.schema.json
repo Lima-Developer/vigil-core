@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "queryId",
+    "decision",
+    "rationale",
+    "planEvidence",
+    "semanticRisks",
+    "confidence"
+  ],
+  "properties": {
+    "queryId": {"type": "string", "pattern": "^Q(0[1-9]|10)$"},
+    "decision": {"enum": ["candidate", "original", "human_review"]},
+    "rationale": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {"type": "string", "minLength": 1, "maxLength": 280}
+    },
+    "planEvidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": {"type": "string", "minLength": 1, "maxLength": 280}
+    },
+    "semanticRisks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": {"type": "string", "minLength": 1, "maxLength": 280}
+    },
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+  }
+}

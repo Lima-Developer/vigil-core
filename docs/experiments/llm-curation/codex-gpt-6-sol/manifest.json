@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "promptVersion": "vigil-curation-v1",
+  "provider": "openai-codex-cli",
+  "model": "gpt-6-sol",
+  "reasoningEffort": "low",
+  "billing": "actual invoice unavailable; token-equivalent projection is calculated separately",
+  "source": "synthetic-versioned-corpus-only",
+  "runs": [
+    {
+      "queryId": "Q01",
+      "durationMs": 8548,
+      "usage": {
+        "input_tokens": 14593,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 211,
+        "reasoning_output_tokens": 0
+      },
+      "responseFile": "Q01.response.json",
+      "rawUsageEvidenceFile": "Q01.events.jsonl"
+    },
+    {
+      "queryId": "Q02",
+      "durationMs": 8915,
+      "usage": {
+        "input_tokens": 14104,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 202,
+        "reasoning_output_tokens": 0
+      },
+      "responseFile": "Q02.response.json",
+      "rawUsageEvidenceFile": "Q02.events.jsonl"
+    },
+    {
+      "queryId": "Q03",
+      "durationMs": 7608,
+      "usage": {
+        "input_tokens": 14190,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 201,
+        "reasoning_output_tokens": 0
+      },
+      "responseFile": "Q03.response.json",
+      "rawUsageEvidenceFile": "Q03.events.jsonl"
+    },
+    {
+      "queryId": "Q04",
+      "durationMs": 8241,
+      "usage": {
+        "input_tokens": 14276,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 239,
+        "reasoning_output_tokens": 32
+      },
+      "responseFile": "Q04.response.json",
+      "rawUsageEvidenceFile": "Q04.events.jsonl"
+    },
+    {
+      "queryId": "Q05",
+      "durationMs": 8900,
+      "usage": {
+        "input_tokens": 14653,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 210,
+        "reasoning_output_tokens": 0
+      },
+      "responseFile": "Q05.response.json",
+      "rawUsageEvidenceFile": "Q05.events.jsonl"
+    },
+    {
+      "queryId": "Q06",
+      "durationMs": 8640,
+      "usage": {
+        "input_tokens": 14377,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 250,
+        "reasoning_output_tokens": 54
+      },
+      "responseFile": "Q06.response.json",
+      "rawUsageEvidenceFile": "Q06.events.jsonl"
+    },
+    {
+      "queryId": "Q07",
+      "durationMs": 8291,
+      "usage": {
+        "input_tokens": 14699,
+        "cached_input_tokens": 13184,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 239,
+        "reasoning_output_tokens": 0
+      },
+      "responseFile": "Q07.response.json",
+      "rawUsageEvidenceFile": "Q07.events.jsonl"
+    },
+    {
+      "queryId": "Q08",
+      "durationMs": 9489,
+      "usage": {
+        "input_tokens": 14744,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 295,
+        "reasoning_output_tokens": 56
+      },
+      "responseFile": "Q08.response.json",
+      "rawUsageEvidenceFile": "Q08.events.jsonl"
+    },
+    {
+      "queryId": "Q09",
+      "durationMs": 7521,
+      "usage": {
+        "input_tokens": 14164,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 172,
+        "reasoning_output_tokens": 0
+      },
+      "responseFile": "Q09.response.json",
+      "rawUsageEvidenceFile": "Q09.events.jsonl"
+    },
+    {
+      "queryId": "Q10",
+      "durationMs": 7775,
+      "usage": {
+        "input_tokens": 14211,
+        "cached_input_tokens": 11136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 217,
+        "reasoning_output_tokens": 16
+      },
+      "responseFile": "Q10.response.json",
+      "rawUsageEvidenceFile": "Q10.events.jsonl"
+    }
+  ],
+  "status": "passed",
+  "totals": {
+    "input_tokens": 144011,
+    "cached_input_tokens": 80000,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 2236,
+    "reasoning_output_tokens": 158
+  }
+}

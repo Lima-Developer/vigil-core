@@ -1,0 +1,17 @@
+{
+  "queryId": "Q10",
+  "decision": "candidate",
+  "rationale": [
+    "Preserva a seleção do último checkout premium por cliente e o desempate por id no domínio JSON controlado.",
+    "A mediana observada foi 1,532 ms contra 3,836 ms da original; os tempos são evidência exploratória."
+  ],
+  "planEvidence": [
+    "O plano da candidate usa Bitmap Index Scan para o filtro JSONB e Hash Join; a original usa Seq Scan e Nested Loop.",
+    "O custo estimado foi 730,53 contra 1209,43, em unidades do planner sem valor monetário."
+  ],
+  "semanticRisks": [
+    "A equivalência de resultados foi observada apenas nos seeds 42 e 43.",
+    "A equivalência entre contenção JSONB e extração de texto depende do schema controlado com objetos e strings; JSON arbitrário exige novos testes, inclusive para chaves ausentes e JSON null."
+  ],
+  "confidence": 0.82
+}

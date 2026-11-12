@@ -1,0 +1,2008 @@
+{
+  "corpus_version": 1,
+  "seed": 43,
+  "scale": 3,
+  "image": "postgres@sha256:e62fbf9d3e2b49816a32c400ed2dba83e3b361e6833e624024309c35d334b412",
+  "repetitions": 7,
+  "queries": [
+    {
+      "id": "Q01",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 900,
+      "variants": {
+        "original": {
+          "sql_sha256": "348901cdb9ae93fc640c9d06df50d08683f58b34482cad2601c9e0baa06a15a8",
+          "runs": [
+            {
+              "execution_ms": 7.567,
+              "planning_ms": 0.205,
+              "estimated_total_cost": 1857.59,
+              "plan_rows": 899,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.original.1.plan.json"
+            },
+            {
+              "execution_ms": 7.834,
+              "planning_ms": 0.224,
+              "estimated_total_cost": 1857.59,
+              "plan_rows": 899,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.original.2.plan.json"
+            },
+            {
+              "execution_ms": 8.233,
+              "planning_ms": 0.207,
+              "estimated_total_cost": 1857.59,
+              "plan_rows": 899,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.original.3.plan.json"
+            },
+            {
+              "execution_ms": 9.92,
+              "planning_ms": 0.259,
+              "estimated_total_cost": 1857.59,
+              "plan_rows": 899,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.original.4.plan.json"
+            },
+            {
+              "execution_ms": 7.881,
+              "planning_ms": 0.363,
+              "estimated_total_cost": 1857.59,
+              "plan_rows": 899,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.original.5.plan.json"
+            },
+            {
+              "execution_ms": 7.692,
+              "planning_ms": 0.233,
+              "estimated_total_cost": 1857.59,
+              "plan_rows": 899,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.original.6.plan.json"
+            },
+            {
+              "execution_ms": 7.574,
+              "planning_ms": 0.195,
+              "estimated_total_cost": 1857.59,
+              "plan_rows": 899,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.original.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 7.834,
+          "p95_execution_ms": 9.92,
+          "min_execution_ms": 7.567,
+          "max_execution_ms": 9.92
+        },
+        "candidate": {
+          "sql_sha256": "bf36de6eba85167c31da8971dc479139cfc9efcb2cb3a74effd451d7b8035256",
+          "runs": [
+            {
+              "execution_ms": 6.46,
+              "planning_ms": 0.259,
+              "estimated_total_cost": 1675.81,
+              "plan_rows": 2698,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.candidate.1.plan.json"
+            },
+            {
+              "execution_ms": 6.747,
+              "planning_ms": 0.232,
+              "estimated_total_cost": 1675.81,
+              "plan_rows": 2698,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.candidate.2.plan.json"
+            },
+            {
+              "execution_ms": 6.49,
+              "planning_ms": 0.236,
+              "estimated_total_cost": 1675.81,
+              "plan_rows": 2698,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.candidate.3.plan.json"
+            },
+            {
+              "execution_ms": 6.529,
+              "planning_ms": 0.276,
+              "estimated_total_cost": 1675.81,
+              "plan_rows": 2698,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.candidate.4.plan.json"
+            },
+            {
+              "execution_ms": 6.545,
+              "planning_ms": 0.271,
+              "estimated_total_cost": 1675.81,
+              "plan_rows": 2698,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.candidate.5.plan.json"
+            },
+            {
+              "execution_ms": 7.104,
+              "planning_ms": 0.347,
+              "estimated_total_cost": 1675.81,
+              "plan_rows": 2698,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.candidate.6.plan.json"
+            },
+            {
+              "execution_ms": 6.427,
+              "planning_ms": 0.241,
+              "estimated_total_cost": 1675.81,
+              "plan_rows": 2698,
+              "actual_rows": 900,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.candidate.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 6.529,
+          "p95_execution_ms": 7.104,
+          "min_execution_ms": 6.427,
+          "max_execution_ms": 7.104
+        }
+      }
+    },
+    {
+      "id": "Q02",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 1500,
+      "variants": {
+        "original": {
+          "sql_sha256": "de957acaffd6178db80e6006b28b8da06610896af1ec9494e680b7f7ddf6eaf9",
+          "runs": [
+            {
+              "execution_ms": 32.708,
+              "planning_ms": 0.225,
+              "estimated_total_cost": 237121.92,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 37066,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.original.1.plan.json"
+            },
+            {
+              "execution_ms": 31.83,
+              "planning_ms": 0.192,
+              "estimated_total_cost": 237121.92,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 37066,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.original.2.plan.json"
+            },
+            {
+              "execution_ms": 37.162,
+              "planning_ms": 0.227,
+              "estimated_total_cost": 237121.92,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 37066,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.original.3.plan.json"
+            },
+            {
+              "execution_ms": 33.997,
+              "planning_ms": 0.202,
+              "estimated_total_cost": 237121.92,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 37066,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.original.4.plan.json"
+            },
+            {
+              "execution_ms": 28.196,
+              "planning_ms": 0.224,
+              "estimated_total_cost": 237121.92,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 37066,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.original.5.plan.json"
+            },
+            {
+              "execution_ms": 29.027,
+              "planning_ms": 0.209,
+              "estimated_total_cost": 237121.92,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 37066,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.original.6.plan.json"
+            },
+            {
+              "execution_ms": 30.132,
+              "planning_ms": 0.181,
+              "estimated_total_cost": 237121.92,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 37066,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.original.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 31.83,
+          "p95_execution_ms": 37.162,
+          "min_execution_ms": 28.196,
+          "max_execution_ms": 37.162
+        },
+        "candidate": {
+          "sql_sha256": "34f4175862dd86a6169fd1a31c9869b0fa9e2f528a0da5d391b23f0d2a0292d9",
+          "runs": [
+            {
+              "execution_ms": 7.601,
+              "planning_ms": 0.188,
+              "estimated_total_cost": 1836.19,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.candidate.1.plan.json"
+            },
+            {
+              "execution_ms": 7.653,
+              "planning_ms": 0.282,
+              "estimated_total_cost": 1836.19,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.candidate.2.plan.json"
+            },
+            {
+              "execution_ms": 7.726,
+              "planning_ms": 0.253,
+              "estimated_total_cost": 1836.19,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.candidate.3.plan.json"
+            },
+            {
+              "execution_ms": 7.389,
+              "planning_ms": 0.183,
+              "estimated_total_cost": 1836.19,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.candidate.4.plan.json"
+            },
+            {
+              "execution_ms": 7.55,
+              "planning_ms": 0.199,
+              "estimated_total_cost": 1836.19,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.candidate.5.plan.json"
+            },
+            {
+              "execution_ms": 7.72,
+              "planning_ms": 0.19,
+              "estimated_total_cost": 1836.19,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.candidate.6.plan.json"
+            },
+            {
+              "execution_ms": 7.553,
+              "planning_ms": 0.215,
+              "estimated_total_cost": 1836.19,
+              "plan_rows": 1500,
+              "actual_rows": 1500,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.candidate.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 7.601,
+          "p95_execution_ms": 7.726,
+          "min_execution_ms": 7.389,
+          "max_execution_ms": 7.726
+        }
+      },
+      "edge_expectations_passed": true
+    },
+    {
+      "id": "Q03",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 2,
+      "variants": {
+        "original": {
+          "sql_sha256": "2de80bc39ae40f1b9974348f07598ecbaab57c2c9421a1a5e0c9ef8df9767a78",
+          "runs": [
+            {
+              "execution_ms": 11.835,
+              "planning_ms": 0.341,
+              "estimated_total_cost": 3034.79,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 787,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.original.1.plan.json"
+            },
+            {
+              "execution_ms": 10.987,
+              "planning_ms": 0.312,
+              "estimated_total_cost": 3034.79,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 787,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.original.2.plan.json"
+            },
+            {
+              "execution_ms": 11.292,
+              "planning_ms": 0.329,
+              "estimated_total_cost": 3034.79,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 787,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.original.3.plan.json"
+            },
+            {
+              "execution_ms": 11.404,
+              "planning_ms": 0.308,
+              "estimated_total_cost": 3034.79,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 787,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.original.4.plan.json"
+            },
+            {
+              "execution_ms": 11.207,
+              "planning_ms": 0.296,
+              "estimated_total_cost": 3034.79,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 787,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.original.5.plan.json"
+            },
+            {
+              "execution_ms": 11.443,
+              "planning_ms": 0.328,
+              "estimated_total_cost": 3034.79,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 787,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.original.6.plan.json"
+            },
+            {
+              "execution_ms": 11.265,
+              "planning_ms": 0.333,
+              "estimated_total_cost": 3034.79,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 787,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.original.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 11.292,
+          "p95_execution_ms": 11.835,
+          "min_execution_ms": 10.987,
+          "max_execution_ms": 11.835
+        },
+        "candidate": {
+          "sql_sha256": "390157b2756e2d20cc411bb5c1b5ae934fa685d89487ca9309ca0081422ef200",
+          "runs": [
+            {
+              "execution_ms": 17.01,
+              "planning_ms": 0.353,
+              "estimated_total_cost": 2538.99,
+              "plan_rows": 1,
+              "actual_rows": 2,
+              "shared_hit_blocks": 32771,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.candidate.1.plan.json"
+            },
+            {
+              "execution_ms": 15.62,
+              "planning_ms": 0.298,
+              "estimated_total_cost": 2538.99,
+              "plan_rows": 1,
+              "actual_rows": 2,
+              "shared_hit_blocks": 32771,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.candidate.2.plan.json"
+            },
+            {
+              "execution_ms": 15.675,
+              "planning_ms": 0.305,
+              "estimated_total_cost": 2538.99,
+              "plan_rows": 1,
+              "actual_rows": 2,
+              "shared_hit_blocks": 32771,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.candidate.3.plan.json"
+            },
+            {
+              "execution_ms": 16.662,
+              "planning_ms": 0.337,
+              "estimated_total_cost": 2538.99,
+              "plan_rows": 1,
+              "actual_rows": 2,
+              "shared_hit_blocks": 32771,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.candidate.4.plan.json"
+            },
+            {
+              "execution_ms": 15.572,
+              "planning_ms": 0.347,
+              "estimated_total_cost": 2538.99,
+              "plan_rows": 1,
+              "actual_rows": 2,
+              "shared_hit_blocks": 32771,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.candidate.5.plan.json"
+            },
+            {
+              "execution_ms": 15.521,
+              "planning_ms": 0.364,
+              "estimated_total_cost": 2538.99,
+              "plan_rows": 1,
+              "actual_rows": 2,
+              "shared_hit_blocks": 32771,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.candidate.6.plan.json"
+            },
+            {
+              "execution_ms": 15.764,
+              "planning_ms": 0.325,
+              "estimated_total_cost": 2538.99,
+              "plan_rows": 1,
+              "actual_rows": 2,
+              "shared_hit_blocks": 32771,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.candidate.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 15.675,
+          "p95_execution_ms": 17.01,
+          "min_execution_ms": 15.521,
+          "max_execution_ms": 17.01
+        }
+      }
+    },
+    {
+      "id": "Q04",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 2,
+      "variants": {
+        "original": {
+          "sql_sha256": "17182f1c6e463c20175034d6b7da33663ba3c58af72b852147aadae44db80dbc",
+          "runs": [
+            {
+              "execution_ms": 128.738,
+              "planning_ms": 0.293,
+              "estimated_total_cost": 24442.64,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 1691,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 562,
+              "temp_written_blocks": 564,
+              "plan_file": "Q04.original.1.plan.json"
+            },
+            {
+              "execution_ms": 131.883,
+              "planning_ms": 0.339,
+              "estimated_total_cost": 24442.64,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 1691,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 562,
+              "temp_written_blocks": 564,
+              "plan_file": "Q04.original.2.plan.json"
+            },
+            {
+              "execution_ms": 134.419,
+              "planning_ms": 0.315,
+              "estimated_total_cost": 24442.64,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 1691,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 562,
+              "temp_written_blocks": 564,
+              "plan_file": "Q04.original.3.plan.json"
+            },
+            {
+              "execution_ms": 132.076,
+              "planning_ms": 0.287,
+              "estimated_total_cost": 24442.64,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 1691,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 562,
+              "temp_written_blocks": 564,
+              "plan_file": "Q04.original.4.plan.json"
+            },
+            {
+              "execution_ms": 136.832,
+              "planning_ms": 0.766,
+              "estimated_total_cost": 24442.64,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 1691,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 562,
+              "temp_written_blocks": 564,
+              "plan_file": "Q04.original.5.plan.json"
+            },
+            {
+              "execution_ms": 136.729,
+              "planning_ms": 0.281,
+              "estimated_total_cost": 24442.64,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 1691,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 562,
+              "temp_written_blocks": 564,
+              "plan_file": "Q04.original.6.plan.json"
+            },
+            {
+              "execution_ms": 136.987,
+              "planning_ms": 0.633,
+              "estimated_total_cost": 24442.64,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 1691,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 562,
+              "temp_written_blocks": 564,
+              "plan_file": "Q04.original.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 134.419,
+          "p95_execution_ms": 136.987,
+          "min_execution_ms": 128.738,
+          "max_execution_ms": 136.987
+        },
+        "candidate": {
+          "sql_sha256": "4b1e50cfa7cbdeb2ff735b511d9d52e64ddaabd98a8ae8d265495419ff2c1799",
+          "runs": [
+            {
+              "execution_ms": 54.557,
+              "planning_ms": 0.274,
+              "estimated_total_cost": 14230.8,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 180901,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q04.candidate.1.plan.json"
+            },
+            {
+              "execution_ms": 56.392,
+              "planning_ms": 0.325,
+              "estimated_total_cost": 14230.8,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 180901,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q04.candidate.2.plan.json"
+            },
+            {
+              "execution_ms": 54.873,
+              "planning_ms": 0.315,
+              "estimated_total_cost": 14230.8,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 180901,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q04.candidate.3.plan.json"
+            },
+            {
+              "execution_ms": 54.901,
+              "planning_ms": 0.285,
+              "estimated_total_cost": 14230.8,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 180901,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q04.candidate.4.plan.json"
+            },
+            {
+              "execution_ms": 58.957,
+              "planning_ms": 0.324,
+              "estimated_total_cost": 14230.8,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 180901,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q04.candidate.5.plan.json"
+            },
+            {
+              "execution_ms": 54.735,
+              "planning_ms": 0.295,
+              "estimated_total_cost": 14230.8,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 180901,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q04.candidate.6.plan.json"
+            },
+            {
+              "execution_ms": 65.894,
+              "planning_ms": 0.299,
+              "estimated_total_cost": 14230.8,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 180901,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q04.candidate.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 54.901,
+          "p95_execution_ms": 65.894,
+          "min_execution_ms": 54.557,
+          "max_execution_ms": 65.894
+        }
+      }
+    },
+    {
+      "id": "Q05",
+      "control": true,
+      "equivalent_multiset": true,
+      "result_rows": 121,
+      "variants": {
+        "original": {
+          "sql_sha256": "129304c5945ba06774940a16a18dfa1d48c6bee5ae8ac8f4ae1793261ff2140e",
+          "runs": [
+            {
+              "execution_ms": 30.288,
+              "planning_ms": 0.332,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.original.1.plan.json"
+            },
+            {
+              "execution_ms": 30.071,
+              "planning_ms": 0.326,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.original.2.plan.json"
+            },
+            {
+              "execution_ms": 30.473,
+              "planning_ms": 0.315,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.original.3.plan.json"
+            },
+            {
+              "execution_ms": 31.996,
+              "planning_ms": 0.389,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.original.4.plan.json"
+            },
+            {
+              "execution_ms": 30.793,
+              "planning_ms": 0.336,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.original.5.plan.json"
+            },
+            {
+              "execution_ms": 30.341,
+              "planning_ms": 0.342,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.original.6.plan.json"
+            },
+            {
+              "execution_ms": 30.873,
+              "planning_ms": 0.344,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.original.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 30.473,
+          "p95_execution_ms": 31.996,
+          "min_execution_ms": 30.071,
+          "max_execution_ms": 31.996
+        },
+        "candidate": {
+          "sql_sha256": "129304c5945ba06774940a16a18dfa1d48c6bee5ae8ac8f4ae1793261ff2140e",
+          "runs": [
+            {
+              "execution_ms": 30.557,
+              "planning_ms": 0.369,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.candidate.1.plan.json"
+            },
+            {
+              "execution_ms": 31.522,
+              "planning_ms": 0.406,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.candidate.2.plan.json"
+            },
+            {
+              "execution_ms": 35.072,
+              "planning_ms": 0.366,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.candidate.3.plan.json"
+            },
+            {
+              "execution_ms": 32.614,
+              "planning_ms": 0.334,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.candidate.4.plan.json"
+            },
+            {
+              "execution_ms": 30.355,
+              "planning_ms": 0.34,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.candidate.5.plan.json"
+            },
+            {
+              "execution_ms": 30.664,
+              "planning_ms": 0.337,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.candidate.6.plan.json"
+            },
+            {
+              "execution_ms": 40.841,
+              "planning_ms": 0.378,
+              "estimated_total_cost": 6648.67,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 2166,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.candidate.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 31.522,
+          "p95_execution_ms": 40.841,
+          "min_execution_ms": 30.355,
+          "max_execution_ms": 40.841
+        }
+      },
+      "edge_expectations_passed": true
+    },
+    {
+      "id": "Q06",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 41,
+      "variants": {
+        "original": {
+          "sql_sha256": "fcb7e8f0062758ee7e956579b91ed3de84182b0ba47d5cdbfb6f5b694d72706b",
+          "runs": [
+            {
+              "execution_ms": 0.573,
+              "planning_ms": 0.217,
+              "estimated_total_cost": 2513.89,
+              "plan_rows": 41,
+              "actual_rows": 41,
+              "shared_hit_blocks": 108,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.original.1.plan.json"
+            },
+            {
+              "execution_ms": 0.573,
+              "planning_ms": 0.231,
+              "estimated_total_cost": 2513.89,
+              "plan_rows": 41,
+              "actual_rows": 41,
+              "shared_hit_blocks": 108,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.original.2.plan.json"
+            },
+            {
+              "execution_ms": 0.57,
+              "planning_ms": 0.217,
+              "estimated_total_cost": 2513.89,
+              "plan_rows": 41,
+              "actual_rows": 41,
+              "shared_hit_blocks": 108,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.original.3.plan.json"
+            },
+            {
+              "execution_ms": 0.611,
+              "planning_ms": 0.34,
+              "estimated_total_cost": 2513.89,
+              "plan_rows": 41,
+              "actual_rows": 41,
+              "shared_hit_blocks": 108,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.original.4.plan.json"
+            },
+            {
+              "execution_ms": 0.57,
+              "planning_ms": 0.3,
+              "estimated_total_cost": 2513.89,
+              "plan_rows": 41,
+              "actual_rows": 41,
+              "shared_hit_blocks": 108,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.original.5.plan.json"
+            },
+            {
+              "execution_ms": 0.539,
+              "planning_ms": 0.24,
+              "estimated_total_cost": 2513.89,
+              "plan_rows": 41,
+              "actual_rows": 41,
+              "shared_hit_blocks": 108,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.original.6.plan.json"
+            },
+            {
+              "execution_ms": 0.537,
+              "planning_ms": 0.243,
+              "estimated_total_cost": 2513.89,
+              "plan_rows": 41,
+              "actual_rows": 41,
+              "shared_hit_blocks": 108,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.original.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 0.57,
+          "p95_execution_ms": 0.611,
+          "min_execution_ms": 0.537,
+          "max_execution_ms": 0.611
+        },
+        "candidate": {
+          "sql_sha256": "aaaeb4d76d5797bd379390b13611dc16457130d4bab28560da35f27519382ba9",
+          "runs": [
+            {
+              "execution_ms": 0.325,
+              "planning_ms": 0.177,
+              "estimated_total_cost": 228.22,
+              "plan_rows": 200,
+              "actual_rows": 41,
+              "shared_hit_blocks": 5,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.candidate.1.plan.json"
+            },
+            {
+              "execution_ms": 0.323,
+              "planning_ms": 0.169,
+              "estimated_total_cost": 228.22,
+              "plan_rows": 200,
+              "actual_rows": 41,
+              "shared_hit_blocks": 5,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.candidate.2.plan.json"
+            },
+            {
+              "execution_ms": 0.324,
+              "planning_ms": 0.188,
+              "estimated_total_cost": 228.22,
+              "plan_rows": 200,
+              "actual_rows": 41,
+              "shared_hit_blocks": 5,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.candidate.3.plan.json"
+            },
+            {
+              "execution_ms": 0.329,
+              "planning_ms": 0.175,
+              "estimated_total_cost": 228.22,
+              "plan_rows": 200,
+              "actual_rows": 41,
+              "shared_hit_blocks": 5,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.candidate.4.plan.json"
+            },
+            {
+              "execution_ms": 0.341,
+              "planning_ms": 0.172,
+              "estimated_total_cost": 228.22,
+              "plan_rows": 200,
+              "actual_rows": 41,
+              "shared_hit_blocks": 5,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.candidate.5.plan.json"
+            },
+            {
+              "execution_ms": 0.369,
+              "planning_ms": 0.316,
+              "estimated_total_cost": 228.22,
+              "plan_rows": 200,
+              "actual_rows": 41,
+              "shared_hit_blocks": 5,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.candidate.6.plan.json"
+            },
+            {
+              "execution_ms": 0.344,
+              "planning_ms": 0.197,
+              "estimated_total_cost": 228.22,
+              "plan_rows": 200,
+              "actual_rows": 41,
+              "shared_hit_blocks": 5,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.candidate.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 0.329,
+          "p95_execution_ms": 0.369,
+          "min_execution_ms": 0.323,
+          "max_execution_ms": 0.369
+        }
+      },
+      "edge_expectations_passed": true
+    },
+    {
+      "id": "Q07",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 2700,
+      "variants": {
+        "original": {
+          "sql_sha256": "71610bc0672d2a8c8612972b7188b5261a3af16739f580611b583d4bb456758e",
+          "runs": [
+            {
+              "execution_ms": 15.742,
+              "planning_ms": 0.267,
+              "estimated_total_cost": 3264.16,
+              "plan_rows": 16959,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 541,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.original.1.plan.json"
+            },
+            {
+              "execution_ms": 15.925,
+              "planning_ms": 0.296,
+              "estimated_total_cost": 3264.16,
+              "plan_rows": 16959,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 541,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.original.2.plan.json"
+            },
+            {
+              "execution_ms": 16.376,
+              "planning_ms": 0.274,
+              "estimated_total_cost": 3264.16,
+              "plan_rows": 16959,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 541,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.original.3.plan.json"
+            },
+            {
+              "execution_ms": 15.816,
+              "planning_ms": 0.23,
+              "estimated_total_cost": 3264.16,
+              "plan_rows": 16959,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 541,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.original.4.plan.json"
+            },
+            {
+              "execution_ms": 16.273,
+              "planning_ms": 0.277,
+              "estimated_total_cost": 3264.16,
+              "plan_rows": 16959,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 541,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.original.5.plan.json"
+            },
+            {
+              "execution_ms": 16.11,
+              "planning_ms": 0.247,
+              "estimated_total_cost": 3264.16,
+              "plan_rows": 16959,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 541,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.original.6.plan.json"
+            },
+            {
+              "execution_ms": 16.287,
+              "planning_ms": 0.241,
+              "estimated_total_cost": 3264.16,
+              "plan_rows": 16959,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 541,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.original.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 16.11,
+          "p95_execution_ms": 16.376,
+          "min_execution_ms": 15.742,
+          "max_execution_ms": 16.376
+        },
+        "candidate": {
+          "sql_sha256": "318e99abb399708c1c1d0971386add423ea1236750c80ddd02ec6bee4e0907ae",
+          "runs": [
+            {
+              "execution_ms": 20.395,
+              "planning_ms": 0.284,
+              "estimated_total_cost": 158570.09,
+              "plan_rows": 6000,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 14555,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.candidate.1.plan.json"
+            },
+            {
+              "execution_ms": 32.086,
+              "planning_ms": 0.212,
+              "estimated_total_cost": 158570.09,
+              "plan_rows": 6000,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 14555,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.candidate.2.plan.json"
+            },
+            {
+              "execution_ms": 23.895,
+              "planning_ms": 0.197,
+              "estimated_total_cost": 158570.09,
+              "plan_rows": 6000,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 14555,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.candidate.3.plan.json"
+            },
+            {
+              "execution_ms": 19.928,
+              "planning_ms": 0.184,
+              "estimated_total_cost": 158570.09,
+              "plan_rows": 6000,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 14555,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.candidate.4.plan.json"
+            },
+            {
+              "execution_ms": 20.528,
+              "planning_ms": 0.233,
+              "estimated_total_cost": 158570.09,
+              "plan_rows": 6000,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 14555,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.candidate.5.plan.json"
+            },
+            {
+              "execution_ms": 22.955,
+              "planning_ms": 0.201,
+              "estimated_total_cost": 158570.09,
+              "plan_rows": 6000,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 14555,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.candidate.6.plan.json"
+            },
+            {
+              "execution_ms": 21.871,
+              "planning_ms": 0.216,
+              "estimated_total_cost": 158570.09,
+              "plan_rows": 6000,
+              "actual_rows": 2700,
+              "shared_hit_blocks": 14555,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.candidate.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 21.871,
+          "p95_execution_ms": 32.086,
+          "min_execution_ms": 19.928,
+          "max_execution_ms": 32.086
+        }
+      },
+      "edge_expectations_passed": true
+    },
+    {
+      "id": "Q08",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 6000,
+      "variants": {
+        "original": {
+          "sql_sha256": "d3d6d5d2e9bd3008cbdee711e0dc79121619d82c4aa4d2d3f7efff252d0aeb2a",
+          "runs": [
+            {
+              "execution_ms": 121.603,
+              "planning_ms": 0.187,
+              "estimated_total_cost": 1421854.52,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 127580,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.original.1.plan.json"
+            },
+            {
+              "execution_ms": 114.428,
+              "planning_ms": 0.176,
+              "estimated_total_cost": 1421854.52,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 127580,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.original.2.plan.json"
+            },
+            {
+              "execution_ms": 116.799,
+              "planning_ms": 0.215,
+              "estimated_total_cost": 1421854.52,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 127580,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.original.3.plan.json"
+            },
+            {
+              "execution_ms": 116.894,
+              "planning_ms": 0.178,
+              "estimated_total_cost": 1421854.52,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 127580,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.original.4.plan.json"
+            },
+            {
+              "execution_ms": 113.446,
+              "planning_ms": 0.179,
+              "estimated_total_cost": 1421854.52,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 127580,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.original.5.plan.json"
+            },
+            {
+              "execution_ms": 122.47,
+              "planning_ms": 0.208,
+              "estimated_total_cost": 1421854.52,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 127580,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.original.6.plan.json"
+            },
+            {
+              "execution_ms": 138.438,
+              "planning_ms": 0.178,
+              "estimated_total_cost": 1421854.52,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 127580,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.original.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 116.894,
+          "p95_execution_ms": 138.438,
+          "min_execution_ms": 113.446,
+          "max_execution_ms": 138.438
+        },
+        "candidate": {
+          "sql_sha256": "5ffe54c32166bb7fa00514724139a6d569b14fe30d49733fda2fb6387172fa1c",
+          "runs": [
+            {
+              "execution_ms": 14.783,
+              "planning_ms": 0.253,
+              "estimated_total_cost": 2540.61,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.candidate.1.plan.json"
+            },
+            {
+              "execution_ms": 14.295,
+              "planning_ms": 0.206,
+              "estimated_total_cost": 2540.61,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.candidate.2.plan.json"
+            },
+            {
+              "execution_ms": 14.527,
+              "planning_ms": 0.225,
+              "estimated_total_cost": 2540.61,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.candidate.3.plan.json"
+            },
+            {
+              "execution_ms": 14.881,
+              "planning_ms": 0.226,
+              "estimated_total_cost": 2540.61,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.candidate.4.plan.json"
+            },
+            {
+              "execution_ms": 14.575,
+              "planning_ms": 0.231,
+              "estimated_total_cost": 2540.61,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.candidate.5.plan.json"
+            },
+            {
+              "execution_ms": 14.781,
+              "planning_ms": 0.271,
+              "estimated_total_cost": 2540.61,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.candidate.6.plan.json"
+            },
+            {
+              "execution_ms": 15.345,
+              "planning_ms": 0.229,
+              "estimated_total_cost": 2540.61,
+              "plan_rows": 6000,
+              "actual_rows": 6000,
+              "shared_hit_blocks": 538,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.candidate.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 14.781,
+          "p95_execution_ms": 15.345,
+          "min_execution_ms": 14.295,
+          "max_execution_ms": 15.345
+        }
+      },
+      "edge_expectations_passed": true
+    },
+    {
+      "id": "Q09",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 2,
+      "variants": {
+        "original": {
+          "sql_sha256": "ae53e4195db6ad87bbb28169da13bfc28f85ab79691ae5aa80233a60fc6b0fad",
+          "runs": [
+            {
+              "execution_ms": 7.453,
+              "planning_ms": 0.231,
+              "estimated_total_cost": 1737.03,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 544,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.original.1.plan.json"
+            },
+            {
+              "execution_ms": 7.517,
+              "planning_ms": 0.265,
+              "estimated_total_cost": 1737.03,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 544,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.original.2.plan.json"
+            },
+            {
+              "execution_ms": 7.775,
+              "planning_ms": 0.413,
+              "estimated_total_cost": 1737.03,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 544,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.original.3.plan.json"
+            },
+            {
+              "execution_ms": 10.118,
+              "planning_ms": 0.26,
+              "estimated_total_cost": 1737.03,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 544,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.original.4.plan.json"
+            },
+            {
+              "execution_ms": 7.467,
+              "planning_ms": 0.223,
+              "estimated_total_cost": 1737.03,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 544,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.original.5.plan.json"
+            },
+            {
+              "execution_ms": 7.484,
+              "planning_ms": 0.26,
+              "estimated_total_cost": 1737.03,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 544,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.original.6.plan.json"
+            },
+            {
+              "execution_ms": 9.272,
+              "planning_ms": 0.248,
+              "estimated_total_cost": 1737.03,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 544,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.original.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 7.517,
+          "p95_execution_ms": 10.118,
+          "min_execution_ms": 7.453,
+          "max_execution_ms": 10.118
+        },
+        "candidate": {
+          "sql_sha256": "b072bd82be2bfc11bae35c79edbe5ccef9f0d1f676235a625d43b82c4c365376",
+          "runs": [
+            {
+              "execution_ms": 3.228,
+              "planning_ms": 0.275,
+              "estimated_total_cost": 1143.41,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 550,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.candidate.1.plan.json"
+            },
+            {
+              "execution_ms": 3.053,
+              "planning_ms": 0.244,
+              "estimated_total_cost": 1143.41,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 550,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.candidate.2.plan.json"
+            },
+            {
+              "execution_ms": 3.331,
+              "planning_ms": 0.285,
+              "estimated_total_cost": 1143.41,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 550,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.candidate.3.plan.json"
+            },
+            {
+              "execution_ms": 3.129,
+              "planning_ms": 0.261,
+              "estimated_total_cost": 1143.41,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 550,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.candidate.4.plan.json"
+            },
+            {
+              "execution_ms": 3.155,
+              "planning_ms": 0.23,
+              "estimated_total_cost": 1143.41,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 550,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.candidate.5.plan.json"
+            },
+            {
+              "execution_ms": 3.038,
+              "planning_ms": 0.242,
+              "estimated_total_cost": 1143.41,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 550,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.candidate.6.plan.json"
+            },
+            {
+              "execution_ms": 3.223,
+              "planning_ms": 0.239,
+              "estimated_total_cost": 1143.41,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 550,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.candidate.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 3.155,
+          "p95_execution_ms": 3.331,
+          "min_execution_ms": 3.038,
+          "max_execution_ms": 3.331
+        }
+      }
+    },
+    {
+      "id": "Q10",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 1091,
+      "variants": {
+        "original": {
+          "sql_sha256": "1548140d980c9a2fa3865bc0398ac7745fc77de601278f1a750d5fd643987d2e",
+          "runs": [
+            {
+              "execution_ms": 3.739,
+              "planning_ms": 0.212,
+              "estimated_total_cost": 1209.43,
+              "plan_rows": 1,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 3760,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.original.1.plan.json"
+            },
+            {
+              "execution_ms": 3.903,
+              "planning_ms": 0.283,
+              "estimated_total_cost": 1209.43,
+              "plan_rows": 1,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 3760,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.original.2.plan.json"
+            },
+            {
+              "execution_ms": 3.824,
+              "planning_ms": 0.219,
+              "estimated_total_cost": 1209.43,
+              "plan_rows": 1,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 3760,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.original.3.plan.json"
+            },
+            {
+              "execution_ms": 3.756,
+              "planning_ms": 0.234,
+              "estimated_total_cost": 1209.43,
+              "plan_rows": 1,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 3760,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.original.4.plan.json"
+            },
+            {
+              "execution_ms": 3.691,
+              "planning_ms": 0.207,
+              "estimated_total_cost": 1209.43,
+              "plan_rows": 1,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 3760,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.original.5.plan.json"
+            },
+            {
+              "execution_ms": 4.061,
+              "planning_ms": 0.417,
+              "estimated_total_cost": 1209.43,
+              "plan_rows": 1,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 3760,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.original.6.plan.json"
+            },
+            {
+              "execution_ms": 4.846,
+              "planning_ms": 0.206,
+              "estimated_total_cost": 1209.43,
+              "plan_rows": 1,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 3760,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.original.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 3.824,
+          "p95_execution_ms": 4.846,
+          "min_execution_ms": 3.691,
+          "max_execution_ms": 4.846
+        },
+        "candidate": {
+          "sql_sha256": "56ff8617437214e46f5197d84471a83722998652406b0d9e5fc2b22bf9249df5",
+          "runs": [
+            {
+              "execution_ms": 1.671,
+              "planning_ms": 0.213,
+              "estimated_total_cost": 735.21,
+              "plan_rows": 1048,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 533,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.candidate.1.plan.json"
+            },
+            {
+              "execution_ms": 1.513,
+              "planning_ms": 0.235,
+              "estimated_total_cost": 735.21,
+              "plan_rows": 1048,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 533,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.candidate.2.plan.json"
+            },
+            {
+              "execution_ms": 1.496,
+              "planning_ms": 0.195,
+              "estimated_total_cost": 735.21,
+              "plan_rows": 1048,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 533,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.candidate.3.plan.json"
+            },
+            {
+              "execution_ms": 1.473,
+              "planning_ms": 0.216,
+              "estimated_total_cost": 735.21,
+              "plan_rows": 1048,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 533,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.candidate.4.plan.json"
+            },
+            {
+              "execution_ms": 1.534,
+              "planning_ms": 0.232,
+              "estimated_total_cost": 735.21,
+              "plan_rows": 1048,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 533,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.candidate.5.plan.json"
+            },
+            {
+              "execution_ms": 1.552,
+              "planning_ms": 0.199,
+              "estimated_total_cost": 735.21,
+              "plan_rows": 1048,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 533,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.candidate.6.plan.json"
+            },
+            {
+              "execution_ms": 1.625,
+              "planning_ms": 0.223,
+              "estimated_total_cost": 735.21,
+              "plan_rows": 1048,
+              "actual_rows": 1091,
+              "shared_hit_blocks": 533,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.candidate.7.plan.json"
+            }
+          ],
+          "median_execution_ms": 1.534,
+          "p95_execution_ms": 1.671,
+          "min_execution_ms": 1.473,
+          "max_execution_ms": 1.671
+        }
+      },
+      "edge_expectations_passed": true
+    }
+  ],
+  "started_at_utc": "2026-11-12T19:55:18Z",
+  "measurement": "isolated synthetic lab; warm cache; alternating order; not production evidence",
+  "resource_limits": {
+    "cpus": 2,
+    "memory_mib": 1024,
+    "data_tmpfs_mib": 512,
+    "network": "none"
+  },
+  "llm_usage": null,
+  "status": "passed",
+  "seed_sql_sha256": "cc584c46d24c6ba8b59599bba8d316ca2324ea8f85524776f8ca4ea6a417c5e5",
+  "postgres_version": "PostgreSQL 16.4 (Debian 16.4-1.pgdg120+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit",
+  "settings": {
+    "jit": "on",
+    "max_parallel_workers_per_gather": "2",
+    "shared_buffers": "16384",
+    "TimeZone": "UTC",
+    "work_mem": "4096"
+  },
+  "dataset": {
+    "customers": {
+      "rows": 6000,
+      "md5": "99be700177f0f9946db8fc1a637bc3bc"
+    },
+    "categories": {
+      "rows": 41,
+      "md5": "4c34727264a2765ef086c9ed3c1c76de"
+    },
+    "products": {
+      "rows": 502,
+      "md5": "f28cc70a516dfbb6856af27cf2269cf8"
+    },
+    "orders": {
+      "rows": 60000,
+      "md5": "b833116ddf4dd1cdb7f81c3ddd3fbee6"
+    },
+    "order_items": {
+      "rows": 180002,
+      "md5": "521106c7cff17028c418665a3b66b054"
+    },
+    "payments": {
+      "rows": 46000,
+      "md5": "81d3554e2bdf6ad6c181755e19f92761"
+    },
+    "events": {
+      "rows": 36004,
+      "md5": "a97fd1e367ae30fd1071d6398e8204a6"
+    }
+  },
+  "dataset_sha256": "05596a8e41a9351d1babf43ddc233e6b2d916fd5c220aa42717dfc5d5b09671a",
+  "catalog_sha256": "06dc20cb93b2dec0036e79c6eb0bde704f225ef2649d49e04e74fae395295fea",
+  "runner_sha256": "9e67a238866a29900c9cdc52e4d181563053742532b1008000a6d21f8b294720",
+  "finished_at_utc": "2026-11-12T19:55:41Z"
+}

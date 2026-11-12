@@ -1,0 +1,17 @@
+{
+  "queryId": "Q09",
+  "decision": "candidate",
+  "rationale": [
+    "No runner com timezone UTC, o intervalo semiaberto preserva o filtro de junho/2024; a equivalência de multiconjuntos foi observada em dois seeds, com alcance limitado.",
+    "A mediana exploratória caiu de 7,546 ms para 3,122 ms."
+  ],
+  "planEvidence": [
+    "O candidate usa Bitmap Index Scan em vez de Seq Scan nos pedidos.",
+    "O custo estimado do planner caiu de 1737,09 para 1139,39 unidades sem preço."
+  ],
+  "semanticRisks": [
+    "A equivalência depende do timezone UTC fixado pelo runner; não deve ser generalizada para outros fusos.",
+    "Dois seeds não demonstram equivalência para todos os dados."
+  ],
+  "confidence": 0.88
+}

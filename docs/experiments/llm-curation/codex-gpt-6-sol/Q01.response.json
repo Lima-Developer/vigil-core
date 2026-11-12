@@ -1,0 +1,16 @@
+{
+  "queryId": "Q01",
+  "decision": "original",
+  "rationale": [
+    "A candidate teve mediana de 8,968 ms contra 7,664 ms da original nas sete repetições; seu p95 também foi maior (9,108 ms contra 8,683 ms).",
+    "A equivalência de resultados em dois seeds apoia a semântica esperada, mas não a comprova em todos os dados."
+  ],
+  "planEvidence": [
+    "A candidate agrega 33.946 linhas após o join; a original agrega 50.919 linhas antes do join. A antecipação do filtro não melhorou o tempo observado.",
+    "O custo estimado da candidate é 1.676,31 contra 1.858,40 da original; essas unidades do planner não têm preço e não prevalecem sobre as medições exploratórias."
+  ],
+  "semanticRisks": [
+    "A equivalência foi verificada apenas nos seeds 42 e 43; diferenças podem surgir com outros dados."
+  ],
+  "confidence": 0.86
+}

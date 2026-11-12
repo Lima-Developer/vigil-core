@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /** Typed external settings; validated by the application's own configuration value objects. */
 @ConfigurationProperties(prefix = "vigil")
-public record VigilProperties(Target target, Sqlite sqlite, Inference inference, Demo demo) {
+public record VigilProperties(Target target, Sqlite sqlite, Inference inference, Demo demo, Telemetry telemetry) {
     public record Target(String name, String environment, String host, String port, String database,
                          String sslMode, Duration connectTimeout) { }
     public record Sqlite(Path path, Long minimumFreeBytes) { }
@@ -22,4 +22,6 @@ public record VigilProperties(Target target, Sqlite sqlite, Inference inference,
         }
     }
     public record Demo(String select, String postgresUser, Path sslRootCert) { }
+    public record Telemetry(Boolean enabled, String postgresUser, String sslRootCert, Duration interval,
+                            Duration retention, Integer maximumSamples) { }
 }

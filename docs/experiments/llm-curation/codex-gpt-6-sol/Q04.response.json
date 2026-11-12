@@ -1,0 +1,18 @@
+{
+  "queryId": "Q04",
+  "decision": "candidate",
+  "rationale": [
+    "A pré-agregação produz uma linha por pedido com itens, preservando a exclusão de pedidos sem itens e permitindo count(*) por região.",
+    "A soma usa quantity × unit_cents, conforme a semântica esperada."
+  ],
+  "planEvidence": [
+    "O join processa cerca de 50.919 linhas na candidate, ante 152.759 na original.",
+    "O custo estimado cai de 24.477,22 para 14.228,52; é uma unidade do planner, sem interpretação monetária.",
+    "A mediana observada cai de 126,436 ms para 54,811 ms em sete repetições; os tempos são evidência exploratória."
+  ],
+  "semanticRisks": [
+    "A equivalência de multiconjuntos em dois seeds é evidência limitada.",
+    "A vantagem pode variar com a seletividade dos pedidos concluídos e o skew dos itens."
+  ],
+  "confidence": 0.86
+}

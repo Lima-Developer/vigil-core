@@ -63,10 +63,11 @@
   workspace.innerHTML = '<div class="page-heading"><div><p class="eyebrow">VIGIL / WORKSPACE</p><h1 id="workspace-title"></h1><p id="workspace-description"></p></div><span class="source-badge">LABORATÓRIO · DADOS SINTÉTICOS</span></div>'+
     Object.keys(screens).map(k=>'<section class="screen" data-screen="'+k+'" aria-label="'+screens[k][0]+'" hidden></section>').join('');
   main.append(workspace);
-  let corpus = null, corpusError = false, selectedId = 'Q01', currentScreen = 'overview';
+  let corpus = null, corpusError = false, curation = null, curationError = false;
+  let selectedId = 'Q01', currentScreen = 'overview';
   let preview = new URLSearchParams(location.search).has('demo');
   let caseEvents = null;
-  let localObservation = null, telemetryFailure = false, telemetryPaused = false;
+  let localObservation = null, telemetrySnapshot = null, telemetryFailure = false, telemetryPaused = false;
   let telemetryAbort = null, telemetryTimer = null;
   const localSamples = [];
   const media = matchMedia('(prefers-color-scheme: dark)');
@@ -91,7 +92,7 @@
   const card = (title,body,extra='') => '<article class="dash-card '+extra+'"><h2>'+title+'</h2>'+body+'</article>';
   const kpi = (label,value,note,tone='') => '<article class="kpi-card"><span>'+label+'</span><strong>'+value+'</strong><small class="'+tone+'">'+note+'</small></article>';
   const empty = text => '<div class="empty-state">'+icon('database')+'<strong>'+text+'</strong><p>Nenhum valor estimado substitui uma medição ausente.</p></div>';
-  const measuredNote = '<p class="evidence-note">PostgreSQL 16.4 · dataset sintético · cache aquecido · alternativas manuais. Resultados exploratórios, sem conclusão estatística ou ganho garantido.</p>';
+  const measuredNote = '<p class="evidence-note">PostgreSQL 16.4 · dataset sintético em escala 3 · cache aquecido · 7 repetições por variante. Resultados exploratórios, sem ganho garantido.</p>';
   const cases = () => corpus?.cases || [];
   const change = q => (q.variants.original.median_execution_ms-q.variants.candidate.median_execution_ms)/q.variants.original.median_execution_ms*100;
   function chartSlot(id,label) { return '<div class="chart-slot" data-plot="'+id+'" aria-label="'+label+'"></div>'; }
@@ -103,37 +104,72 @@
     root.innerHTML='<div class="overview-layout"><div class="overview-main"><div class="kpi-grid">'+
       kpi('Queries complexas',cases().length,'Acervo versionado · 10 cenários')+
       kpi('Equivalência nos dois seeds','20 / 20','Multiconjuntos e casos-limite','positive')+
-      kpi('Planos medidos','80','Inclui controle e regressões')+'</div>'+
+      kpi('Planos medidos',number(corpus.planCount,0),'Dois seeds · 7 repetições')+'</div>'+
       card('Tempo por consulta <span class="subtle">· mediana em ms</span>','<div class="legend"><span>Original</span><span>Candidata manual</span></div>'+chartSlot('comparison','Tempos medidos de cada consulta')+measuredNote,'main-chart')+
       '<div class="bottom-cards">'+card('Resultados observados','<ul class="metric-list"><li>Melhorias preliminares <strong class="positive">'+improved+'</strong></li><li>Regressões <strong class="negative">'+regressed+'</strong></li><li>Controle sem alteração <strong>1</strong></li></ul><a class="text-link" href="#caso">Revisar cada resultado →</a>')+
-      card('Ambiente do experimento','<ul class="metric-list"><li>Banco <strong>PostgreSQL 16.4</strong></li><li>CPU / memória <strong>2 / 1 GiB</strong></li><li>Distribuições <strong>Seeds 42 e 43</strong></li></ul>')+
-      card('Próxima entrega','<p class="card-copy">Conectar a coleta contínua com origem, janela e qualidade de cada métrica.</p><a class="text-link" href="#roteiro">Acompanhar roteiro →</a>')+'</div></div>'+
-      card('Execuções do acervo <span class="subtle">Histórico</span>','<p class="caption">Seed 42 · '+escape(new Date(corpus.observedAt).toLocaleDateString('pt-BR'))+'</p><ul class="activity-list">'+cases().map(q=>'<li><a href="#caso/'+q.id+'"><span class="activity-dot"></span><span><strong>'+q.id+'</strong><small>Equivalência validada</small></span><span class="activity-time">'+number(q.variants.candidate.median_execution_ms)+' ms<small>Candidata</small></span></a></li>').join('')+'</ul>','activity-card')+'</div>';
+      card('Ambiente do experimento','<ul class="metric-list"><li>Banco <strong>PostgreSQL 16.4</strong></li><li>CPU / memória <strong>2 / 1 GiB</strong></li><li>Escala / distribuições <strong>'+number(corpus.scale,0)+' · seeds 42 e 43</strong></li></ul>')+
+      card('Próxima entrega','<p class="card-copy">Registrar o parecer humano do caso escolhido e ensaiar o roteiro completo da defesa.</p><a class="text-link" href="#roteiro">Acompanhar roteiro →</a>')+'</div></div>'+
+      card('Execuções do acervo <span class="subtle">Histórico</span>','<p class="caption">Seed 42 · '+escape(new Date(corpus.observedAt).toLocaleDateString('pt-BR'))+' · '+number(corpus.repetitions,0)+' repetições</p><ul class="activity-list">'+cases().map(q=>'<li><a href="#caso/'+q.id+'"><span class="activity-dot"></span><span><strong>'+q.id+'</strong><small>Equivalência validada</small></span><span class="activity-time">'+number(q.variants.candidate.median_execution_ms)+' ms<small>Candidata</small></span></a></li>').join('')+'</ul>','activity-card')+'</div>';
   }
   function renderTelemetry() {
-    section('telemetria').innerHTML='<div class="view-toolbar"><span class="subtle">Métricas operacionais do target</span><button id="preview-toggle" class="secondary-button" aria-pressed="'+preview+'">'+(preview?'Sair da prévia visual':'Ativar prévia visual')+'</button></div><div class="notice '+(preview?'demo':'')+'">'+(preview?'Prévia visual: séries sintéticas de layout. Não há coleta contínua conectada.':'Coleta contínua ainda não integrada. As métricas do banco permanecem indisponíveis.')+'</div><div class="kpi-grid four">'+
-      kpi('Chamadas SQL',preview?'67.589':'—','Na janela ilustrativa de 30 min')+
-      kpi('Latência média',preview?'22 ms':'—','Ponderada por chamadas')+
-      kpi('Sessões em espera',preview?'4':'—','Espera não implica fila de pool')+
+    section('telemetria').innerHTML='<div class="view-toolbar"><span class="subtle">Métricas operacionais do target</span><button id="preview-toggle" class="secondary-button" aria-pressed="'+preview+'">'+(preview?'Sair da prévia visual':'Ativar prévia visual')+'</button></div><div id="collector-notice" class="notice '+(preview?'demo':'')+'" role="status"></div><div class="kpi-grid four">'+
+      kpi('Chamadas SQL','<span id="sql-calls-value">'+(preview?'67.589':'—')+'</span>','<span id="sql-calls-note">'+(preview?'Janela sintética de 30 min':'Aguardando amostra')+'</span>')+
+      kpi('Latência média','<span id="mean-latency-value">'+(preview?'22 ms':'—')+'</span>','<span id="mean-latency-note">'+(preview?'Ponderada por chamadas':'Aguardando amostra')+'</span>')+
+      kpi('Sessões em espera','<span id="waiting-sessions-value">'+(preview?'4':'—')+'</span>','<span id="waiting-sessions-note">'+(preview?'Série sintética':'Aguardando amostra')+'</span>')+
       kpi('Armazenamento local','<span id="local-space-value">'+(preview?'78,2 GiB':'—')+'</span>','<span id="local-space-origin">Volume do Vigil, não do target</span>')+'</div><div class="telemetry-controls" '+(preview?'hidden':'')+'><button id="pause-telemetry" class="secondary-button" aria-pressed="'+telemetryPaused+'">'+(telemetryPaused?'Retomar atualização':'Pausar atualização')+'</button><span id="telemetry-read-status" role="status">Leitura local a cada 30 s enquanto esta aba estiver visível.</span></div><div class="telemetry-grid">'+
-      card('Atividade do banco <span class="subtle">· chamadas por intervalo</span>',chartSlot('calls','Atividade ilustrativa'))+
-      card('Latência média <span class="subtle">· ms</span>',chartSlot('latency','Latência ilustrativa'))+
-      card('Sessões <span class="subtle">· ativas e em espera</span>',chartSlot('sessions','Sessões ilustrativas'))+
+      card('Atividade do banco <span class="subtle">· chamadas por intervalo</span>',chartSlot('calls','Chamadas SQL observadas por intervalo'))+
+      card('Latência média <span class="subtle">· ms</span>',chartSlot('latency','Latência média ponderada por intervalo'))+
+      card('Sessões <span class="subtle">· ativas e em espera</span>',chartSlot('sessions','Sessões agregadas observadas'))+
       card('Espaço local disponível <span class="subtle">· GiB</span>',chartSlot('storage',preview?'Espaço ilustrativo':'Leituras reais do espaço local'))+'</div><p class="evidence-note">A primeira amostra, resets e falhas terão estados próprios. freeLocalStorage de um provedor de banco exige uma fonte específica; não é o espaço livre deste computador.</p>';
     $('#preview-toggle').onclick=()=>{preview=!preview;renderTelemetry();redrawCharts();startTelemetry();};
-    $('#pause-telemetry').onclick=()=>{
-      telemetryPaused=!telemetryPaused;
-      $('#pause-telemetry').setAttribute('aria-pressed',String(telemetryPaused));
-      $('#pause-telemetry').textContent=telemetryPaused?'Retomar atualização':'Pausar atualização';
+    $('#pause-telemetry').onclick=async()=>{
+      const nextPaused=!telemetryPaused;
+      if(telemetrySnapshot?.collector?.enabled){
+        $('#pause-telemetry').disabled=true;
+        try {
+          const response=await fetch('/api/workspace/telemetry/'+(nextPaused?'pause':'resume'),{method:'POST',cache:'no-store'});
+          if(!response.ok)throw new Error('Collector control unavailable');
+          telemetrySnapshot.collector=await response.json();
+          telemetryPaused=Boolean(telemetrySnapshot.collector.paused);
+        } catch { telemetryFailure=true; }
+        $('#pause-telemetry').disabled=false;
+      } else telemetryPaused=nextPaused;
       updateTelemetryRead();startTelemetry();
     };
     updateTelemetryRead();
   }
+  function metricText(metric,suffix='') {
+    return metric?.state==='available'&&typeof metric.value==='number'?number(metric.value)+(suffix?' '+suffix:''):'—';
+  }
+  function metricNote(metric,label) {
+    if(!metric)return 'Aguardando amostra';
+    if(metric.state==='available')return label+' · '+metric.quality+' · '+new Date(metric.observedAt).toLocaleTimeString('pt-BR');
+    const states={warming_up:'Aquecendo baseline',unsupported:'Fonte não configurada',error:'Falha de leitura',stale:'Último valor conhecido'};
+    return (states[metric.state]||'Indisponível')+(metric.reason?' · '+metric.reason:'');
+  }
   function updateTelemetryRead() {
-    if(preview) return;
+    if(preview){
+      $('#collector-notice').textContent='Prévia visual: séries sintéticas para conferir o layout. Não representam o target.';
+      return;
+    }
+    const metrics=telemetrySnapshot?.metrics||{};
     const available=localObservation?.state==='available';
+    $('#sql-calls-value').textContent=metricText(metrics.sqlCalls);
+    $('#sql-calls-note').textContent=metricNote(metrics.sqlCalls,'Delta de execuções');
+    $('#mean-latency-value').textContent=metricText(metrics.meanExecutionMillis,'ms');
+    $('#mean-latency-note').textContent=metricNote(metrics.meanExecutionMillis,'Ponderada por chamadas');
+    $('#waiting-sessions-value').textContent=metricText(metrics.waitingSessions);
+    $('#waiting-sessions-note').textContent=metricNote(metrics.waitingSessions,'Gauge de espera');
     $('#local-space-value').textContent=available?number(localObservation.value/1073741824)+' GiB':'—';
     $('#local-space-origin').textContent=available?'Medição real · volume local do Vigil':'Volume local · leitura indisponível';
+    const collector=telemetrySnapshot?.collector;
+    $('#collector-notice').textContent=collector?.enabled?
+      collector.paused?'Coletor PostgreSQL pausado. O histórico permanece disponível.':
+      collector.consecutiveFailures?'Coletor em backoff após '+collector.consecutiveFailures+' falha(s). Nenhum zero foi inventado.':
+      collector.collecting?'Coleta serial em andamento.':'Coletor PostgreSQL ativo · deltas e gauges persistidos no SQLite local.':
+      'Coletor PostgreSQL desabilitado. O volume local continua medido; métricas do target permanecem explicitamente indisponíveis.';
+    $('#pause-telemetry').setAttribute('aria-pressed',String(telemetryPaused));
+    $('#pause-telemetry').textContent=telemetryPaused?'Retomar atualização':'Pausar atualização';
     $('#telemetry-read-status').textContent=telemetryPaused?'Atualização pausada.':
       telemetryFailure?'Leitura indisponível. Nova tentativa em 30 s.':
       available?'Última leitura real: '+new Date(localObservation.observedAt).toLocaleTimeString('pt-BR')+' · atualização a cada 30 s.':
@@ -155,8 +191,10 @@
       .then(data=>{
         if(controller!==telemetryAbort) return;
         const metric=data.metrics?.localUsableBytes;
-        if(data.schemaVersion!==1||!metric||metric.source!=='filesystem')throw new Error('Invalid telemetry');
-        localObservation=metric;telemetryFailure=metric.state!=='available';
+        if(data.schemaVersion!==1||!metric||metric.source!=='filesystem'||!Array.isArray(data.samples)||!data.collector)throw new Error('Invalid telemetry');
+        telemetrySnapshot=data;
+        if(data.collector.enabled)telemetryPaused=Boolean(data.collector.paused);
+        localObservation=metric;telemetryFailure=metric.state==='error';
         if(metric.state==='available'&&typeof metric.value==='number'&&metric.observedAt){
           localSamples.push({at:metric.observedAt,value:metric.value/1073741824});
           if(localSamples.length>60)localSamples.shift();
@@ -194,41 +232,67 @@
     const root=$('.case-detail'), q=cases().find(item=>item.id===selectedId);
     if(!q) {root.innerHTML=empty(corpusError?'Acervo indisponível':'Carregando acervo');return;}
     const a=q.variants.original,b=q.variants.candidate;
-    root.innerHTML='<div class="dash-card"><div class="detail-heading"><span class="eyebrow">'+q.id+'</span>'+badge(q.control?'Controle negativo':change(q)>0?'Melhoria preliminar':'Regressão medida',q.control?'':change(q)>0?'positive':'negative')+'</div><h2>'+escape(q.title)+'</h2><p class="card-copy">'+escape(q.expected)+'</p><div class="kpi-grid three">'+kpi('Original',number(a.median_execution_ms)+' ms','Mediana · 3 repetições')+kpi('Candidata',number(b.median_execution_ms)+' ms','Alternativa escrita manualmente')+kpi('Resultado',number(q.result_rows,0)+' linhas','Equivalência validada · dois seeds','positive')+'</div><ol class="phase-track"><li class="complete">Dataset</li><li class="complete">Plano</li><li class="complete">Alternativa manual</li><li class="complete">Equivalência</li><li class="complete">Medição</li><li>Parecer humano</li></ol><p class="evidence-note">Fluxo do laboratório. Proposta por IA e aprovação humana ainda não executadas.</p></div>'+
+    const review=curation?.decisions?.find(item=>item.queryId===q.id);
+    const reviewCard=review?card('Curadoria por IA <span class="subtle">· artefato não executável</span>',
+      '<div class="detail-heading">'+badge(review.decision==='candidate'?'Candidata recomendada':review.decision==='original'?'Original mantida':'Revisão humana',review.decision==='candidate'?'positive':'')+'<span class="caption">confiança '+number(review.confidence*100,0)+'%</span></div><ul class="phase-list">'+review.rationale.map(item=>'<li>'+escape(item)+'</li>').join('')+'</ul><p class="evidence-note">Riscos: '+escape(review.semanticRisks.join(' · '))+'</p>'):'';
+    root.innerHTML='<div class="dash-card"><div class="detail-heading"><span class="eyebrow">'+q.id+'</span>'+badge(q.control?'Controle negativo':change(q)>0?'Melhoria preliminar':'Regressão medida',q.control?'':change(q)>0?'positive':'negative')+'</div><h2>'+escape(q.title)+'</h2><p class="card-copy">'+escape(q.expected)+'</p><div class="kpi-grid three">'+kpi('Original',number(a.median_execution_ms)+' ms','Mediana · '+number(corpus.repetitions,0)+' repetições')+kpi('Candidata',number(b.median_execution_ms)+' ms','Alternativa escrita manualmente')+kpi('Resultado',number(q.result_rows,0)+' linhas','Equivalência validada · dois seeds','positive')+'</div><ol class="phase-track"><li class="complete">Dataset</li><li class="complete">Plano</li><li class="complete">Alternativa manual</li><li class="complete">Equivalência</li><li class="complete">Medição</li><li class="'+(review?'complete':'')+'">Curadoria IA</li><li>Parecer humano</li></ol><p class="evidence-note">A IA apenas selecionou entre duas variantes versionadas já validadas; nenhum SQL gerado pelo modelo foi executado.</p></div>'+reviewCard+
       card('Hipótese e limites','<p class="card-copy">'+escape(q.hypothesis)+'</p><p class="evidence-note">'+escape(q.risk)+'</p>')+
       '<div class="query-panels">'+['original','candidate'].map(v=>card(v==='original'?'SQL original':'SQL candidato · manual','<pre class="sql"><code>'+escape(q.variants[v].sql)+'</code></pre>')).join('')+'</div>'+
-      card('Planos observados <span class="subtle">· primeira repetição do seed 42</span>','<div class="plan-columns">'+['original','candidate'].map(v=>'<div><h3>'+(v==='original'?'Original':'Candidata')+'</h3><ul class="plan-tree">'+planTree(q.variants[v].plan[0].Plan)+'</ul><details><summary>JSON completo do plano</summary><pre class="sql">'+escape(JSON.stringify(q.variants[v].plan,null,2))+'</pre></details></div>').join('')+'</div><p class="evidence-note">Custo do planner não é preço nem tempo medido. Nós e linhas vêm de EXPLAIN ANALYZE no sandbox.</p>')+
+      card('Planos observados <span class="subtle">· primeira repetição do seed 42, escala 3</span>','<div class="plan-columns">'+['original','candidate'].map(v=>'<div><h3>'+(v==='original'?'Original':'Candidata')+'</h3><ul class="plan-tree">'+planTree(q.variants[v].plan[0].Plan)+'</ul><details><summary>JSON completo do plano</summary><pre class="sql">'+escape(JSON.stringify(q.variants[v].plan,null,2))+'</pre></details></div>').join('')+'</div><p class="evidence-note">Custo do planner não é preço nem tempo medido. Nós e linhas vêm de EXPLAIN ANALYZE no sandbox.</p>')+
       card('Amostras de execução · ms','<div class="table-wrap"><table><thead><tr><th>Repetição</th><th>Original</th><th>Candidata</th></tr></thead><tbody>'+a.runs.map((run,i)=>'<tr><td>'+(i+1)+'</td><td>'+number(run.execution_ms)+'</td><td>'+number(b.runs[i].execution_ms)+'</td></tr>').join('')+'</tbody></table></div>'+measuredNote);
   }
   function renderAudit() {
     const events=caseEvents?.events||[];
     section('auditoria').innerHTML=card('Eventos do caso local',caseEvents?'<p class="caption">'+escape(caseEvents.id)+' · '+(new URLSearchParams(location.search).has('demo')?'simulação não persistida':'auditoria SQLite')+'</p><ol class="audit-events">'+events.map(e=>'<li><span class="activity-dot"></span><div><strong>'+escape(e.type)+'</strong><p>'+escape(e.detail)+'</p><time>'+escape(new Date(e.at).toLocaleString('pt-BR'))+'</time></div></li>').join('')+'</ol>':empty('Nenhum caso carregado'))+
-      card('Execuções verificadas do acervo','<p class="evidence-note">Evidências estáticas do experimento; não são eventos coletados em tempo real.</p><div class="table-wrap"><table><thead><tr><th>Query</th><th>Escopo</th><th>Verificação</th><th>Origem</th></tr></thead><tbody>'+cases().map(q=>'<tr><td><a class="text-link" href="#caso/'+q.id+'">'+q.id+'</a></td><td>Seeds 42 e 43</td><td>Equivalência aprovada</td><td>Laboratório sintético</td></tr>').join('')+'</tbody></table></div>');
+      card('Execuções verificadas do acervo','<p class="evidence-note">Evidências estáticas do experimento; não são eventos coletados em tempo real.</p><div class="table-wrap"><table><thead><tr><th>Query</th><th>Escopo</th><th>Verificação</th><th>Origem</th></tr></thead><tbody>'+cases().map(q=>'<tr><td><a class="text-link" href="#caso/'+q.id+'">'+q.id+'</a></td><td>Escala 3 · seeds 42 e 43</td><td>Equivalência aprovada</td><td>Laboratório sintético</td></tr>').join('')+'</tbody></table></div>')+
+      (curation?card('Curadoria de IA auditável','<p class="evidence-note">Cada linha possui resposta estruturada, duração e evento bruto de usage. Nenhuma decisão substitui o parecer humano.</p><div class="table-wrap"><table><thead><tr><th>Query</th><th>Modelo</th><th>Decisão</th><th>Input / cache / output</th><th>Estado</th></tr></thead><tbody>'+curation.decisions.map(item=>'<tr><td>'+item.queryId+'</td><td>'+escape(curation.actualExecution.model)+'</td><td>'+escape(item.decision)+'</td><td>'+number(item.usage.input_tokens,0)+' / '+number(item.usage.cached_input_tokens,0)+' / '+number(item.usage.output_tokens,0)+'</td><td>Registrado</td></tr>').join('')+'</tbody></table></div>'):'');
   }
   function renderUsage() {
-    section('consumo').innerHTML='<div class="notice">Nenhuma execução de LLM registrada. As alternativas do acervo foram escritas manualmente.</div><div class="kpi-grid four">'+['Tokens de entrada','Tokens de saída','Entrada em cache','Custo calculado'].map(label=>kpi(label,'—','Aguardando usage reportado pelo provedor')).join('')+'</div><div class="query-panels">'+
-      card('Fases da execução por IA','<ol class="phase-list"><li>Contexto sanitizado<small>Schema, plano e hipótese permitidos</small></li><li>Proposta do modelo<small>Input, output e cache por tentativa</small></li><li>Validação no sandbox<small>Política SQL e equivalência</small></li><li>Comparação e decisão<small>Tempos, consumo e parecer humano</small></li></ol>')+
-      card('Comparação de custos',empty('Sem consumo medido')+'<p class="evidence-note">Contagens ausentes não viram zero. Preços deverão ter data, moeda e modelo; projeções tarifadas serão separadas do valor da assinatura.</p>')+'</div>';
+    const root=section('consumo');
+    if(!curation){root.innerHTML=empty(curationError?'Evidência de IA indisponível':'Carregando evidência de IA');return;}
+    const actual=curation.actualExecution,tokens=actual.tokens,prices=curation.pricing.projections;
+    const avg=Math.round(tokens.input_tokens/actual.runs);
+    root.innerHTML='<div class="notice">10 curadorias reais concluídas com '+escape(actual.model)+' em sandbox somente leitura. A IA escolheu apenas entre variantes versionadas; Claude Code não foi executado porque a CLI não está instalada.</div><div class="kpi-grid four">'+
+      kpi('Tokens de entrada',number(tokens.input_tokens,0),'Média '+number(avg,0)+' por query')+
+      kpi('Tokens de saída',number(tokens.output_tokens,0),'Inclui '+number(tokens.reasoning_output_tokens,0)+' de reasoning reportado')+
+      kpi('Entrada em cache',number(tokens.cached_input_tokens,0),'Subconjunto do total de entrada')+
+      kpi('Projeção GPT', '$ '+number(prices['gpt-6-sol'].usd,6),'USD · tarifa de '+escape(curation.pricing.effectiveDate))+'</div><div class="query-panels">'+
+      card('Fases da execução por IA','<ol class="phase-list"><li>Contexto sanitizado<small>Somente SQL sintético, sem credenciais ou dados do target</small></li><li>Curadoria estruturada<small>Seleção entre original/candidata versionadas</small></li><li>Validação já medida<small>Equivalência multiconjunto em dois seeds e 280 planos</small></li><li>Decisão humana<small>Pendente e exibida como pendente; não automatizada</small></li></ol>')+
+      card('Comparação de custos','<ul class="metric-list"><li>GPT-6 Sol · projeção <strong>$ '+number(prices['gpt-6-sol'].usd,6)+'</strong></li><li>Claude Sonnet 5.5 · mesmos tokens <strong>$ '+number(prices['claude-sonnet-5-5'].usd,6)+'</strong></li><li>Custo faturado da assinatura <strong>não reportado</strong></li></ul><p class="evidence-note">A projeção Claude não é uma execução: tokenização e saída podem diferir. O valor GPT é equivalente à tarifa API, não uma fatura do plano.</p>')+'</div>'+
+      card('Usage e decisão por query','<div class="table-wrap"><table><thead><tr><th>Query</th><th>Decisão</th><th>Confiança</th><th>Input</th><th>Cache</th><th>Output</th><th>Duração</th></tr></thead><tbody>'+curation.decisions.map(item=>'<tr><td><a class="text-link" href="#caso/'+item.queryId+'">'+item.queryId+'</a></td><td>'+escape(item.decision)+'</td><td>'+number(item.confidence*100,0)+'%</td><td>'+number(item.usage.input_tokens,0)+'</td><td>'+number(item.usage.cached_input_tokens,0)+'</td><td>'+number(item.usage.output_tokens,0)+'</td><td>'+number(item.durationMs/1000,1)+' s</td></tr>').join('')+'</tbody></table></div><p class="evidence-note">Eventos JSONL brutos preservam o usage reportado pelo CLI; nenhuma contagem ausente foi convertida em zero.</p><a class="text-link" href="/curation.json" download="vigil-curation-summary.json">Baixar relatório JSON reproduzível →</a>');
   }
   function renderRoadmap() {
     const steps=[
       ['Concluído','Interface e navegação','Temas claro/escuro, cards responsivos e seis áreas com responsabilidades próprias.'],
       ['Concluído','Acervo de 10 queries complexas','Dois seeds, equivalência, casos-limite e 80 planos medidos.'],
-      ['Em andamento','Telemetria contínua','Contrato e leitura do volume local prontos. Faltam coletor PostgreSQL, deltas, reset e retenção.'],
-      ['Parcial','Baseline e planos','Laboratório medido. Ampliar escala, repetições e conexão com o fluxo do sistema.'],
-      ['Pendente','IA local e tokens','Integração explícita com provedor, contexto sanitizado e usage exato por tentativa.'],
-      ['Parcial','Validação e apresentação','SQL, planos e resultados visíveis. Faltam propostas de IA, decisão e relatório completo.']
+      ['Concluído','Telemetria contínua','Deltas, reset, sessões, backoff, pausa e retenção SQLite integrados; storage do provedor permanece indisponível sem adapter.'],
+      ['Concluído','Baseline e planos','Escala 3, dois seeds, sete repetições por variante e 280 planos completos.'],
+      ['Concluído','IA local e tokens','10 curadorias reais, usage bruto por tentativa, preços datados e projeções separadas da fatura.'],
+      ['Parcial','Validação e apresentação','SQL, planos, equivalência, decisões da IA e custos visíveis. Parecer humano e ensaio da defesa permanecem atividades humanas.']
     ];
-    section('roteiro').innerHTML='<div class="roadmap-grid">'+steps.map(([status,title,description],i)=>'<article class="dash-card roadmap-card"><span class="step-number">'+String(i+1).padStart(2,'0')+'</span><div>'+badge(status,status==='Concluído'?'positive':'')+'<h2>'+title+'</h2><p class="card-copy">'+description+'</p></div></article>').join('')+'</div><div class="notice">Integração VIG-087: revisão/QA e publicação ainda pendentes. O checkout de integração contém um conflito anterior de cherry-pick; este workspace usa a branch de preparação.</div>';
+    section('roteiro').innerHTML='<div class="roadmap-grid">'+steps.map(([status,title,description],i)=>'<article class="dash-card roadmap-card"><span class="step-number">'+String(i+1).padStart(2,'0')+'</span><div>'+badge(status,status==='Concluído'?'positive':'')+'<h2>'+title+'</h2><p class="card-copy">'+description+'</p></div></article>').join('')+'</div><div class="notice">VIG-087: implementação técnica concluída nesta branch de preparação. Revisão final, publicação do PR empilhado e parecer humano permanecem pendentes; não haverá merge automático.</div>';
   }
-  const plotDefinitions = () => ({
-    comparison:{labels:cases().map(q=>q.id),series:[{label:'Original',values:cases().map(q=>q.variants.original.median_execution_ms)},{label:'Candidata manual',values:cases().map(q=>q.variants.candidate.median_execution_ms)}],unit:'ms'},
-    calls:{labels:['−30','−25','−20','−15','−10','−5','agora'],series:[{label:'Chamadas',values:[72,84,65,93,81,95,89]}],unit:'chamadas',preview:true},
-    latency:{labels:['−30','−25','−20','−15','−10','−5','agora'],series:[{label:'Média',values:[25,24,22,23,21,20,19]}],unit:'ms',preview:true},
-    sessions:{labels:['−30','−25','−20','−15','−10','−5','agora'],series:[{label:'Ativas',values:[12,16,13,18,14,17,15]},{label:'Em espera',values:[2,4,2,3,5,3,4]}],unit:'sessões',preview:true},
-    storage:preview?{labels:['−30','−25','−20','−15','−10','−5','agora'],series:[{label:'Espaço livre',values:[82,81,81,80,79,79,78.2]}],unit:'GiB',preview:true}:
-      {labels:localSamples.map(s=>new Date(s.at).toLocaleTimeString('pt-BR')),series:[{label:'Volume local',values:localSamples.map(s=>s.value)}],unit:'GiB',local:true}
-  });
+  const telemetrySamples = () => (telemetrySnapshot?.samples||[])
+    .filter(sample=>sample.state!=='error')
+    .slice().reverse();
+  const timeLabels = samples => samples.map(sample=>new Date(sample.observedAt).toLocaleTimeString('pt-BR'));
+  const plotDefinitions = () => {
+    const samples=telemetrySamples();
+    const available=samples.filter(sample=>sample.state==='available');
+    const activity=samples.filter(sample=>sample.activeSessions!=null&&sample.waitingSessions!=null);
+    const labels=['−30','−25','−20','−15','−10','−5','agora'];
+    return {
+      comparison:{labels:cases().map(q=>q.id),series:[{label:'Original',values:cases().map(q=>q.variants.original.median_execution_ms)},{label:'Candidata manual',values:cases().map(q=>q.variants.candidate.median_execution_ms)}],unit:'ms'},
+      calls:preview?{labels,series:[{label:'Chamadas',values:[72,84,65,93,81,95,89]}],unit:'chamadas',preview:true}:
+        {labels:timeLabels(available),series:[{label:'Chamadas',values:available.map(sample=>sample.calls)}],unit:'chamadas',real:true},
+      latency:preview?{labels,series:[{label:'Média',values:[25,24,22,23,21,20,19]}],unit:'ms',preview:true}:
+        {labels:timeLabels(available.filter(sample=>sample.meanExecutionMillis!=null)),series:[{label:'Média ponderada',values:available.filter(sample=>sample.meanExecutionMillis!=null).map(sample=>sample.meanExecutionMillis)}],unit:'ms',real:true},
+      sessions:preview?{labels,series:[{label:'Ativas',values:[12,16,13,18,14,17,15]},{label:'Em espera',values:[2,4,2,3,5,3,4]}],unit:'sessões',preview:true}:
+        {labels:timeLabels(activity),series:[{label:'Ativas',values:activity.map(sample=>sample.activeSessions)},{label:'Em espera',values:activity.map(sample=>sample.waitingSessions)}],unit:'sessões',real:true},
+      storage:preview?{labels,series:[{label:'Espaço livre',values:[82,81,81,80,79,79,78.2]}],unit:'GiB',preview:true}:
+        {labels:localSamples.map(s=>new Date(s.at).toLocaleTimeString('pt-BR')),series:[{label:'Volume local',values:localSamples.map(s=>s.value)}],unit:'GiB',local:true}
+    };
+  };
   function redrawCharts() {
     const definitions=plotDefinitions();
     document.querySelectorAll('.chart-slot').forEach(slot=>{
@@ -237,6 +301,7 @@
       const wasOpen=Boolean(slot.querySelector('details[open]'));
       const restoreFocus=slot.contains(document.activeElement);
       if(!plot || (plot.preview&&!preview)){slot.innerHTML=empty('Aguardando coleta');return;}
+      if(plot.real&&!plot.labels.length){slot.innerHTML=empty('Sem amostras persistidas');return;}
       if(plot.local&&!localSamples.length){slot.innerHTML=empty('Aguardando leitura local');return;}
       const width=Math.max(240,slot.clientWidth), height=245, left=42,right=width-20,top=14,bottom=206;
       const max=Math.max(1,...plot.series.flatMap(s=>s.values))*1.12;
@@ -256,7 +321,7 @@
         drawing+='<polyline points="'+points+'" class="plot-line line-'+index+'" '+(index?'stroke-dasharray="5 3"':'')+'/>';
         series.values.forEach((v,i)=>drawing+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="3" class="point point-'+index+'"><title>'+escape(series.label+' · '+plot.labels[i]+': '+number(v)+' '+plot.unit)+'</title></circle>');
       });
-      slot.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+escape((plot.preview?'Série sintética ilustrativa. ':plot.local?'Leituras reais do volume local nesta sessão. ':'Dados medidos do laboratório. ')+plot.series.map(s=>s.label).join(' e '))+'">'+drawing+'</svg><details class="chart-data"><summary>Ver dados do gráfico</summary><div class="table-wrap"><table><thead><tr><th>'+(plot.preview?'Minutos':plot.local?'Horário':'Query')+'</th>'+plot.series.map(s=>'<th>'+s.label+' ('+plot.unit+')</th>').join('')+'</tr></thead><tbody>'+plot.labels.map((label,i)=>'<tr><td>'+label+'</td>'+plot.series.map(s=>'<td>'+number(s.values[i])+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>';
+      slot.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+escape((plot.preview?'Série sintética ilustrativa. ':plot.local?'Leituras reais do volume local nesta sessão. ':plot.real?'Amostras persistidas do target. ':'Dados medidos do laboratório. ')+plot.series.map(s=>s.label).join(' e '))+'">'+drawing+'</svg><details class="chart-data"><summary>Ver dados do gráfico</summary><div class="table-wrap"><table><thead><tr><th>'+(plot.preview?'Minutos':plot.local||plot.real?'Horário':'Query')+'</th>'+plot.series.map(s=>'<th>'+s.label+' ('+plot.unit+')</th>').join('')+'</tr></thead><tbody>'+plot.labels.map((label,i)=>'<tr><td>'+label+'</td>'+plot.series.map(s=>'<td>'+number(s.values[i])+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>';
       if(slot.dataset.plot!=='comparison')slot.insertAdjacentHTML('afterbegin','<div class="legend">'+plot.series.map(s=>'<span>'+s.label+'</span>').join('')+'</div>');
       slot.querySelector('details').open=wasOpen;
       if(restoreFocus)slot.querySelector('summary').focus({preventScroll:true});
@@ -268,7 +333,7 @@
     if(id&&cases().some(q=>q.id===id)) selectedId=id;
     $('#workspace-title').textContent=screens[currentScreen][1];
     $('#workspace-description').textContent=screens[currentScreen][2];
-    $('.source-badge').textContent=currentScreen==='telemetria'?'ORIGEM INDICADA POR MÉTRICA':currentScreen==='consumo'?'SEM EXECUÇÕES DE LLM':'LABORATÓRIO · DADOS SINTÉTICOS';
+    $('.source-badge').textContent=currentScreen==='telemetria'?'ORIGEM INDICADA POR MÉTRICA':currentScreen==='consumo'?'USAGE REPORTADO · CUSTO PROJETADO':'LABORATÓRIO · DADOS SINTÉTICOS';
     document.querySelectorAll('[data-screen]').forEach(el=>el.hidden=el.dataset.screen!==currentScreen);
     document.querySelectorAll('.rail-link,.segment').forEach(a=>{
       const active=a.hash==='#'+currentScreen;
@@ -294,4 +359,11 @@
     if(data.schemaVersion!==1 || data.source!=='synthetic-lab-measured' || !Array.isArray(data.cases))throw new Error('Invalid corpus');
     corpus=data;renderOverview();renderCaseList();renderCaseDetail();renderAudit();navigate();
   }).catch(()=>{corpusError=true;renderOverview();renderCaseDetail();});
+  fetch('/curation.json').then(response=>{
+    if(!response.ok)throw new Error('Curation unavailable');
+    return response.json();
+  }).then(data=>{
+    if(data.schemaVersion!==1||data.actualExecution?.runs!==10||!Array.isArray(data.decisions))throw new Error('Invalid curation');
+    curation=data;renderUsage();renderCaseDetail();renderAudit();renderRoadmap();navigate();
+  }).catch(()=>{curationError=true;renderUsage();});
 })();

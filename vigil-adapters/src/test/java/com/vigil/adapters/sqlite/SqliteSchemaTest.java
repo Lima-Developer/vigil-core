@@ -61,7 +61,7 @@ class SqliteSchemaTest {
     @Test
     void shouldCreateOnlyTheCaseTablesAndTheMigrationHistory() throws SQLException {
         assertEquals(
-                List.of("analysis_case", "case_event", "domain_event", "evidence", "schema_version"),
+                List.of("analysis_case", "case_event", "domain_event", "evidence", "schema_version", "workspace_telemetry_sample"),
                 rows(connection, "SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name")
         );
     }

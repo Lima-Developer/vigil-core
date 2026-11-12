@@ -60,16 +60,20 @@ class SqlMigrationRunnerTest {
 
         try (var connection = factory.open()) {
             assertAll(
-                    () -> assertEquals(List.of(1, 2), applied),
+                    () -> assertEquals(List.of(1, 2, 3), applied),
                     () -> assertEquals(List.of(
                             "1 | create case schema | " + sha256("db/migration/V001__create_case_schema.sql")
                                     + " | 2026-09-30T12:34:56.123456789Z",
                             "2 | create evidence and domain event schema | "
                                     + sha256("db/migration/V002__create_evidence_and_domain_event_schema.sql")
+                                    + " | 2026-09-30T12:34:56.123456789Z",
+                            "3 | create workspace telemetry schema | "
+                                    + sha256("db/migration/V003__create_workspace_telemetry_schema.sql")
                                     + " | 2026-09-30T12:34:56.123456789Z"
                     ), rows(connection, "SELECT version, description, checksum, installed_at FROM schema_version")),
                     () -> assertEquals(
-                            List.of("analysis_case", "case_event", "domain_event", "evidence", "schema_version"),
+                            List.of("analysis_case", "case_event", "domain_event", "evidence", "schema_version",
+                                    "workspace_telemetry_sample"),
                             rows(connection, "SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name")
                     ),
                     () -> assertTrue(connection.getAutoCommit())
@@ -381,7 +385,9 @@ class SqlMigrationRunnerTest {
         assertEquals(
                 List.of(new Migration(1, "create case schema", "db/migration/V001__create_case_schema.sql"),
                         new Migration(2, "create evidence and domain event schema",
-                                "db/migration/V002__create_evidence_and_domain_event_schema.sql")),
+                                "db/migration/V002__create_evidence_and_domain_event_schema.sql"),
+                        new Migration(3, "create workspace telemetry schema",
+                                "db/migration/V003__create_workspace_telemetry_schema.sql")),
                 SqlMigrationRunner.catalog()
         );
     }

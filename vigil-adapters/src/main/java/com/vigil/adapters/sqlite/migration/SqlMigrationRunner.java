@@ -37,7 +37,9 @@ public final class SqlMigrationRunner {
     private static final List<Migration> CATALOG = List.of(
             new Migration(1, "create case schema", "db/migration/V001__create_case_schema.sql"),
             new Migration(2, "create evidence and domain event schema",
-                    "db/migration/V002__create_evidence_and_domain_event_schema.sql")
+                    "db/migration/V002__create_evidence_and_domain_event_schema.sql"),
+            new Migration(3, "create workspace telemetry schema",
+                    "db/migration/V003__create_workspace_telemetry_schema.sql")
     );
     private static final Set<String> TRANSACTION_KEYWORDS =
             Set.of("BEGIN", "COMMIT", "END", "ROLLBACK", "SAVEPOINT", "RELEASE");
