@@ -100,6 +100,9 @@ estimadas não são comparados, pois não são estáveis byte a byte entre vers�
 
 ## 8. Decisões em aberto
 
+O acervo complementar para a defesa está em [tools/complex-query-lab](../../tools/complex-query-lab/README.md):
+10 cenários complexos, dataset próprio e runner isolado. Ele não substitui as fixtures H/P1/P2 nem altera as ITs do VIG-030.
+
 - **Mutação do laboratório:** sem suporte do `pitest-maven` a código mutável em `target/test-classes`, a cobertura
   de mutação do lab depende de um driver externo; decidir se vale um módulo dedicado ou aceitar a medição manual.
 - **Docker em CI:** o repositório não tem pipeline (`.github/` ausente). A política (runner com Docker, cache de

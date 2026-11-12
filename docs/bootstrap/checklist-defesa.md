@@ -9,15 +9,17 @@
 - [x] Validar desktop/mobile, navegação por teclado e contraste nos dois temas.
 - [ ] Integrar ao VIG-087 final, concluir revisão/QA e publicar PR na stack sem merge automático.
 
-## 2. Próxima tarefa: acervo reproduzível de 10 queries complexas
+## 2. Acervo reproduzível de 10 queries complexas — executado
 
-- [ ] Criar dataset sintético PostgreSQL versionado, seed, distribuição e escala documentados.
-- [ ] Selecionar dez cenários distintos: CTE com agregações; subquery correlacionada; EXISTS/anti-join; múltiplos joins com skew; window functions; CTE recursiva; top-N por grupo; agregação condicional; filtros temporais com expressões; JSONB com joins e filtros.
-- [ ] Para cada cenário registrar SQL original, parâmetros, cardinalidades, índices, resultado esperado, hipótese e risco sem assumir que CTE/subquery seja lenta por definição.
-- [ ] Guardar o SQL do laboratório em artefatos controlados; não ampliar a persistência de SQL bruto do target original.
-- [ ] Incluir cenários sem melhoria para evitar seleção apenas de resultados positivos.
+- [x] Criar dataset sintético PostgreSQL versionado, seed, distribuição e escala documentados.
+- [x] Selecionar dez cenários distintos: CTE com agregações; subquery correlacionada; EXISTS/anti-join; múltiplos joins com skew; window functions; CTE recursiva; top-N por grupo; agregação condicional; filtros temporais com expressões; JSONB com joins e filtros.
+- [x] Para cada cenário registrar SQL original, parâmetros, cardinalidades, índices, resultado esperado, hipótese e risco sem assumir que CTE/subquery seja lenta por definição.
+- [x] Guardar o SQL do laboratório em artefatos controlados; não ampliar a persistência de SQL bruto do target original.
+- [x] Incluir cenários sem melhoria para evitar seleção apenas de resultados positivos.
 
-## 3. Contrato de telemetria e coleta contínua
+Implementação: [acervo e runner](../../tools/complex-query-lab/README.md). [Validação inicial](../experiments/complex-query-corpus/README.md): dez pares em dois seeds, equivalência multiconjunto, expectativas de borda e 80 planos medidos. Alternativas manuais; integração com IA e fluxo visual continuam pendentes. As medições são preliminares e não comprovam a tese por si só.
+
+## 3. Próxima tarefa: contrato de telemetria e coleta contínua
 
 - [ ] Definir contrato versionado com `source`, `targetId`, `observedAt`, janela, unidade, qualidade e estado (`available`, `stale`, `unsupported`, `error`). Zero e ausência devem ser distintos.
 - [ ] Derivar chamadas e latência ponderada dos deltas de pg_stat_statements, tratando reset, primeira amostra e eviction. Não chamar chamadas SQL de requests da aplicação sem instrumentação equivalente.

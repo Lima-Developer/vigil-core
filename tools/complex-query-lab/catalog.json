@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "queries": [
+    {
+      "id": "Q01",
+      "title": "CTE materializada e agregação",
+      "hypothesis": "Puxar o filtro de segmento para antes da agregação pode reduzir linhas materializadas.",
+      "risk": "CTE não é lenta por definição; inlining e distribuição mudam o resultado.",
+      "expected": "Uma linha por cliente ENTERPRISE com pedidos COMPLETED.",
+      "control": false,
+      "original": "queries/Q01.original.sql",
+      "candidate": "queries/Q01.candidate.sql"
+    },
+    {
+      "id": "Q02",
+      "title": "Subqueries correlacionadas",
+      "hypothesis": "Agregar uma vez pode evitar duas leituras por cliente.",
+      "risk": "Pré-agregação pode ler mais dados do que probes seletivos; SUM vazio permanece NULL.",
+      "expected": "Uma linha por cliente NORTH, inclusive os sem pedidos.",
+      "control": false,
+      "original": "queries/Q02.original.sql",
+      "candidate": "queries/Q02.candidate.sql"
+    },
+    {
+      "id": "Q03",
+      "title": "NOT EXISTS e anti-join",
+      "hypothesis": "Comparar duas formas de anti-join: o planner pode produzir o mesmo plano.",
+      "risk": "Controle de ausência de ganho; pagamentos duplicados não podem inflar o resultado.",
+      "expected": "Contagem e soma por região de pedidos sem pagamento PAID.",
+      "control": false,
+      "original": "queries/Q03.original.sql",
+      "candidate": "queries/Q03.candidate.sql"
+    },
+    {
+      "id": "Q04",
+      "title": "Múltiplos joins com skew",
+      "hypothesis": "Pré-agregar itens pode reduzir volume do join e count(distinct).",
+      "risk": "A vantagem depende da seletividade; sem itens o pedido deve continuar excluído.",
+      "expected": "Pedidos distintos e valor dos itens por região; não confundir com orders.total_cents.",
+      "control": false,
+      "original": "queries/Q04.original.sql",
+      "candidate": "queries/Q04.candidate.sql"
+    },
+    {
+      "id": "Q05",
+      "title": "Ranking com funções de janela — controle",
+      "hypothesis": "Manter a consulta inalterada fornece um controle negativo para ruído de medição.",
+      "risk": "Não trocar DENSE_RANK por ROW_NUMBER: empates fazem parte do resultado.",
+      "expected": "Produtos nas três primeiras posições por categoria, incluindo todos os empates.",
+      "control": true,
+      "original": "queries/Q05.original.sql",
+      "candidate": "queries/Q05.candidate.sql"
+    },
+    {
+      "id": "Q06",
+      "title": "CTE recursiva e subquery",
+      "hypothesis": "Construir o fechamento da árvore uma vez pode evitar recursão por categoria.",
+      "risk": "Dataset é árvore acíclica; um grafo com ciclos exige política própria. Multiplicidade importa.",
+      "expected": "Quantidade de produtos na categoria e em todos os descendentes, inclusive zero.",
+      "control": false,
+      "original": "queries/Q06.original.sql",
+      "candidate": "queries/Q06.candidate.sql"
+    },
+    {
+      "id": "Q07",
+      "title": "Top-N por grupo e LATERAL",
+      "hypothesis": "LIMIT por cliente pode reduzir sort global, especialmente com índice apropriado.",
+      "risk": "Cliente 1 concentrado pode favorecer/desfavorecer o plano. Desempate por id é obrigatório.",
+      "expected": "Até três pedidos COMPLETED por cliente STARTUP; NULLS LAST explícito.",
+      "control": false,
+      "original": "queries/Q07.original.sql",
+      "candidate": "queries/Q07.candidate.sql"
+    },
+    {
+      "id": "Q08",
+      "title": "Agregações condicionais",
+      "hypothesis": "Uma agregação com FILTER pode substituir três subqueries.",
+      "risk": "COUNT vazio é zero; SUM vazio é NULL. LEFT JOIN não pode produzir count(*) igual a um.",
+      "expected": "Contagem de concluídos/pendentes e receita por cliente, inclusive sem pedidos.",
+      "control": false,
+      "original": "queries/Q08.original.sql",
+      "candidate": "queries/Q08.candidate.sql"
+    },
+    {
+      "id": "Q09",
+      "title": "Filtro temporal com expressão e subquery",
+      "hypothesis": "Intervalo semiaberto pode permitir uso do índice de placed_at.",
+      "risk": "Equivalência aqui depende de timezone UTC, fixado pelo runner; não generalizar a outros fusos.",
+      "expected": "Por região: pedidos COMPLETED de junho/2024 e clientes distintos.",
+      "control": false,
+      "original": "queries/Q09.original.sql",
+      "candidate": "queries/Q09.candidate.sql"
+    },
+    {
+      "id": "Q10",
+      "title": "JSONB, join e último evento",
+      "hypothesis": "Containment pode usar GIN; DISTINCT ON compara outra forma de último evento.",
+      "risk": "Equivalência limitada ao schema JSON controlado (objetos e strings); JSON arbitrário exige novos testes.",
+      "expected": "Último checkout premium por cliente; desempate por id, excluindo chave ausente/JSON null.",
+      "control": false,
+      "original": "queries/Q10.original.sql",
+      "candidate": "queries/Q10.candidate.sql"
+    }
+  ]
+}

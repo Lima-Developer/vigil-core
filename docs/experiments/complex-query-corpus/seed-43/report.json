@@ -1,0 +1,568 @@
+{
+  "corpus_version": 1,
+  "seed": 43,
+  "scale": 1,
+  "image": "postgres@sha256:e62fbf9d3e2b49816a32c400ed2dba83e3b361e6833e624024309c35d334b412",
+  "repetitions": 1,
+  "queries": [
+    {
+      "id": "Q01",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 300,
+      "variants": {
+        "original": {
+          "sql_sha256": "348901cdb9ae93fc640c9d06df50d08683f58b34482cad2601c9e0baa06a15a8",
+          "runs": [
+            {
+              "execution_ms": 2.595,
+              "planning_ms": 0.226,
+              "estimated_total_cost": 619.99,
+              "plan_rows": 300,
+              "actual_rows": 300,
+              "shared_hit_blocks": 180,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.original.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 2.595,
+          "p95_execution_ms": 2.595,
+          "min_execution_ms": 2.595,
+          "max_execution_ms": 2.595
+        },
+        "candidate": {
+          "sql_sha256": "bf36de6eba85167c31da8971dc479139cfc9efcb2cb3a74effd451d7b8035256",
+          "runs": [
+            {
+              "execution_ms": 2.491,
+              "planning_ms": 0.27,
+              "estimated_total_cost": 559.36,
+              "plan_rows": 900,
+              "actual_rows": 300,
+              "shared_hit_blocks": 180,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q01.candidate.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 2.491,
+          "p95_execution_ms": 2.491,
+          "min_execution_ms": 2.491,
+          "max_execution_ms": 2.491
+        }
+      }
+    },
+    {
+      "id": "Q02",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 500,
+      "variants": {
+        "original": {
+          "sql_sha256": "de957acaffd6178db80e6006b28b8da06610896af1ec9494e680b7f7ddf6eaf9",
+          "runs": [
+            {
+              "execution_ms": 175.546,
+              "planning_ms": 0.212,
+              "estimated_total_cost": 64965.13,
+              "plan_rows": 500,
+              "actual_rows": 500,
+              "shared_hit_blocks": 1866257,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.original.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 175.546,
+          "p95_execution_ms": 175.546,
+          "min_execution_ms": 175.546,
+          "max_execution_ms": 175.546
+        },
+        "candidate": {
+          "sql_sha256": "34f4175862dd86a6169fd1a31c9869b0fa9e2f528a0da5d391b23f0d2a0292d9",
+          "runs": [
+            {
+              "execution_ms": 3.106,
+              "planning_ms": 0.31,
+              "estimated_total_cost": 612.86,
+              "plan_rows": 500,
+              "actual_rows": 500,
+              "shared_hit_blocks": 180,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q02.candidate.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 3.106,
+          "p95_execution_ms": 3.106,
+          "min_execution_ms": 3.106,
+          "max_execution_ms": 3.106
+        }
+      },
+      "edge_expectations_passed": true
+    },
+    {
+      "id": "Q03",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 2,
+      "variants": {
+        "original": {
+          "sql_sha256": "2de80bc39ae40f1b9974348f07598ecbaab57c2c9421a1a5e0c9ef8df9767a78",
+          "runs": [
+            {
+              "execution_ms": 3.732,
+              "planning_ms": 0.336,
+              "estimated_total_cost": 1018.5,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 263,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.original.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 3.732,
+          "p95_execution_ms": 3.732,
+          "min_execution_ms": 3.732,
+          "max_execution_ms": 3.732
+        },
+        "candidate": {
+          "sql_sha256": "390157b2756e2d20cc411bb5c1b5ae934fa685d89487ca9309ca0081422ef200",
+          "runs": [
+            {
+              "execution_ms": 5.107,
+              "planning_ms": 0.324,
+              "estimated_total_cost": 845.22,
+              "plan_rows": 1,
+              "actual_rows": 2,
+              "shared_hit_blocks": 10798,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q03.candidate.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 5.107,
+          "p95_execution_ms": 5.107,
+          "min_execution_ms": 5.107,
+          "max_execution_ms": 5.107
+        }
+      }
+    },
+    {
+      "id": "Q04",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 2,
+      "variants": {
+        "original": {
+          "sql_sha256": "17182f1c6e463c20175034d6b7da33663ba3c58af72b852147aadae44db80dbc",
+          "runs": [
+            {
+              "execution_ms": 42.066,
+              "planning_ms": 0.349,
+              "estimated_total_cost": 6706.53,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 569,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q04.original.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 42.066,
+          "p95_execution_ms": 42.066,
+          "min_execution_ms": 42.066,
+          "max_execution_ms": 42.066
+        },
+        "candidate": {
+          "sql_sha256": "4b1e50cfa7cbdeb2ff735b511d9d52e64ddaabd98a8ae8d265495419ff2c1799",
+          "runs": [
+            {
+              "execution_ms": 17.682,
+              "planning_ms": 0.384,
+              "estimated_total_cost": 2944.6,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 563,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q04.candidate.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 17.682,
+          "p95_execution_ms": 17.682,
+          "min_execution_ms": 17.682,
+          "max_execution_ms": 17.682
+        }
+      }
+    },
+    {
+      "id": "Q05",
+      "control": true,
+      "equivalent_multiset": true,
+      "result_rows": 121,
+      "variants": {
+        "original": {
+          "sql_sha256": "129304c5945ba06774940a16a18dfa1d48c6bee5ae8ac8f4ae1793261ff2140e",
+          "runs": [
+            {
+              "execution_ms": 16.711,
+              "planning_ms": 0.335,
+              "estimated_total_cost": 2466.85,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 559,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.original.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 16.711,
+          "p95_execution_ms": 16.711,
+          "min_execution_ms": 16.711,
+          "max_execution_ms": 16.711
+        },
+        "candidate": {
+          "sql_sha256": "129304c5945ba06774940a16a18dfa1d48c6bee5ae8ac8f4ae1793261ff2140e",
+          "runs": [
+            {
+              "execution_ms": 16.585,
+              "planning_ms": 0.301,
+              "estimated_total_cost": 2466.85,
+              "plan_rows": 502,
+              "actual_rows": 121,
+              "shared_hit_blocks": 559,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q05.candidate.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 16.585,
+          "p95_execution_ms": 16.585,
+          "min_execution_ms": 16.585,
+          "max_execution_ms": 16.585
+        }
+      },
+      "edge_expectations_passed": true
+    },
+    {
+      "id": "Q06",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 41,
+      "variants": {
+        "original": {
+          "sql_sha256": "fcb7e8f0062758ee7e956579b91ed3de84182b0ba47d5cdbfb6f5b694d72706b",
+          "runs": [
+            {
+              "execution_ms": 0.585,
+              "planning_ms": 0.253,
+              "estimated_total_cost": 2513.89,
+              "plan_rows": 41,
+              "actual_rows": 41,
+              "shared_hit_blocks": 108,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.original.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 0.585,
+          "p95_execution_ms": 0.585,
+          "min_execution_ms": 0.585,
+          "max_execution_ms": 0.585
+        },
+        "candidate": {
+          "sql_sha256": "aaaeb4d76d5797bd379390b13611dc16457130d4bab28560da35f27519382ba9",
+          "runs": [
+            {
+              "execution_ms": 0.35,
+              "planning_ms": 0.181,
+              "estimated_total_cost": 228.22,
+              "plan_rows": 200,
+              "actual_rows": 41,
+              "shared_hit_blocks": 5,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q06.candidate.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 0.35,
+          "p95_execution_ms": 0.35,
+          "min_execution_ms": 0.35,
+          "max_execution_ms": 0.35
+        }
+      },
+      "edge_expectations_passed": true
+    },
+    {
+      "id": "Q07",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 900,
+      "variants": {
+        "original": {
+          "sql_sha256": "71610bc0672d2a8c8612972b7188b5261a3af16739f580611b583d4bb456758e",
+          "runs": [
+            {
+              "execution_ms": 5.165,
+              "planning_ms": 0.238,
+              "estimated_total_cost": 1044.74,
+              "plan_rows": 5660,
+              "actual_rows": 900,
+              "shared_hit_blocks": 183,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.original.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 5.165,
+          "p95_execution_ms": 5.165,
+          "min_execution_ms": 5.165,
+          "max_execution_ms": 5.165
+        },
+        "candidate": {
+          "sql_sha256": "318e99abb399708c1c1d0971386add423ea1236750c80ddd02ec6bee4e0907ae",
+          "runs": [
+            {
+              "execution_ms": 3.069,
+              "planning_ms": 0.201,
+              "estimated_total_cost": 44546.82,
+              "plan_rows": 2001,
+              "actual_rows": 900,
+              "shared_hit_blocks": 4848,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q07.candidate.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 3.069,
+          "p95_execution_ms": 3.069,
+          "min_execution_ms": 3.069,
+          "max_execution_ms": 3.069
+        }
+      },
+      "edge_expectations_passed": true
+    },
+    {
+      "id": "Q08",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 2000,
+      "variants": {
+        "original": {
+          "sql_sha256": "d3d6d5d2e9bd3008cbdee711e0dc79121619d82c4aa4d2d3f7efff252d0aeb2a",
+          "runs": [
+            {
+              "execution_ms": 28.858,
+              "planning_ms": 0.211,
+              "estimated_total_cost": 398959.79,
+              "plan_rows": 2000,
+              "actual_rows": 2000,
+              "shared_hit_blocks": 42505,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.original.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 28.858,
+          "p95_execution_ms": 28.858,
+          "min_execution_ms": 28.858,
+          "max_execution_ms": 28.858
+        },
+        "candidate": {
+          "sql_sha256": "5ffe54c32166bb7fa00514724139a6d569b14fe30d49733fda2fb6387172fa1c",
+          "runs": [
+            {
+              "execution_ms": 4.887,
+              "planning_ms": 0.244,
+              "estimated_total_cost": 847.61,
+              "plan_rows": 2000,
+              "actual_rows": 2000,
+              "shared_hit_blocks": 180,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q08.candidate.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 4.887,
+          "p95_execution_ms": 4.887,
+          "min_execution_ms": 4.887,
+          "max_execution_ms": 4.887
+        }
+      },
+      "edge_expectations_passed": true
+    },
+    {
+      "id": "Q09",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 2,
+      "variants": {
+        "original": {
+          "sql_sha256": "ae53e4195db6ad87bbb28169da13bfc28f85ab79691ae5aa80233a60fc6b0fad",
+          "runs": [
+            {
+              "execution_ms": 2.457,
+              "planning_ms": 0.228,
+              "estimated_total_cost": 579.05,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 186,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.original.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 2.457,
+          "p95_execution_ms": 2.457,
+          "min_execution_ms": 2.457,
+          "max_execution_ms": 2.457
+        },
+        "candidate": {
+          "sql_sha256": "b072bd82be2bfc11bae35c79edbe5ccef9f0d1f676235a625d43b82c4c365376",
+          "runs": [
+            {
+              "execution_ms": 1.105,
+              "planning_ms": 0.267,
+              "estimated_total_cost": 372.83,
+              "plan_rows": 4,
+              "actual_rows": 2,
+              "shared_hit_blocks": 189,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q09.candidate.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 1.105,
+          "p95_execution_ms": 1.105,
+          "min_execution_ms": 1.105,
+          "max_execution_ms": 1.105
+        }
+      }
+    },
+    {
+      "id": "Q10",
+      "control": false,
+      "equivalent_multiset": true,
+      "result_rows": 363,
+      "variants": {
+        "original": {
+          "sql_sha256": "1548140d980c9a2fa3865bc0398ac7745fc77de601278f1a750d5fd643987d2e",
+          "runs": [
+            {
+              "execution_ms": 1.29,
+              "planning_ms": 0.228,
+              "estimated_total_cost": 409.43,
+              "plan_rows": 1,
+              "actual_rows": 363,
+              "shared_hit_blocks": 1256,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.original.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 1.29,
+          "p95_execution_ms": 1.29,
+          "min_execution_ms": 1.29,
+          "max_execution_ms": 1.29
+        },
+        "candidate": {
+          "sql_sha256": "56ff8617437214e46f5197d84471a83722998652406b0d9e5fc2b22bf9249df5",
+          "runs": [
+            {
+              "execution_ms": 0.574,
+              "planning_ms": 0.275,
+              "estimated_total_cost": 251.86,
+              "plan_rows": 338,
+              "actual_rows": 363,
+              "shared_hit_blocks": 184,
+              "shared_read_blocks": 0,
+              "temp_read_blocks": 0,
+              "temp_written_blocks": 0,
+              "plan_file": "Q10.candidate.1.plan.json"
+            }
+          ],
+          "median_execution_ms": 0.574,
+          "p95_execution_ms": 0.574,
+          "min_execution_ms": 0.574,
+          "max_execution_ms": 0.574
+        }
+      },
+      "edge_expectations_passed": true
+    }
+  ],
+  "started_at_utc": "2026-11-12T13:44:00Z",
+  "measurement": "isolated synthetic lab; warm cache; alternating order; not production evidence",
+  "resource_limits": {
+    "cpus": 2,
+    "memory_mib": 1024,
+    "data_tmpfs_mib": 512,
+    "network": "none"
+  },
+  "llm_usage": null,
+  "status": "passed",
+  "seed_sql_sha256": "cc584c46d24c6ba8b59599bba8d316ca2324ea8f85524776f8ca4ea6a417c5e5",
+  "postgres_version": "PostgreSQL 16.4 (Debian 16.4-1.pgdg120+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit",
+  "settings": {
+    "jit": "on",
+    "max_parallel_workers_per_gather": "2",
+    "shared_buffers": "16384",
+    "TimeZone": "UTC",
+    "work_mem": "4096"
+  },
+  "dataset": {
+    "customers": {
+      "rows": 2000,
+      "md5": "be6352ae108ce9226645520a9b500080"
+    },
+    "categories": {
+      "rows": 41,
+      "md5": "4c34727264a2765ef086c9ed3c1c76de"
+    },
+    "products": {
+      "rows": 502,
+      "md5": "f28cc70a516dfbb6856af27cf2269cf8"
+    },
+    "orders": {
+      "rows": 20000,
+      "md5": "44f799fe9faafcee515417eee8266cdd"
+    },
+    "order_items": {
+      "rows": 60002,
+      "md5": "174b34b7be94f172b04861b963df6cf8"
+    },
+    "payments": {
+      "rows": 15334,
+      "md5": "22fea5f5a5b4db5b969ba256724d5a28"
+    },
+    "events": {
+      "rows": 12004,
+      "md5": "71d89c57340cb63030093be10678d679"
+    }
+  },
+  "dataset_sha256": "fb4afec65e24f51dc2176dffab98747ca6651692a0f8ee51216c507f22737ede",
+  "catalog_sha256": "06dc20cb93b2dec0036e79c6eb0bde704f225ef2649d49e04e74fae395295fea",
+  "runner_sha256": "9e67a238866a29900c9cdc52e4d181563053742532b1008000a6d21f8b294720",
+  "finished_at_utc": "2026-11-12T13:44:09Z"
+}
