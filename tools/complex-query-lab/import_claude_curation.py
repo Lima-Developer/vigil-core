@@ -83,10 +83,14 @@ def main():
         "artifactDirectory": str(args.destination_directory.relative_to(ROOT)),
     }
     summary = read_json(args.dashboard_summary)
+    previous = summary.get("additionalExecutions", [])
+    if any(item.get("provider") == execution["provider"] and item.get("model") == model for item in previous):
+        parser.error(f"dashboard summary already contains an execution for {model}")
     summary["providerAvailability"]["claude-code"] = {
         "status": "executed", "model": model, "runs": len(runs), "billedCostUsd": execution["billedCostUsd"],
+        "benchmarkCount": len(previous) + 1,
     }
-    summary["additionalExecutions"] = [execution]
+    summary["additionalExecutions"] = [*previous, execution]
     args.dashboard_summary.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Imported {len(runs)} Claude runs ({model}) into {args.destination_directory}")
 
