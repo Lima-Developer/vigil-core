@@ -23,8 +23,8 @@ def compact_plan(node):
 
 
 def selected_cases(query_ids):
-    catalog = json.loads((LAB / "catalog.json").read_text())
-    report = json.loads((EVIDENCE / "report.json").read_text())
+    catalog = json.loads((LAB / "catalog.json").read_text(encoding="utf-8"))
+    report = json.loads((EVIDENCE / "report.json").read_text(encoding="utf-8"))
     selected = set(query_ids or [query["id"] for query in catalog["queries"]])
     known = {query["id"] for query in catalog["queries"]}
     if not selected or not selected <= known:
@@ -36,9 +36,9 @@ def selected_cases(query_ids):
         variants = {}
         for name in ("original", "candidate"):
             record = measurement["variants"][name]
-            plan = json.loads((EVIDENCE / record["runs"][0]["plan_file"]).read_text())
+            plan = json.loads((EVIDENCE / record["runs"][0]["plan_file"]).read_text(encoding="utf-8"))
             variants[name] = {
-                "sql": (LAB / case[name]).read_text().strip(),
+                "sql": (LAB / case[name]).read_text(encoding="utf-8").strip(),
                 "medianExecutionMs": record["median_execution_ms"],
                 "p95ExecutionMs": record["p95_execution_ms"],
                 "minExecutionMs": record["min_execution_ms"],
@@ -96,4 +96,4 @@ def parse_json_text(text):
 
 
 def write_manifest(output, manifest):
-    (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+    (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

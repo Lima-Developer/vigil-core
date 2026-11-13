@@ -79,6 +79,10 @@ python3 tools/complex-query-lab/run_claude_curation.py \
   --model sonnet
 ```
 
+No Windows, o runner reconhece automaticamente instalações npm que expõem `claude.cmd`; use sempre um diretório de
+saída novo. O dry-run é silencioso no terminal por intenção: confirme-o por `manifest.json` com `status: planned` e
+dez itens em `runs`.
+
 O resultado preserva o envelope JSON bruto devolvido pelo CLI, a resposta validada, duração do host e o campo de
 usage quando o provedor o expuser. A fatura da assinatura/API continua separada: o runner nunca transforma tokens em
 uma cobrança real. Copie o diretório de saída para `docs/experiments/llm-curation/` antes de versioná-lo.

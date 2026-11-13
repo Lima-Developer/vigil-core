@@ -60,7 +60,7 @@ def main():
         parser.error("output directory must be new")
     if min(args.max_input_tokens, args.max_output_tokens, args.max_cost_usd) <= 0:
         parser.error("token and cost limits must be positive")
-    pricing_data = json.loads(args.pricing.read_text())
+    pricing_data = json.loads(args.pricing.read_text(encoding="utf-8"))
     prices = pricing_data["models"].get(args.model)
     if not prices:
         parser.error(f"no pinned price for {args.model} in {args.pricing}")
@@ -84,7 +84,7 @@ def main():
             query_id = case["id"]
             prompt = prompt_for(context)
             prompt_file = args.output / f"{query_id}.prompt.json"
-            prompt_file.write_text(json.dumps(context, ensure_ascii=False, indent=2) + "\n")
+            prompt_file.write_text(json.dumps(context, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             if args.dry_run:
                 manifest["runs"].append({"queryId": query_id, "promptFile": prompt_file.name, "status": "planned"})
                 continue
@@ -95,12 +95,12 @@ def main():
             raw = call_openrouter(api_key, body)
             duration_ms = round((time.monotonic() - started) * 1000)
             raw_file = args.output / f"{query_id}.openrouter.json"
-            raw_file.write_text(json.dumps(raw, ensure_ascii=False, indent=2) + "\n")
+            raw_file.write_text(json.dumps(raw, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             content = raw.get("choices", [{}])[0].get("message", {}).get("content", "")
             response = parse_json_text(content)
             validate_response(response, query_id)
             response_file = args.output / f"{query_id}.response.json"
-            response_file.write_text(json.dumps(response, ensure_ascii=False, indent=2) + "\n")
+            response_file.write_text(json.dumps(response, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             usage = raw.get("usage") or {}
             manifest["runs"].append({
                 "queryId": query_id, "durationMs": duration_ms, "usage": usage,

@@ -2,12 +2,23 @@
 """Run the isolated curation corpus through an already-authenticated Claude Code CLI."""
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
 import time
 
 from curation_common import PROMPT_VERSION, parse_json_text, prompt_for, selected_cases, validate_response, write_manifest
+
+
+def claude_command(executable, prompt, model):
+    command = [executable, "-p", prompt, "--output-format", "json", "--model", model,
+               "--max-turns", "1", "--disallowedTools", "Bash,Read,Edit,Write,Glob,Grep,WebFetch,WebSearch"]
+    # npm commonly installs Claude Code as claude.cmd on Windows. CreateProcess cannot execute that launcher
+    # directly when shell=False, so run only the resolved launcher through the native command interpreter.
+    if os.name == "nt" and Path(executable).suffix.lower() in {".cmd", ".bat"}:
+        return [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/s", "/c", subprocess.list2cmdline(command)]
+    return command
 
 
 def main():
@@ -20,7 +31,8 @@ def main():
     if args.output.exists():
         parser.error("output directory must be new")
     args.output.mkdir(parents=True)
-    if not args.dry_run and not shutil.which("claude"):
+    claude = shutil.which("claude")
+    if not args.dry_run and not claude:
         parser.error("Claude Code CLI not found. Install and authenticate on this machine, then rerun; --dry-run needs no CLI.")
     manifest = {
         "schemaVersion": 1, "promptVersion": PROMPT_VERSION, "provider": "anthropic-claude-code-cli",
@@ -33,24 +45,23 @@ def main():
             query_id = case["id"]
             prompt = prompt_for(context)
             prompt_file = args.output / f"{query_id}.prompt.json"
-            prompt_file.write_text(json.dumps(context, ensure_ascii=False, indent=2) + "\n")
+            prompt_file.write_text(json.dumps(context, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             if args.dry_run:
                 manifest["runs"].append({"queryId": query_id, "promptFile": prompt_file.name, "status": "planned"})
                 continue
-            command = ["claude", "-p", prompt, "--output-format", "json", "--model", args.model,
-                       "--max-turns", "1", "--disallowedTools", "Bash,Read,Edit,Write,Glob,Grep,WebFetch,WebSearch"]
+            command = claude_command(claude, prompt, args.model)
             started = time.monotonic()
-            result = subprocess.run(command, text=True, capture_output=True, timeout=300)
+            result = subprocess.run(command, text=True, encoding="utf-8", capture_output=True, timeout=300)
             duration_ms = round((time.monotonic() - started) * 1000)
             raw_file = args.output / f"{query_id}.claude.json"
-            raw_file.write_text(result.stdout)
+            raw_file.write_text(result.stdout, encoding="utf-8")
             if result.returncode:
                 raise RuntimeError(f"{query_id}: Claude Code failed with exit {result.returncode}: {result.stderr[-500:]}")
             envelope = json.loads(result.stdout)
             response = parse_json_text(envelope.get("result", ""))
             validate_response(response, query_id)
             response_file = args.output / f"{query_id}.response.json"
-            response_file.write_text(json.dumps(response, ensure_ascii=False, indent=2) + "\n")
+            response_file.write_text(json.dumps(response, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             usage = envelope.get("usage") or {}
             manifest["runs"].append({
                 "queryId": query_id, "durationMs": duration_ms, "usage": usage,
