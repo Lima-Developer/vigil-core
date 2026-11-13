@@ -94,11 +94,11 @@ class VigilCliTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"local", "test"})
-    void applicationEntryUsesProfileTargetDefaults(String profile) throws Exception {
+    void cliEntryUsesProfileTargetDefaults(String profile) throws Exception {
         var env = Map.of("VIGIL_DATABASE_PATH", directory.resolve(profile + ".db").toString(),
                 "VIGIL_STORAGE_MIN_FREE_BYTES", "1", "SPRING_PROFILES_ACTIVE", profile);
 
-        var result = runInChildJvm(VigilApplication.class, env);
+        var result = runInChildJvm(Main.class, env);
 
         assertEquals(0, result.exit(), result.err());
         assertEquals("", result.err());

@@ -1,6 +1,8 @@
 # Bootstrap Spring do Vigil
 
-`vigil-bootstrap` é a única camada que depende de Spring Boot. A entrada `Main` e o executável Spring usam o mesmo CLI. O contexto compõe os adapters e casos de uso explicitamente; o target PostgreSQL não é acessado na inicialização.
+`vigil-bootstrap` é a única camada que depende de Spring Boot. `Main` mantém o CLI de health e casos; o executável
+Spring inicia a interface web. O contexto compõe os adapters e casos de uso explicitamente; o target PostgreSQL não
+é acessado na inicialização.
 
 ## Iniciar localmente
 

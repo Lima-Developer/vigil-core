@@ -4,6 +4,18 @@ A aplicação web local oferece uma página de um único caso. Identidade, estad
 
 ## Execução
 
+No PowerShell, o modo mais simples para a banca cria um SQLite no diretório temporário do sistema e o remove ao
+encerrar a aplicação. Ele não precisa de `VIGIL_DATABASE_PATH`, credencial PostgreSQL ou rede:
+
+```powershell
+.\mvnw.cmd -pl vigil-bootstrap spring-boot:run `
+  '-Dspring-boot.run.arguments=--vigil.demo.ephemeral=true --server.port=8080'
+```
+
+O modo efêmero só é ativado por `--vigil.demo.ephemeral=true`, pelo profile `demo` ou por `VIGIL_DEMO_MODE=true`.
+Se `VIGIL_DATABASE_PATH` estiver explícita, ela prevalece e **nunca** é apagada. Para uma execução persistente ou
+com coleta de target, use o fluxo abaixo.
+
 ```sh
 ./mvnw verify
 VIGIL_DATABASE_PATH=/caminho/absoluto/vigil-demo.db \
