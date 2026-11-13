@@ -54,6 +54,8 @@ def main():
     parser.add_argument("--max-input-tokens", type=int, default=18000)
     parser.add_argument("--max-output-tokens", type=int, default=700)
     parser.add_argument("--max-cost-usd", type=float, default=0.05)
+    parser.add_argument("--reasoning", action="store_true",
+                        help="enable the model's reasoning mode; disabled by default so the bounded output budget is reserved for the JSON decision")
     parser.add_argument("--dry-run", action="store_true", help="write sanitized prompts and cost bound without making HTTP requests")
     args = parser.parse_args()
     if args.output.exists():
@@ -91,12 +93,26 @@ def main():
             body = {"model": args.model, "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
                     "temperature": 0, "max_tokens": args.max_output_tokens,
                     "response_format": {"type": "json_object"}}
+            # Qwen can spend its entire bounded completion budget on hidden reasoning and
+            # return `content: null`. For this controlled JSON benchmark we need the
+            # final decision, not chain-of-thought, so opt out unless explicitly asked.
+            if not args.reasoning:
+                body["reasoning"] = {"enabled": False}
             started = time.monotonic()
             raw = call_openrouter(api_key, body)
             duration_ms = round((time.monotonic() - started) * 1000)
             raw_file = args.output / f"{query_id}.openrouter.json"
             raw_file.write_text(json.dumps(raw, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-            content = raw.get("choices", [{}])[0].get("message", {}).get("content", "")
+            choice = raw.get("choices", [{}])[0] if isinstance(raw.get("choices"), list) else {}
+            message = choice.get("message") if isinstance(choice, dict) else {}
+            content = message.get("content") if isinstance(message, dict) else None
+            if not isinstance(content, str) or not content.strip():
+                raise RuntimeError(
+                    f"{query_id}: OpenRouter returned no textual JSON content "
+                    f"(finish_reason={choice.get('finish_reason') if isinstance(choice, dict) else None!r}); "
+                    f"inspect {raw_file.name} for the provider response. "
+                    "Retry with the default reasoning disabled or increase --max-output-tokens when using --reasoning."
+                )
             response = parse_json_text(content)
             validate_response(response, query_id)
             response_file = args.output / f"{query_id}.response.json"
