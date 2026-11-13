@@ -128,7 +128,8 @@ class PostgresTargetSettingsTest {
 
     @Test
     void shouldNotRevealSecretsOrThePasswordInToString() {
-        var path = Path.of("/run/secrets/" + PostgresTestSupport.canary());
+        var path = Path.of(System.getProperty("java.io.tmpdir"), "vigil-secrets", PostgresTestSupport.canary())
+                .toAbsolutePath();
         var settings = PostgresTargetSettings.withDefaults(PostgresTestSupport.profile(), "vigil_collector", path);
 
         var text = settings.toString();

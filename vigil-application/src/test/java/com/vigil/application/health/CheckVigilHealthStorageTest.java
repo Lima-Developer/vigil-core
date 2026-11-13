@@ -16,7 +16,8 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CheckVigilHealthStorageTest {
-    private static final Path FILE = Path.of("/volume/vigil.db");
+    private static final Path FILE = Path.of(System.getProperty("java.io.tmpdir"), "vigil-health", "vigil.db")
+            .toAbsolutePath();
     private static final StorageConfiguration CONFIG = new StorageConfiguration(FILE, 256);
 
     static Stream<Arguments> unhealthyFacts() {
@@ -75,9 +76,9 @@ class CheckVigilHealthStorageTest {
     @Test
     void keepsProbeFailureWhenParentIsNotADirectory() {
         var status = check(new StorageFacts(false, false, false, -1, null,
-                "Caminho pai do banco não é um diretório: /volume"));
+                "Caminho pai do banco não é um diretório: " + FILE.getParent()));
         assertTrue(status.storage().problems().stream()
-                .anyMatch(problem -> problem.contains("não é um diretório: /volume")));
+                .anyMatch(problem -> problem.contains("não é um diretório: " + FILE.getParent())));
     }
 
     @Test

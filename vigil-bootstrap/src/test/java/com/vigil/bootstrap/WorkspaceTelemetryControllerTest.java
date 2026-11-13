@@ -27,7 +27,8 @@ class WorkspaceTelemetryControllerTest {
             public java.util.List<com.vigil.application.port.out.interfaces.WorkspaceTelemetrySample> recent(int limit) { return java.util.List.copyOf(samples); }
         };
         return new WorkspaceTelemetryController(
-                new StorageConfiguration(Path.of("/tmp/local.db"), 1),
+                new StorageConfiguration(Path.of(System.getProperty("java.io.tmpdir"), "vigil-workspace", "local.db")
+                        .toAbsolutePath(), 1),
                 new TargetProfile("lab", "test", "localhost", 5432, "postgres",
                         TargetSslMode.VERIFY_FULL, Duration.ofSeconds(5)),
                 () -> NOW, ignored -> bytes, history,

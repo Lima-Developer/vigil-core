@@ -24,7 +24,7 @@ public class CheckVigilHealthTest {
         CheckVigilHealth healthCheck =
                 new CheckVigilHealth(fixedClock, "0.1.0-SNAPSHOT",
                         path -> new StorageFacts(true, true, true, 256, "ok", null),
-                        new StorageConfiguration(Path.of("/tmp/vigil.db"), 256));
+                        new StorageConfiguration(Path.of(System.getProperty("java.io.tmpdir"), "vigil.db").toAbsolutePath(), 256));
 
         VigilConfiguration configuration =
                 new VigilConfiguration("local-postgres", "development");
