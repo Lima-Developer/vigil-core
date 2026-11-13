@@ -7,7 +7,7 @@
 - [x] Separar visualmente dados persistidos, fixtures e métricas ainda não coletadas.
 - [x] Preparar visões de telemetria, caso, auditoria e consumo de IA.
 - [x] Validar desktop/mobile, navegação por teclado e contraste nos dois temas.
-- [ ] Publicar o PR final na stack sem merge automático (após `verify` e revisão do diff).
+- [x] Publicar o [PR #77](https://github.com/Lima-Developer/vigil-core/pull/77) na stack #65, sem merge automático e sobre o topo atual (`VIG-035`).
 
 ## 2. Acervo reproduzível de 10 queries complexas — executado
 
