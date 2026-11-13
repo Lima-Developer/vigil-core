@@ -1,0 +1,170 @@
+{
+  "id": "gen-1794548810-hzItHthL0PubgWNAwXYO",
+  "object": "chat.completion",
+  "created": 1794548810,
+  "model": "qwen/qwen3.8-27b",
+  "provider": "Modal",
+  "system_fingerprint": null,
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"queryId\": \"Q08\",\n  \"decision\": \"candidate\",\n  \"rationale\": [\n    \"A variante candidata substitui três subqueries correlacionadas por uma única agregação com LEFT JOIN e FILTER, reduzindo drasticamente o custo do plano (de ~1.4M para ~2.5K) e o tempo de execução (de ~117ms para ~15ms).\",\n    \"A semântica é preservada: COUNT com FILTER retorna 0 para clientes sem pedidos (diferente de NULL), e SUM com FILTER retorna NULL, alinhando-se ao comportamento esperado de agregações condicionais.\",\n    \"A equivalência foi confirmada em dois seeds (42 e 43), fornecendo evidência limitada mas suficiente para a decisão, dado o ganho de performance significativo e a ausência de riscos semânticos críticos.\"\n  ],\n  \"planEvidence\": [\n    \"O plano original executa 3 agregações separadas com loops=6000, resultando em custo estimado de 1.421.854,52.\",\n    \"O plano candidato usa um único Hash Join e Aggregate com loops=1, custo estimado de 2.540,61, indicando uma melhoria de eficiência de mais de 500x.\",\n    \"As linhas reais (63.299 no join) estão próximas das estimadas (60.000), sugerindo que o planner está calibrado corretamente para a escala 3.\"\n  ],\n  \"semanticRisks\": [\n    \"Risco baixo: COUNT com FILTER retorna 0 para conjuntos vazios, o que é o comportamento desejado para contagens de status.\",\n    \"Risco baixo: SUM com FILTER retorna NULL para conjuntos vazios, o que é consistente com a semântica padrão de agregações SQL.\",\n    \"Risco mitigado: A equivalência em dois seeds confirma que a reescrita não altera os resultados para os dados testados.\"\n  ],\n  \"confidence\": 0.95\n}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1100,
+    "completion_tokens": 454,
+    "total_tokens": 1554,
+    "cost": 0.0010882,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0010882,
+      "upstream_inference_prompt_cost": 4.4e-05,
+      "upstream_inference_completions_cost": 0.0010442
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "openrouter_metadata": {
+    "requested": "qwen/qwen3.8-27b",
+    "strategy": "direct",
+    "region": "GRU",
+    "summary": "available=22, selected=Modal",
+    "attempt": 1,
+    "is_byok": false,
+    "endpoints": {
+      "total": 23,
+      "available": [
+        {
+          "provider": "Modal",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": true
+        },
+        {
+          "provider": "Near AI",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Wafer",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "PrimeIntellect",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Nebius",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "DekaLLM",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Tenstorrent",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Ionstream",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Mancer 2",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Venice",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "CoreWeave",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Parasail",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Reka",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "AkashML",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Chutes",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Cloudflare",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Darkbloom",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Novita",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Alibaba",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "GMICloud",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "DeepInfra",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "StreamLake",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        }
+      ]
+    },
+    "generation_time": 3858
+  }
+}

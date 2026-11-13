@@ -1,0 +1,20 @@
+{
+  "queryId": "Q04",
+  "decision": "human_review",
+  "rationale": [
+    "A variante candidata altera a semântica da contagem de pedidos: usa count(*) sobre a tabela pré-agregada 'items', o que conta pedidos que possuem itens, mas não garante a distinção correta se houver múltiplas linhas por pedido no join final ou se a lógica de exclusão de pedidos sem itens for diferente da original.",
+    "A original usa count(DISTINCT o.id), que é semanticamente mais robusta para garantir a contagem de pedidos distintos, enquanto a candidata depende da unicidade implícita do pré-agregado, o que pode falhar se a estrutura de dados permitir múltiplas entradas por order_id no CTE ou se o join introduzir duplicidades não esperadas.",
+    "Embora a candidata seja significativamente mais rápida (54ms vs 126ms), a diferença de semântica na contagem de pedidos é um risco crítico que impede a aprovação automática sem validação humana."
+  ],
+  "planEvidence": [
+    "A candidata elimina o nó 'Sort' presente na original, reduzindo o custo estimado de 24477 para 14228.",
+    "A candidata utiliza um 'Index Scan' na pré-agregação de itens, enquanto a original usa 'Seq Scan' para o join direto, indicando uma mudança de estratégia de acesso.",
+    "Os tempos de execução médios mostram uma melhoria de ~56% na candidata (54.8ms vs 126.4ms), mas a equivalência de multiset em dois seeds é evidência limitada para garantir a correção semântica."
+  ],
+  "semanticRisks": [
+    "Risco de contagem incorreta de pedidos: count(*) na candidata pode não ser equivalente a count(DISTINCT o.id) se houver qualquer duplicidade no join ou se a pré-agregação não garantir uma linha por pedido.",
+    "A semântica de 'pedidos distintos' pode ser violada se a tabela 'items' no CTE não for estritamente 1:1 com 'orders' devido a dados inconsistentes ou lógica de join complexa.",
+    "A exclusão de pedidos sem itens é mantida em ambas, mas a forma como a contagem é derivada difere, o que pode levar a discrepâncias sutis em cenários de dados específicos."
+  ],
+  "confidence": 0.85
+}

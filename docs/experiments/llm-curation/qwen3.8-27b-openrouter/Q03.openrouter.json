@@ -1,0 +1,170 @@
+{
+  "id": "gen-1794548783-ihW3BUPqlJYN5mdzIvAX",
+  "object": "chat.completion",
+  "created": 1794548783,
+  "model": "qwen/qwen3.8-27b",
+  "provider": "Wafer",
+  "system_fingerprint": null,
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"queryId\": \"Q03\",\n  \"decision\": \"original\",\n  \"rationale\": [\n    \"O plano do original utiliza Hash Joins eficientes, enquanto o candidato recorre a Nested Loops com um Index Scan repetido 10.673 vezes, indicando uma degradação significativa de performance.\",\n    \"Embora o custo estimado do candidato seja menor, o custo real de execução (tempo) é superior ao do original, sugerindo que o planner subestimou o custo do anti-join via LEFT JOIN/IS NULL neste contexto específico.\",\n    \"A semântica é equivalente em ambos os casos, mas a escolha do original é justificada pela estabilidade e eficiência do plano de execução observado.\"\n  ],\n  \"planEvidence\": [\n    \"Original: Hash Join com estimatedCost 3033.84 e actualRows 10673 no nó principal, executando em ~11.5ms.\",\n    \"Candidate: Nested Loop com estimatedCost 2537.84, mas com loops=10673 no Index Scan, resultando em ~16.0ms de execução.\",\n    \"O plano do candidato mostra uma estimativa de 1 linha para o resultado do join, mas o actualRows é 10673, indicando uma falha grave na estimativa do planner para o LEFT JOIN.\"\n  ],\n  \"semanticRisks\": [\n    \"Ambas as variantes implementam corretamente a lógica de anti-join (pedidos sem pagamento PAID).\",\n    \"Não há risco de inflação por pagamentos duplicados em ambas as abordagens, pois a condição de ausência (NOT EXISTS ou IS NULL) garante que apenas pedidos sem correspondência sejam contados.\"\n  ],\n  \"confidence\": 0.95\n}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1126,
+    "completion_tokens": 396,
+    "total_tokens": 1522,
+    "cost": 0.00093876,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.00093876,
+      "upstream_inference_prompt_cost": 6.756e-05,
+      "upstream_inference_completions_cost": 0.0008712
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "openrouter_metadata": {
+    "requested": "qwen/qwen3.8-27b",
+    "strategy": "direct",
+    "region": "GRU",
+    "summary": "available=22, selected=Wafer",
+    "attempt": 1,
+    "is_byok": false,
+    "endpoints": {
+      "total": 23,
+      "available": [
+        {
+          "provider": "Wafer",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": true
+        },
+        {
+          "provider": "Nebius",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "PrimeIntellect",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Tenstorrent",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Modal",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Near AI",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Ionstream",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "DekaLLM",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Parasail",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "CoreWeave",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Venice",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Mancer 2",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Reka",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Novita",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Alibaba",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "AkashML",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "StreamLake",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "GMICloud",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Chutes",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Cloudflare",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "DeepInfra",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Darkbloom",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        }
+      ]
+    },
+    "generation_time": 4656
+  }
+}

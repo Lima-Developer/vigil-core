@@ -1,0 +1,19 @@
+{
+  "queryId": "Q03",
+  "decision": "original",
+  "rationale": [
+    "O plano do original utiliza Hash Joins eficientes, enquanto o candidato recorre a Nested Loops com um Index Scan repetido 10.673 vezes, indicando uma degradação significativa de performance.",
+    "Embora o custo estimado do candidato seja menor, o custo real de execução (tempo) é superior ao do original, sugerindo que o planner subestimou o custo do anti-join via LEFT JOIN/IS NULL neste contexto específico.",
+    "A semântica é equivalente em ambos os casos, mas a escolha do original é justificada pela estabilidade e eficiência do plano de execução observado."
+  ],
+  "planEvidence": [
+    "Original: Hash Join com estimatedCost 3033.84 e actualRows 10673 no nó principal, executando em ~11.5ms.",
+    "Candidate: Nested Loop com estimatedCost 2537.84, mas com loops=10673 no Index Scan, resultando em ~16.0ms de execução.",
+    "O plano do candidato mostra uma estimativa de 1 linha para o resultado do join, mas o actualRows é 10673, indicando uma falha grave na estimativa do planner para o LEFT JOIN."
+  ],
+  "semanticRisks": [
+    "Ambas as variantes implementam corretamente a lógica de anti-join (pedidos sem pagamento PAID).",
+    "Não há risco de inflação por pagamentos duplicados em ambas as abordagens, pois a condição de ausência (NOT EXISTS ou IS NULL) garante que apenas pedidos sem correspondência sejam contados."
+  ],
+  "confidence": 0.95
+}

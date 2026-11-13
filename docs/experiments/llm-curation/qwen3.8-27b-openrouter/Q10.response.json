@@ -1,0 +1,20 @@
+{
+  "queryId": "Q10",
+  "decision": "human_review",
+  "rationale": [
+    "A variante candidata utiliza o operador de contenção '@>' que pode falhar semanticamente se a estrutura JSONB não corresponder exatamente à forma aninhada esperada, diferentemente da extração de campos no original.",
+    "Embora a candidata seja significativamente mais rápida (1.53ms vs 3.84ms), a equivalência foi testada apenas em dois seeds, o que é evidência limitada para garantir a correção em todos os casos de borda do JSON.",
+    "O risco de divergência semântica em dados JSON arbitrários ou com chaves ausentes/NULLs exige validação manual antes de adotar a otimização."
+  ],
+  "planEvidence": [
+    "O plano do original usa Seq Scan na tabela de eventos, indicando que o filtro por extração de JSONB não utilizou índice eficiente.",
+    "O plano da candidata usa Bitmap Index Scan, sugerindo o uso de um índice GIN para o operador de contenção, o que explica a redução de custo e tempo.",
+    "O custo estimado do planner caiu de 1209.43 para 730.53, mas a estimativa de linhas no original estava severamente subestimada (1 vs 1091)."
+  ],
+  "semanticRisks": [
+    "O operador '@>' exige que o JSONB da linha contenha exatamente a estrutura '{\"type\":\"checkout\",\"context\":{\"tier\":\"premium\"}}', o que pode falhar se houver campos extras ou diferenças de aninhamento não capturadas pela sintaxe do original.",
+    "A semântica de 'último evento' depende da ordenação correta; DISTINCT ON com ORDER BY é equivalente a ROW_NUMBER() apenas se a ordenação for determinística e completa, o que parece ser o caso, mas a diferença de implementação de filtro é o principal risco.",
+    "A equivalência em dois seeds não cobre todos os possíveis padrões de dados JSONB, especialmente casos com NULLs explícitos ou estruturas parcialmente ausentes."
+  ],
+  "confidence": 0.65
+}

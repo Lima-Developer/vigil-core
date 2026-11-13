@@ -1,0 +1,170 @@
+{
+  "id": "gen-1794548816-B7wZvqey9jkZn9FU1RO5",
+  "object": "chat.completion",
+  "created": 1794548816,
+  "model": "qwen/qwen3.8-27b",
+  "provider": "PrimeIntellect",
+  "system_fingerprint": null,
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"queryId\": \"Q10\",\n  \"decision\": \"human_review\",\n  \"rationale\": [\n    \"A variante candidata utiliza o operador de contenção '@>' que pode falhar semanticamente se a estrutura JSONB não corresponder exatamente à forma aninhada esperada, diferentemente da extração de campos no original.\",\n    \"Embora a candidata seja significativamente mais rápida (1.53ms vs 3.84ms), a equivalência foi testada apenas em dois seeds, o que é evidência limitada para garantir a correção em todos os casos de borda do JSON.\",\n    \"O risco de divergência semântica em dados JSON arbitrários ou com chaves ausentes/NULLs exige validação manual antes de adotar a otimização.\"\n  ],\n  \"planEvidence\": [\n    \"O plano do original usa Seq Scan na tabela de eventos, indicando que o filtro por extração de JSONB não utilizou índice eficiente.\",\n    \"O plano da candidata usa Bitmap Index Scan, sugerindo o uso de um índice GIN para o operador de contenção, o que explica a redução de custo e tempo.\",\n    \"O custo estimado do planner caiu de 1209.43 para 730.53, mas a estimativa de linhas no original estava severamente subestimada (1 vs 1091).\"\n  ],\n  \"semanticRisks\": [\n    \"O operador '@>' exige que o JSONB da linha contenha exatamente a estrutura '{\\\"type\\\":\\\"checkout\\\",\\\"context\\\":{\\\"tier\\\":\\\"premium\\\"}}', o que pode falhar se houver campos extras ou diferenças de aninhamento não capturadas pela sintaxe do original.\",\n    \"A semântica de 'último evento' depende da ordenação correta; DISTINCT ON com ORDER BY é equivalente a ROW_NUMBER() apenas se a ordenação for determinística e completa, o que parece ser o caso, mas a diferença de implementação de filtro é o principal risco.\",\n    \"A equivalência em dois seeds não cobre todos os possíveis padrões de dados JSONB, especialmente casos com NULLs explícitos ou estruturas parcialmente ausentes.\"\n  ],\n  \"confidence\": 0.65\n}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1108,
+    "completion_tokens": 478,
+    "total_tokens": 1586,
+    "cost": 0.000739538,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.000739538,
+      "upstream_inference_prompt_cost": 0.000181712,
+      "upstream_inference_completions_cost": 0.000557826
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "openrouter_metadata": {
+    "requested": "qwen/qwen3.8-27b",
+    "strategy": "direct",
+    "region": "GRU",
+    "summary": "available=22, selected=PrimeIntellect",
+    "attempt": 1,
+    "is_byok": false,
+    "endpoints": {
+      "total": 23,
+      "available": [
+        {
+          "provider": "PrimeIntellect",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": true
+        },
+        {
+          "provider": "Nebius",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "DekaLLM",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Modal",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Wafer",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Near AI",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Tenstorrent",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Ionstream",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "CoreWeave",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Reka",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Venice",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "StreamLake",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Parasail",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Alibaba",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Mancer 2",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Novita",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Cloudflare",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "GMICloud",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "AkashML",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Darkbloom",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Chutes",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "DeepInfra",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        }
+      ]
+    },
+    "generation_time": 10433
+  }
+}

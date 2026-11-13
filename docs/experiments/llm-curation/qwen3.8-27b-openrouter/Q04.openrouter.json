@@ -1,0 +1,170 @@
+{
+  "id": "gen-1794548788-Y1av4FBpnZhvtrOUwuZ3",
+  "object": "chat.completion",
+  "created": 1794548788,
+  "model": "qwen/qwen3.8-27b",
+  "provider": "Near AI",
+  "system_fingerprint": "vllm-0.33.0-6aef0147",
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"queryId\": \"Q04\",\n  \"decision\": \"human_review\",\n  \"rationale\": [\n    \"A variante candidata altera a semântica da contagem de pedidos: usa count(*) sobre a tabela pré-agregada 'items', o que conta pedidos que possuem itens, mas não garante a distinção correta se houver múltiplas linhas por pedido no join final ou se a lógica de exclusão de pedidos sem itens for diferente da original.\",\n    \"A original usa count(DISTINCT o.id), que é semanticamente mais robusta para garantir a contagem de pedidos distintos, enquanto a candidata depende da unicidade implícita do pré-agregado, o que pode falhar se a estrutura de dados permitir múltiplas entradas por order_id no CTE ou se o join introduzir duplicidades não esperadas.\",\n    \"Embora a candidata seja significativamente mais rápida (54ms vs 126ms), a diferença de semântica na contagem de pedidos é um risco crítico que impede a aprovação automática sem validação humana.\"\n  ],\n  \"planEvidence\": [\n    \"A candidata elimina o nó 'Sort' presente na original, reduzindo o custo estimado de 24477 para 14228.\",\n    \"A candidata utiliza um 'Index Scan' na pré-agregação de itens, enquanto a original usa 'Seq Scan' para o join direto, indicando uma mudança de estratégia de acesso.\",\n    \"Os tempos de execução médios mostram uma melhoria de ~56% na candidata (54.8ms vs 126.4ms), mas a equivalência de multiset em dois seeds é evidência limitada para garantir a correção semântica.\"\n  ],\n  \"semanticRisks\": [\n    \"Risco de contagem incorreta de pedidos: count(*) na candidata pode não ser equivalente a count(DISTINCT o.id) se houver qualquer duplicidade no join ou se a pré-agregação não garantir uma linha por pedido.\",\n    \"A semântica de 'pedidos distintos' pode ser violada se a tabela 'items' no CTE não for estritamente 1:1 com 'orders' devido a dados inconsistentes ou lógica de join complexa.\",\n    \"A exclusão de pedidos sem itens é mantida em ambas, mas a forma como a contagem é derivada difere, o que pode levar a discrepâncias sutis em cenários de dados específicos.\"\n  ],\n  \"confidence\": 0.85\n}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1250,
+    "completion_tokens": 543,
+    "total_tokens": 1793,
+    "cost": 0.00078305,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.00078305,
+      "upstream_inference_prompt_cost": 5e-05,
+      "upstream_inference_completions_cost": 0.00073305
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "openrouter_metadata": {
+    "requested": "qwen/qwen3.8-27b",
+    "strategy": "direct",
+    "region": "GRU",
+    "summary": "available=22, selected=Near AI",
+    "attempt": 1,
+    "is_byok": false,
+    "endpoints": {
+      "total": 23,
+      "available": [
+        {
+          "provider": "Near AI",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": true
+        },
+        {
+          "provider": "DekaLLM",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Ionstream",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Modal",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Wafer",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Nebius",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "PrimeIntellect",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Tenstorrent",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Reka",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "CoreWeave",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Mancer 2",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Venice",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Parasail",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "DeepInfra",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Alibaba",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "GMICloud",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Cloudflare",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Novita",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "AkashML",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Darkbloom",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Chutes",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "StreamLake",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        }
+      ]
+    },
+    "generation_time": 4019
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "queryId": "Q06",
+  "decision": "candidate",
+  "rationale": [
+    "A variante candidata reestrutura a lógica para calcular o fechamento da árvore apenas uma vez, evitando a reexecução da recursão para cada categoria, o que alinha-se com a hipótese anterior.",
+    "Os tempos de execução medidos indicam uma melhoria consistente (mediana 0.333ms vs 0.562ms), embora o volume de dados seja pequeno.",
+    "A equivalência semântica foi verificada em dois seeds, fornecendo evidência limitada, mas suficiente para considerar a mudança segura neste contexto."
+  ],
+  "planEvidence": [
+    "O plano do original exibe 'loops': 41 no nó 'Aggregate' e 'Recursive Union', indicando que a subquery recursiva é reexecutada para cada linha da tabela de categorias.",
+    "O plano do candidato exibe 'loops': 1 no nó 'Recursive Union', confirmando que a árvore é construída uma única vez antes da agregação.",
+    "O custo estimado do plano do candidato (228.22) é significativamente menor que o do original (2513.89), refletindo a redução de trabalho repetitivo."
+  ],
+  "semanticRisks": [
+    "A semântica de 'descendentes' inclui a categoria raiz (ancestor = descendant), o que é consistente com a descrição 'inclusive zero' e a lógica do original.",
+    "O uso de LEFT JOIN no candidato garante que categorias sem produtos retornem 0, preservando a contagem correta.",
+    "A suposição de que o grafo é acíclico é mantida; se houvesse ciclos, ambas as variantes falhariam ou exigiriam tratamento adicional, mas o risco é idêntico."
+  ],
+  "confidence": 0.95
+}

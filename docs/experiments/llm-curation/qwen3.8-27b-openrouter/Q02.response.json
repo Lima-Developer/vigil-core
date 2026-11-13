@@ -1,0 +1,19 @@
+{
+  "queryId": "Q02",
+  "decision": "candidate",
+  "rationale": [
+    "A variante candidata apresenta uma redução drástica no tempo de execução mediano (7.635ms vs 25.474ms) e no custo estimado do plano (1837.0 vs 237121.92), indicando uma melhoria de performance significativa.",
+    "A semântica é preservada: o uso de LEFT JOIN garante que clientes da região NORTH sem pedidos sejam incluídos com valores NULL para revenue e latest, atendendo à expectativa de 'uma linha por cliente NORTH, inclusive os sem pedidos'.",
+    "A equivalência de resultados foi confirmada em dois seeds (42 e 43), fornecendo evidência limitada, mas suficiente, de que a reescrita não altera a saída esperada."
+  ],
+  "planEvidence": [
+    "O plano original executa duas subqueries correlacionadas (Aggregate) para cada uma das 1500 linhas de clientes, resultando em 3000 loops de agregação e scans de bitmap, o que explica o alto custo e tempo de execução.",
+    "O plano da candidata realiza uma única agregação (Aggregate) sobre a tabela de pedidos (50919 linhas) e um Hash Join com os clientes, eliminando a redundância de leituras por cliente.",
+    "O custo estimado do plano da candidata (1837.0) é aproximadamente 129 vezes menor que o do original (237121.92), refletindo a eficiência da pré-agregação."
+  ],
+  "semanticRisks": [
+    "O risco de pré-agregação ler mais dados do que probes seletivos é mitigado aqui, pois a tabela de pedidos é pequena o suficiente para que o scan sequencial e a agregação única sejam mais eficientes que os scans repetidos.",
+    "O comportamento de SUM vazio permanecendo NULL é mantido pelo LEFT JOIN, que produz NULL para colunas da tabela de totais quando não há correspondência, alinhando-se com o comportamento das subqueries correlacionadas."
+  ],
+  "confidence": 0.95
+}

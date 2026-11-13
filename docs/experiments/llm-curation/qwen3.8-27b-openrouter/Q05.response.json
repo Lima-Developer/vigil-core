@@ -1,0 +1,19 @@
+{
+  "queryId": "Q05",
+  "decision": "original",
+  "rationale": [
+    "A variante candidata é textualmente idêntica à original, sem alterações semânticas ou estruturais.",
+    "Como consulta de controle, a manutenção da originalidade é essencial para validar a hipótese de ruído de medição.",
+    "Não há ganho de performance ou correção que justifique a troca, dado que o SQL é o mesmo."
+  ],
+  "planEvidence": [
+    "Os planos de execução são idênticos em estrutura e custos estimados (6651.8).",
+    "As métricas de tempo (median ~30.3ms vs ~30.2ms) mostram variação mínima, consistente com ruído exploratório.",
+    "A equivalência em dois seeds (42, 43) confirma a estabilidade do resultado, mas não oferece vantagem à candidata."
+  ],
+  "semanticRisks": [
+    "Risco nulo de alteração semântica, pois o SQL é idêntico.",
+    "A preservação de DENSE_RANK garante a inclusão correta de empates, conforme esperado."
+  ],
+  "confidence": 1.0
+}

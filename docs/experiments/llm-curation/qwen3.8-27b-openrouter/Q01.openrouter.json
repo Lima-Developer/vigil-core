@@ -1,0 +1,170 @@
+{
+  "id": "gen-1794548774-mT3nSobsN6xkmn1ZT0xQ",
+  "object": "chat.completion",
+  "created": 1794548774,
+  "model": "qwen/qwen3.8-27b",
+  "provider": "Near AI",
+  "system_fingerprint": "vllm-0.33.0-6aef0147",
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"queryId\": \"Q01\",\n  \"decision\": \"original\",\n  \"rationale\": [\n    \"A variante original apresenta tempos de execução medianos e p95 consistentemente inferiores à candidata (7.664ms vs 8.968ms).\",\n    \"O plano da original mantém a agregação separada da junção final, evitando o custo de junção antes da agregação visto na candidata.\",\n    \"A candidata sofre de estimativa de linhas incorreta no Hash Join (16989 estimadas vs 33946 reais), indicando ineficiência no processamento intermediário.\"\n  ],\n  \"planEvidence\": [\n    \"Original: Hash Join final com custo estimado 1858.4 e 901 linhas reais, alinhado com a semântica esperada.\",\n    \"Candidata: Hash Join intermediário com custo estimado 1521.87, mas 33946 linhas reais contra 16989 estimadas, gerando overhead desnecessário.\",\n    \"Original: Seq Scan em orders (50919 linhas) alimenta diretamente a agregação, enquanto a candidata junta antes de agregar.\"\n  ],\n  \"semanticRisks\": [\n    \"A candidata move o filtro de segmento para dentro da CTE, o que é semanticamente equivalente para este caso específico, mas altera o plano de execução.\",\n    \"A remoção do MATERIALIZED na candidata permite que o otimizador inline a CTE, resultando em um plano de junção antes da agregação que é menos eficiente aqui.\",\n    \"Não há risco de divergência de resultados, pois a lógica de filtragem e agregação permanece funcionalmente idêntica, mas o custo de execução é maior.\"\n  ],\n  \"confidence\": 0.95\n}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 936,
+    "completion_tokens": 405,
+    "total_tokens": 1341,
+    "cost": 0.000574334,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 448,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.000574334,
+      "upstream_inference_prompt_cost": 2.7584e-05,
+      "upstream_inference_completions_cost": 0.00054675
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "openrouter_metadata": {
+    "requested": "qwen/qwen3.8-27b",
+    "strategy": "direct",
+    "region": "GRU",
+    "summary": "available=22, selected=Near AI",
+    "attempt": 1,
+    "is_byok": false,
+    "endpoints": {
+      "total": 23,
+      "available": [
+        {
+          "provider": "Near AI",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": true
+        },
+        {
+          "provider": "PrimeIntellect",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Tenstorrent",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Nebius",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Wafer",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Modal",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Mancer 2",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Ionstream",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Parasail",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "CoreWeave",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Venice",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "DekaLLM",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Cloudflare",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Reka",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Novita",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Chutes",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Alibaba",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "StreamLake",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "AkashML",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "DeepInfra",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "GMICloud",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Darkbloom",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        }
+      ]
+    },
+    "generation_time": 4852
+  }
+}

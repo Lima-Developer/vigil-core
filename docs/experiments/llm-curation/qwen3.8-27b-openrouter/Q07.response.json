@@ -1,0 +1,19 @@
+{
+  "queryId": "Q07",
+  "decision": "original",
+  "rationale": [
+    "A variante original apresenta um tempo de execução mediano significativamente menor (7.848 ms) em comparação com a candidata (17.925 ms), indicando superioridade prática no cenário testado.",
+    "O plano da variante original utiliza um Hash Join e um Sort global, que se mostrou mais eficiente para o volume de dados e a distribuição de clientes do que o Nested Loop com LATERAL da candidata.",
+    "Embora a candidata utilize LATERAL para limitar o processamento por cliente, o custo do planner e o tempo real indicam que a abordagem de janela (WindowAgg) no original é mais performática neste contexto específico."
+  ],
+  "planEvidence": [
+    "Original: Hash Join com Seq Scan em customers e orders, seguido de Sort e WindowAgg. Custo estimado 3267.69, linhas reais 2700.",
+    "Candidate: Nested Loop com Seq Scan em customers e LATERAL contendo Bitmap Index Scan e Sort. Custo estimado 158570.09, linhas reais 2700.",
+    "A candidata executa o subplano LATERAL 2000 vezes (loops=2000), o que contribui para o maior tempo de execução apesar do uso de índices."
+  ],
+  "semanticRisks": [
+    "Ambas as variantes implementam corretamente a lógica de Top-N por grupo com desempate por id e NULLS LAST.",
+    "Não há riscos semânticos identificados que justifiquem a escolha da candidata sobre a original, dado o desempenho inferior."
+  ],
+  "confidence": 0.95
+}

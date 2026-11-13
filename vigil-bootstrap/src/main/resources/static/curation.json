@@ -48,6 +48,17 @@
       "runs": 10,
       "billedCostUsd": 0.490676,
       "benchmarkCount": 2
+    },
+    "openrouter": {
+      "status": "executed",
+      "model": "qwen/qwen3.8-27b",
+      "runs": 10,
+      "billedCostUsd": 0.009686,
+      "quality": {
+        "validResponses": 10,
+        "invalidResponses": 0,
+        "validResponseRate": 1.0
+      }
     }
   },
   "decisions": [
@@ -1389,6 +1400,473 @@
         }
       ],
       "artifactDirectory": "docs/experiments/llm-curation/claude-sonnet-5-5"
+    },
+    {
+      "provider": "openrouter",
+      "model": "qwen/qwen3.8-27b",
+      "runs": 10,
+      "durationMs": 53076,
+      "tokens": {
+        "input_tokens": 11618,
+        "output_tokens": 4327,
+        "total_tokens": 15945,
+        "reasoning_tokens": 0
+      },
+      "billedCostUsd": 0.00968636,
+      "billingReason": "Custo efetivo reportado pelo OpenRouter por execução; inclui a rota do provedor utilizada.",
+      "quality": {
+        "validResponses": 10,
+        "invalidResponses": 0,
+        "validResponseRate": 1.0
+      },
+      "decisions": [
+        {
+          "queryId": "Q01",
+          "decision": "original",
+          "rationale": [
+            "A variante original apresenta tempos de execução medianos e p95 consistentemente inferiores à candidata (7.664ms vs 8.968ms).",
+            "O plano da original mantém a agregação separada da junção final, evitando o custo de junção antes da agregação visto na candidata.",
+            "A candidata sofre de estimativa de linhas incorreta no Hash Join (16989 estimadas vs 33946 reais), indicando ineficiência no processamento intermediário."
+          ],
+          "planEvidence": [
+            "Original: Hash Join final com custo estimado 1858.4 e 901 linhas reais, alinhado com a semântica esperada.",
+            "Candidata: Hash Join intermediário com custo estimado 1521.87, mas 33946 linhas reais contra 16989 estimadas, gerando overhead desnecessário.",
+            "Original: Seq Scan em orders (50919 linhas) alimenta diretamente a agregação, enquanto a candidata junta antes de agregar."
+          ],
+          "semanticRisks": [
+            "A candidata move o filtro de segmento para dentro da CTE, o que é semanticamente equivalente para este caso específico, mas altera o plano de execução.",
+            "A remoção do MATERIALIZED na candidata permite que o otimizador inline a CTE, resultando em um plano de junção antes da agregação que é menos eficiente aqui.",
+            "Não há risco de divergência de resultados, pois a lógica de filtragem e agregação permanece funcionalmente idêntica, mas o custo de execução é maior."
+          ],
+          "confidence": 0.95,
+          "durationMs": 5126,
+          "usage": {
+            "prompt_tokens": 936,
+            "completion_tokens": 405,
+            "total_tokens": 1341,
+            "cost": 0.000574334,
+            "is_byok": false,
+            "prompt_tokens_details": {
+              "cached_tokens": 448,
+              "cache_write_tokens": 0,
+              "audio_tokens": 0,
+              "video_tokens": 0
+            },
+            "cost_details": {
+              "upstream_inference_cost": 0.000574334,
+              "upstream_inference_prompt_cost": 2.7584e-05,
+              "upstream_inference_completions_cost": 0.00054675
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "image_tokens": 0,
+              "audio_tokens": 0
+            }
+          },
+          "reportedCostUsd": 0.000574334
+        },
+        {
+          "queryId": "Q02",
+          "decision": "candidate",
+          "rationale": [
+            "A variante candidata apresenta uma redução drástica no tempo de execução mediano (7.635ms vs 25.474ms) e no custo estimado do plano (1837.0 vs 237121.92), indicando uma melhoria de performance significativa.",
+            "A semântica é preservada: o uso de LEFT JOIN garante que clientes da região NORTH sem pedidos sejam incluídos com valores NULL para revenue e latest, atendendo à expectativa de 'uma linha por cliente NORTH, inclusive os sem pedidos'.",
+            "A equivalência de resultados foi confirmada em dois seeds (42 e 43), fornecendo evidência limitada, mas suficiente, de que a reescrita não altera a saída esperada."
+          ],
+          "planEvidence": [
+            "O plano original executa duas subqueries correlacionadas (Aggregate) para cada uma das 1500 linhas de clientes, resultando em 3000 loops de agregação e scans de bitmap, o que explica o alto custo e tempo de execução.",
+            "O plano da candidata realiza uma única agregação (Aggregate) sobre a tabela de pedidos (50919 linhas) e um Hash Join com os clientes, eliminando a redundância de leituras por cliente.",
+            "O custo estimado do plano da candidata (1837.0) é aproximadamente 129 vezes menor que o do original (237121.92), refletindo a eficiência da pré-agregação."
+          ],
+          "semanticRisks": [
+            "O risco de pré-agregação ler mais dados do que probes seletivos é mitigado aqui, pois a tabela de pedidos é pequena o suficiente para que o scan sequencial e a agregação única sejam mais eficientes que os scans repetidos.",
+            "O comportamento de SUM vazio permanecendo NULL é mantido pelo LEFT JOIN, que produz NULL para colunas da tabela de totais quando não há correspondência, alinhando-se com o comportamento das subqueries correlacionadas."
+          ],
+          "confidence": 0.95,
+          "durationMs": 4331,
+          "usage": {
+            "prompt_tokens": 1003,
+            "completion_tokens": 489,
+            "total_tokens": 1492,
+            "cost": 0.00116482,
+            "is_byok": false,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 0,
+              "audio_tokens": 0,
+              "video_tokens": 0
+            },
+            "cost_details": {
+              "upstream_inference_cost": 0.00116482,
+              "upstream_inference_prompt_cost": 4.012e-05,
+              "upstream_inference_completions_cost": 0.0011247
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "image_tokens": 0,
+              "audio_tokens": 0
+            }
+          },
+          "reportedCostUsd": 0.00116482
+        },
+        {
+          "queryId": "Q03",
+          "decision": "original",
+          "rationale": [
+            "O plano do original utiliza Hash Joins eficientes, enquanto o candidato recorre a Nested Loops com um Index Scan repetido 10.673 vezes, indicando uma degradação significativa de performance.",
+            "Embora o custo estimado do candidato seja menor, o custo real de execução (tempo) é superior ao do original, sugerindo que o planner subestimou o custo do anti-join via LEFT JOIN/IS NULL neste contexto específico.",
+            "A semântica é equivalente em ambos os casos, mas a escolha do original é justificada pela estabilidade e eficiência do plano de execução observado."
+          ],
+          "planEvidence": [
+            "Original: Hash Join com estimatedCost 3033.84 e actualRows 10673 no nó principal, executando em ~11.5ms.",
+            "Candidate: Nested Loop com estimatedCost 2537.84, mas com loops=10673 no Index Scan, resultando em ~16.0ms de execução.",
+            "O plano do candidato mostra uma estimativa de 1 linha para o resultado do join, mas o actualRows é 10673, indicando uma falha grave na estimativa do planner para o LEFT JOIN."
+          ],
+          "semanticRisks": [
+            "Ambas as variantes implementam corretamente a lógica de anti-join (pedidos sem pagamento PAID).",
+            "Não há risco de inflação por pagamentos duplicados em ambas as abordagens, pois a condição de ausência (NOT EXISTS ou IS NULL) garante que apenas pedidos sem correspondência sejam contados."
+          ],
+          "confidence": 0.95,
+          "durationMs": 4893,
+          "usage": {
+            "prompt_tokens": 1126,
+            "completion_tokens": 396,
+            "total_tokens": 1522,
+            "cost": 0.00093876,
+            "is_byok": false,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 0,
+              "audio_tokens": 0,
+              "video_tokens": 0
+            },
+            "cost_details": {
+              "upstream_inference_cost": 0.00093876,
+              "upstream_inference_prompt_cost": 6.756e-05,
+              "upstream_inference_completions_cost": 0.0008712
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "image_tokens": 0,
+              "audio_tokens": 0
+            }
+          },
+          "reportedCostUsd": 0.00093876
+        },
+        {
+          "queryId": "Q04",
+          "decision": "human_review",
+          "rationale": [
+            "A variante candidata altera a semântica da contagem de pedidos: usa count(*) sobre a tabela pré-agregada 'items', o que conta pedidos que possuem itens, mas não garante a distinção correta se houver múltiplas linhas por pedido no join final ou se a lógica de exclusão de pedidos sem itens for diferente da original.",
+            "A original usa count(DISTINCT o.id), que é semanticamente mais robusta para garantir a contagem de pedidos distintos, enquanto a candidata depende da unicidade implícita do pré-agregado, o que pode falhar se a estrutura de dados permitir múltiplas entradas por order_id no CTE ou se o join introduzir duplicidades não esperadas.",
+            "Embora a candidata seja significativamente mais rápida (54ms vs 126ms), a diferença de semântica na contagem de pedidos é um risco crítico que impede a aprovação automática sem validação humana."
+          ],
+          "planEvidence": [
+            "A candidata elimina o nó 'Sort' presente na original, reduzindo o custo estimado de 24477 para 14228.",
+            "A candidata utiliza um 'Index Scan' na pré-agregação de itens, enquanto a original usa 'Seq Scan' para o join direto, indicando uma mudança de estratégia de acesso.",
+            "Os tempos de execução médios mostram uma melhoria de ~56% na candidata (54.8ms vs 126.4ms), mas a equivalência de multiset em dois seeds é evidência limitada para garantir a correção semântica."
+          ],
+          "semanticRisks": [
+            "Risco de contagem incorreta de pedidos: count(*) na candidata pode não ser equivalente a count(DISTINCT o.id) se houver qualquer duplicidade no join ou se a pré-agregação não garantir uma linha por pedido.",
+            "A semântica de 'pedidos distintos' pode ser violada se a tabela 'items' no CTE não for estritamente 1:1 com 'orders' devido a dados inconsistentes ou lógica de join complexa.",
+            "A exclusão de pedidos sem itens é mantida em ambas, mas a forma como a contagem é derivada difere, o que pode levar a discrepâncias sutis em cenários de dados específicos."
+          ],
+          "confidence": 0.85,
+          "durationMs": 4116,
+          "usage": {
+            "prompt_tokens": 1250,
+            "completion_tokens": 543,
+            "total_tokens": 1793,
+            "cost": 0.00078305,
+            "is_byok": false,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 0,
+              "audio_tokens": 0,
+              "video_tokens": 0
+            },
+            "cost_details": {
+              "upstream_inference_cost": 0.00078305,
+              "upstream_inference_prompt_cost": 5e-05,
+              "upstream_inference_completions_cost": 0.00073305
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "image_tokens": 0,
+              "audio_tokens": 0
+            }
+          },
+          "reportedCostUsd": 0.00078305
+        },
+        {
+          "queryId": "Q05",
+          "decision": "original",
+          "rationale": [
+            "A variante candidata é textualmente idêntica à original, sem alterações semânticas ou estruturais.",
+            "Como consulta de controle, a manutenção da originalidade é essencial para validar a hipótese de ruído de medição.",
+            "Não há ganho de performance ou correção que justifique a troca, dado que o SQL é o mesmo."
+          ],
+          "planEvidence": [
+            "Os planos de execução são idênticos em estrutura e custos estimados (6651.8).",
+            "As métricas de tempo (median ~30.3ms vs ~30.2ms) mostram variação mínima, consistente com ruído exploratório.",
+            "A equivalência em dois seeds (42, 43) confirma a estabilidade do resultado, mas não oferece vantagem à candidata."
+          ],
+          "semanticRisks": [
+            "Risco nulo de alteração semântica, pois o SQL é idêntico.",
+            "A preservação de DENSE_RANK garante a inclusão correta de empates, conforme esperado."
+          ],
+          "confidence": 1.0,
+          "durationMs": 3616,
+          "usage": {
+            "prompt_tokens": 1670,
+            "completion_tokens": 277,
+            "total_tokens": 1947,
+            "cost": 0.0007593,
+            "is_byok": false,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 0,
+              "audio_tokens": 0,
+              "video_tokens": 0
+            },
+            "cost_details": {
+              "upstream_inference_cost": 0.0007593,
+              "upstream_inference_prompt_cost": 6.68e-05,
+              "upstream_inference_completions_cost": 0.0006925
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "image_tokens": 0,
+              "audio_tokens": 0
+            }
+          },
+          "reportedCostUsd": 0.0007593
+        },
+        {
+          "queryId": "Q06",
+          "decision": "candidate",
+          "rationale": [
+            "A variante candidata reestrutura a lógica para calcular o fechamento da árvore apenas uma vez, evitando a reexecução da recursão para cada categoria, o que alinha-se com a hipótese anterior.",
+            "Os tempos de execução medidos indicam uma melhoria consistente (mediana 0.333ms vs 0.562ms), embora o volume de dados seja pequeno.",
+            "A equivalência semântica foi verificada em dois seeds, fornecendo evidência limitada, mas suficiente para considerar a mudança segura neste contexto."
+          ],
+          "planEvidence": [
+            "O plano do original exibe 'loops': 41 no nó 'Aggregate' e 'Recursive Union', indicando que a subquery recursiva é reexecutada para cada linha da tabela de categorias.",
+            "O plano do candidato exibe 'loops': 1 no nó 'Recursive Union', confirmando que a árvore é construída uma única vez antes da agregação.",
+            "O custo estimado do plano do candidato (228.22) é significativamente menor que o do original (2513.89), refletindo a redução de trabalho repetitivo."
+          ],
+          "semanticRisks": [
+            "A semântica de 'descendentes' inclui a categoria raiz (ancestor = descendant), o que é consistente com a descrição 'inclusive zero' e a lógica do original.",
+            "O uso de LEFT JOIN no candidato garante que categorias sem produtos retornem 0, preservando a contagem correta.",
+            "A suposição de que o grafo é acíclico é mantida; se houvesse ciclos, ambas as variantes falhariam ou exigiriam tratamento adicional, mas o risco é idêntico."
+          ],
+          "confidence": 0.95,
+          "durationMs": 4531,
+          "usage": {
+            "prompt_tokens": 1291,
+            "completion_tokens": 421,
+            "total_tokens": 1712,
+            "cost": 0.00061999,
+            "is_byok": false,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 0,
+              "audio_tokens": 0,
+              "video_tokens": 0
+            },
+            "cost_details": {
+              "upstream_inference_cost": 0.00061999,
+              "upstream_inference_prompt_cost": 5.164e-05,
+              "upstream_inference_completions_cost": 0.00056835
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "image_tokens": 0,
+              "audio_tokens": 0
+            }
+          },
+          "reportedCostUsd": 0.00061999
+        },
+        {
+          "queryId": "Q07",
+          "decision": "original",
+          "rationale": [
+            "A variante original apresenta um tempo de execução mediano significativamente menor (7.848 ms) em comparação com a candidata (17.925 ms), indicando superioridade prática no cenário testado.",
+            "O plano da variante original utiliza um Hash Join e um Sort global, que se mostrou mais eficiente para o volume de dados e a distribuição de clientes do que o Nested Loop com LATERAL da candidata.",
+            "Embora a candidata utilize LATERAL para limitar o processamento por cliente, o custo do planner e o tempo real indicam que a abordagem de janela (WindowAgg) no original é mais performática neste contexto específico."
+          ],
+          "planEvidence": [
+            "Original: Hash Join com Seq Scan em customers e orders, seguido de Sort e WindowAgg. Custo estimado 3267.69, linhas reais 2700.",
+            "Candidate: Nested Loop com Seq Scan em customers e LATERAL contendo Bitmap Index Scan e Sort. Custo estimado 158570.09, linhas reais 2700.",
+            "A candidata executa o subplano LATERAL 2000 vezes (loops=2000), o que contribui para o maior tempo de execução apesar do uso de índices."
+          ],
+          "semanticRisks": [
+            "Ambas as variantes implementam corretamente a lógica de Top-N por grupo com desempate por id e NULLS LAST.",
+            "Não há riscos semânticos identificados que justifiquem a escolha da candidata sobre a original, dado o desempenho inferior."
+          ],
+          "confidence": 0.95,
+          "durationMs": 9909,
+          "usage": {
+            "prompt_tokens": 1053,
+            "completion_tokens": 391,
+            "total_tokens": 1444,
+            "cost": 0.00111292,
+            "is_byok": false,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 0,
+              "audio_tokens": 0,
+              "video_tokens": 0
+            },
+            "cost_details": {
+              "upstream_inference_cost": 0.00111292,
+              "upstream_inference_prompt_cost": 0.00025272,
+              "upstream_inference_completions_cost": 0.0008602
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "image_tokens": 0,
+              "audio_tokens": 0
+            }
+          },
+          "reportedCostUsd": 0.00111292
+        },
+        {
+          "queryId": "Q08",
+          "decision": "candidate",
+          "rationale": [
+            "A variante candidata substitui três subqueries correlacionadas por uma única agregação com LEFT JOIN e FILTER, reduzindo drasticamente o custo do plano (de ~1.4M para ~2.5K) e o tempo de execução (de ~117ms para ~15ms).",
+            "A semântica é preservada: COUNT com FILTER retorna 0 para clientes sem pedidos (diferente de NULL), e SUM com FILTER retorna NULL, alinhando-se ao comportamento esperado de agregações condicionais.",
+            "A equivalência foi confirmada em dois seeds (42 e 43), fornecendo evidência limitada mas suficiente para a decisão, dado o ganho de performance significativo e a ausência de riscos semânticos críticos."
+          ],
+          "planEvidence": [
+            "O plano original executa 3 agregações separadas com loops=6000, resultando em custo estimado de 1.421.854,52.",
+            "O plano candidato usa um único Hash Join e Aggregate com loops=1, custo estimado de 2.540,61, indicando uma melhoria de eficiência de mais de 500x.",
+            "As linhas reais (63.299 no join) estão próximas das estimadas (60.000), sugerindo que o planner está calibrado corretamente para a escala 3."
+          ],
+          "semanticRisks": [
+            "Risco baixo: COUNT com FILTER retorna 0 para conjuntos vazios, o que é o comportamento desejado para contagens de status.",
+            "Risco baixo: SUM com FILTER retorna NULL para conjuntos vazios, o que é consistente com a semântica padrão de agregações SQL.",
+            "Risco mitigado: A equivalência em dois seeds confirma que a reescrita não altera os resultados para os dados testados."
+          ],
+          "confidence": 0.95,
+          "durationMs": 4106,
+          "usage": {
+            "prompt_tokens": 1100,
+            "completion_tokens": 454,
+            "total_tokens": 1554,
+            "cost": 0.0010882,
+            "is_byok": false,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 0,
+              "audio_tokens": 0,
+              "video_tokens": 0
+            },
+            "cost_details": {
+              "upstream_inference_cost": 0.0010882,
+              "upstream_inference_prompt_cost": 4.4e-05,
+              "upstream_inference_completions_cost": 0.0010442
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "image_tokens": 0,
+              "audio_tokens": 0
+            }
+          },
+          "reportedCostUsd": 0.0010882
+        },
+        {
+          "queryId": "Q09",
+          "decision": "candidate",
+          "rationale": [
+            "A variante candidata substitui a função date_trunc por um intervalo semiaberto (>= e <), o que permite ao planner utilizar índices de forma mais eficiente, evitando a varredura sequencial completa da tabela de pedidos.",
+            "Os tempos de execução exploratórios indicam uma melhoria significativa, com a mediana reduzida de 7.546 ms para 3.122 ms, e o custo estimado do plano caindo de 1737.09 para 1139.39.",
+            "A equivalência semântica foi validada em dois seeds (42 e 43), confirmando que a transformação preserva a lógica de filtragem temporal para o fuso horário UTC fixado pelo runner."
+          ],
+          "planEvidence": [
+            "O plano original utiliza Seq Scan na tabela orders com custo estimado de 1550.0, enquanto o candidato utiliza Bitmap Index Scan com custo de 68.99, demonstrando o ganho de eficiência do índice.",
+            "O custo total estimado do nó raiz Aggregate diminuiu de 1737.09 (original) para 1139.39 (candidato), refletindo a redução no custo de acesso aos dados.",
+            "As estimativas de linhas no Hash Join melhoraram de 255 para 4137 no candidato, alinhando-se melhor às linhas reais (4170) e indicando uma estatística mais precisa para o join."
+          ],
+          "semanticRisks": [
+            "A equivalência depende estritamente do fuso horário UTC; se o ambiente de produção ou outros testes utilizarem fusos diferentes, a lógica de intervalo pode divergir da função date_trunc se não houver tratamento explícito de timezone.",
+            "A evidência de equivalência é limitada a apenas dois seeds (42 e 43), o que pode não capturar todas as variações de dados ou edge cases de borda temporal."
+          ],
+          "confidence": 0.95,
+          "durationMs": 1930,
+          "usage": {
+            "prompt_tokens": 1081,
+            "completion_tokens": 473,
+            "total_tokens": 1554,
+            "cost": 0.00190545,
+            "is_byok": false,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 0,
+              "audio_tokens": 0,
+              "video_tokens": 0
+            },
+            "cost_details": {
+              "upstream_inference_cost": 0.00190545,
+              "upstream_inference_prompt_cost": 0.00048645,
+              "upstream_inference_completions_cost": 0.001419
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "image_tokens": 0,
+              "audio_tokens": 0
+            }
+          },
+          "reportedCostUsd": 0.00190545
+        },
+        {
+          "queryId": "Q10",
+          "decision": "human_review",
+          "rationale": [
+            "A variante candidata utiliza o operador de contenção '@>' que pode falhar semanticamente se a estrutura JSONB não corresponder exatamente à forma aninhada esperada, diferentemente da extração de campos no original.",
+            "Embora a candidata seja significativamente mais rápida (1.53ms vs 3.84ms), a equivalência foi testada apenas em dois seeds, o que é evidência limitada para garantir a correção em todos os casos de borda do JSON.",
+            "O risco de divergência semântica em dados JSON arbitrários ou com chaves ausentes/NULLs exige validação manual antes de adotar a otimização."
+          ],
+          "planEvidence": [
+            "O plano do original usa Seq Scan na tabela de eventos, indicando que o filtro por extração de JSONB não utilizou índice eficiente.",
+            "O plano da candidata usa Bitmap Index Scan, sugerindo o uso de um índice GIN para o operador de contenção, o que explica a redução de custo e tempo.",
+            "O custo estimado do planner caiu de 1209.43 para 730.53, mas a estimativa de linhas no original estava severamente subestimada (1 vs 1091)."
+          ],
+          "semanticRisks": [
+            "O operador '@>' exige que o JSONB da linha contenha exatamente a estrutura '{\"type\":\"checkout\",\"context\":{\"tier\":\"premium\"}}', o que pode falhar se houver campos extras ou diferenças de aninhamento não capturadas pela sintaxe do original.",
+            "A semântica de 'último evento' depende da ordenação correta; DISTINCT ON com ORDER BY é equivalente a ROW_NUMBER() apenas se a ordenação for determinística e completa, o que parece ser o caso, mas a diferença de implementação de filtro é o principal risco.",
+            "A equivalência em dois seeds não cobre todos os possíveis padrões de dados JSONB, especialmente casos com NULLs explícitos ou estruturas parcialmente ausentes."
+          ],
+          "confidence": 0.65,
+          "durationMs": 10518,
+          "usage": {
+            "prompt_tokens": 1108,
+            "completion_tokens": 478,
+            "total_tokens": 1586,
+            "cost": 0.000739538,
+            "is_byok": false,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "cache_write_tokens": 0,
+              "audio_tokens": 0,
+              "video_tokens": 0
+            },
+            "cost_details": {
+              "upstream_inference_cost": 0.000739538,
+              "upstream_inference_prompt_cost": 0.000181712,
+              "upstream_inference_completions_cost": 0.000557826
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "image_tokens": 0,
+              "audio_tokens": 0
+            }
+          },
+          "reportedCostUsd": 0.000739538
+        }
+      ],
+      "artifactDirectory": "docs/experiments/llm-curation/qwen3.8-27b-openrouter"
     }
   ]
 }

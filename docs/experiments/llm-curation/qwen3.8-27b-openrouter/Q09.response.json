@@ -1,0 +1,19 @@
+{
+  "queryId": "Q09",
+  "decision": "candidate",
+  "rationale": [
+    "A variante candidata substitui a função date_trunc por um intervalo semiaberto (>= e <), o que permite ao planner utilizar índices de forma mais eficiente, evitando a varredura sequencial completa da tabela de pedidos.",
+    "Os tempos de execução exploratórios indicam uma melhoria significativa, com a mediana reduzida de 7.546 ms para 3.122 ms, e o custo estimado do plano caindo de 1737.09 para 1139.39.",
+    "A equivalência semântica foi validada em dois seeds (42 e 43), confirmando que a transformação preserva a lógica de filtragem temporal para o fuso horário UTC fixado pelo runner."
+  ],
+  "planEvidence": [
+    "O plano original utiliza Seq Scan na tabela orders com custo estimado de 1550.0, enquanto o candidato utiliza Bitmap Index Scan com custo de 68.99, demonstrando o ganho de eficiência do índice.",
+    "O custo total estimado do nó raiz Aggregate diminuiu de 1737.09 (original) para 1139.39 (candidato), refletindo a redução no custo de acesso aos dados.",
+    "As estimativas de linhas no Hash Join melhoraram de 255 para 4137 no candidato, alinhando-se melhor às linhas reais (4170) e indicando uma estatística mais precisa para o join."
+  ],
+  "semanticRisks": [
+    "A equivalência depende estritamente do fuso horário UTC; se o ambiente de produção ou outros testes utilizarem fusos diferentes, a lógica de intervalo pode divergir da função date_trunc se não houver tratamento explícito de timezone.",
+    "A evidência de equivalência é limitada a apenas dois seeds (42 e 43), o que pode não capturar todas as variações de dados ou edge cases de borda temporal."
+  ],
+  "confidence": 0.95
+}

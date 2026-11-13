@@ -1,0 +1,170 @@
+{
+  "id": "gen-1794548796-ZIDlVrobsy3WhxoEV6Ri",
+  "object": "chat.completion",
+  "created": 1794548796,
+  "model": "qwen/qwen3.8-27b",
+  "provider": "Near AI",
+  "system_fingerprint": "vllm-0.33.0-6aef0147",
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"queryId\": \"Q06\",\n  \"decision\": \"candidate\",\n  \"rationale\": [\n    \"A variante candidata reestrutura a lógica para calcular o fechamento da árvore apenas uma vez, evitando a reexecução da recursão para cada categoria, o que alinha-se com a hipótese anterior.\",\n    \"Os tempos de execução medidos indicam uma melhoria consistente (mediana 0.333ms vs 0.562ms), embora o volume de dados seja pequeno.\",\n    \"A equivalência semântica foi verificada em dois seeds, fornecendo evidência limitada, mas suficiente para considerar a mudança segura neste contexto.\"\n  ],\n  \"planEvidence\": [\n    \"O plano do original exibe 'loops': 41 no nó 'Aggregate' e 'Recursive Union', indicando que a subquery recursiva é reexecutada para cada linha da tabela de categorias.\",\n    \"O plano do candidato exibe 'loops': 1 no nó 'Recursive Union', confirmando que a árvore é construída uma única vez antes da agregação.\",\n    \"O custo estimado do plano do candidato (228.22) é significativamente menor que o do original (2513.89), refletindo a redução de trabalho repetitivo.\"\n  ],\n  \"semanticRisks\": [\n    \"A semântica de 'descendentes' inclui a categoria raiz (ancestor = descendant), o que é consistente com a descrição 'inclusive zero' e a lógica do original.\",\n    \"O uso de LEFT JOIN no candidato garante que categorias sem produtos retornem 0, preservando a contagem correta.\",\n    \"A suposição de que o grafo é acíclico é mantida; se houvesse ciclos, ambas as variantes falhariam ou exigiriam tratamento adicional, mas o risco é idêntico.\"\n  ],\n  \"confidence\": 0.95\n}",
+        "refusal": null,
+        "reasoning": null
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1291,
+    "completion_tokens": 421,
+    "total_tokens": 1712,
+    "cost": 0.00061999,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.00061999,
+      "upstream_inference_prompt_cost": 5.164e-05,
+      "upstream_inference_completions_cost": 0.00056835
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "openrouter_metadata": {
+    "requested": "qwen/qwen3.8-27b",
+    "strategy": "direct",
+    "region": "GRU",
+    "summary": "available=22, selected=Near AI",
+    "attempt": 1,
+    "is_byok": false,
+    "endpoints": {
+      "total": 23,
+      "available": [
+        {
+          "provider": "Near AI",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": true
+        },
+        {
+          "provider": "Wafer",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "PrimeIntellect",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Tenstorrent",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Nebius",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Modal",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "DekaLLM",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Parasail",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Reka",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Ionstream",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Venice",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "CoreWeave",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Mancer 2",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Chutes",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Darkbloom",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "StreamLake",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Novita",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "AkashML",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "GMICloud",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Alibaba",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "DeepInfra",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        },
+        {
+          "provider": "Cloudflare",
+          "model": "qwen/qwen3.8-27b-20260814",
+          "selected": false
+        }
+      ]
+    },
+    "generation_time": 4435
+  }
+}

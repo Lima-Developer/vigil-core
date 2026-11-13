@@ -1,0 +1,20 @@
+{
+  "queryId": "Q08",
+  "decision": "candidate",
+  "rationale": [
+    "A variante candidata substitui três subqueries correlacionadas por uma única agregação com LEFT JOIN e FILTER, reduzindo drasticamente o custo do plano (de ~1.4M para ~2.5K) e o tempo de execução (de ~117ms para ~15ms).",
+    "A semântica é preservada: COUNT com FILTER retorna 0 para clientes sem pedidos (diferente de NULL), e SUM com FILTER retorna NULL, alinhando-se ao comportamento esperado de agregações condicionais.",
+    "A equivalência foi confirmada em dois seeds (42 e 43), fornecendo evidência limitada mas suficiente para a decisão, dado o ganho de performance significativo e a ausência de riscos semânticos críticos."
+  ],
+  "planEvidence": [
+    "O plano original executa 3 agregações separadas com loops=6000, resultando em custo estimado de 1.421.854,52.",
+    "O plano candidato usa um único Hash Join e Aggregate com loops=1, custo estimado de 2.540,61, indicando uma melhoria de eficiência de mais de 500x.",
+    "As linhas reais (63.299 no join) estão próximas das estimadas (60.000), sugerindo que o planner está calibrado corretamente para a escala 3."
+  ],
+  "semanticRisks": [
+    "Risco baixo: COUNT com FILTER retorna 0 para conjuntos vazios, o que é o comportamento desejado para contagens de status.",
+    "Risco baixo: SUM com FILTER retorna NULL para conjuntos vazios, o que é consistente com a semântica padrão de agregações SQL.",
+    "Risco mitigado: A equivalência em dois seeds confirma que a reescrita não altera os resultados para os dados testados."
+  ],
+  "confidence": 0.95
+}

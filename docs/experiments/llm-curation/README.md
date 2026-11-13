@@ -154,6 +154,20 @@ o modelo efetivo, preços pinados, limite, custo máximo calculado, tokens/usage
 cada chamada. Para máxima previsibilidade, execute inicialmente com `--queries Q01 Q02`; para o acervo completo,
 omita `--queries`.
 
+## Execução real posterior: Qwen3.8-27B via OpenRouter — 13/11/2026
+
+O benchmark completo foi concluído com o modelo efetivo `qwen/qwen3.8-27b`, com raciocínio desativado para reservar
+o orçamento de saída à resposta JSON estruturada. Os dez envelopes brutos, as respostas validadas e o manifest ficam
+em [`qwen3.8-27b-openrouter`](qwen3.8-27b-openrouter/). O OpenRouter reportou **US$ 0,00968636**, 53,076 s de duração
+acumulada, 11.618 tokens de entrada e 4.327 de saída; os dez JSONs passaram pela validação de identidade, decisão,
+confiança e evidências (`validResponseRate: 100%`).
+
+As decisões coincidiram com o baseline em Q01, Q02, Q03, Q05, Q06, Q07, Q08 e Q09. Q04 e Q10 foram encaminhadas
+para `human_review`, em vez de promover a candidata, o que é uma divergência deliberadamente preservada como sinal de
+cautela do modelo — não é erro nem autorização de execução. O custo é o valor efetivamente retornado pelo provedor
+para essa rota, não uma projeção tarifária; tokenização, cache e saída não são diretamente equivalentes aos recortes
+Codex e Claude.
+
 Fontes: [OpenRouter Chat Completions](https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request),
 [Qwen3.8-27B no OpenRouter](https://openrouter.ai/qwen/qwen3.8-27b) e
 [referência do Claude Code](https://docs.anthropic.com/en/docs/claude-code/cli-usage).
