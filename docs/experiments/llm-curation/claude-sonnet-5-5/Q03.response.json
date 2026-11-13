@@ -1,0 +1,18 @@
+{
+  "queryId": "Q03",
+  "decision": "original",
+  "rationale": [
+    "A variante original (NOT EXISTS) teve mediana de 11,509 ms contra 15,979 ms do candidate (LEFT JOIN ... IS NULL), e o p95 também é menor (11,658 vs 19,399 ms). Como evidência exploratória, não há ganho do candidate, o que é coerente com a hipótese de controle de ausência de ganho.",
+    "O candidate apresenta estimativas de linhas muito ruins (1 estimada contra 10.673 reais) e adiciona Sort e Nested Loop com Index Scan em 10.673 loops. A original manteve estimativas próximas da realidade (10.702 contra 10.673) e usou Hash Joins."
+  ],
+  "planEvidence": [
+    "Original: Aggregate sobre dois Hash Joins, com estimativa de 10.702 linhas e 10.673 reais. O custo do planner é 3033,84 (unidade sem preço).",
+    "Candidate: custo estimado menor (2537,84), mas com subestimação severa (1 linha estimada contra 10.673 reais) nos nós Hash Join, Nested Loop e Sort. O custo menor não se confirmou no tempo medido.",
+    "O Index Scan do candidate executa 10.673 loops, o que explica o provável overhead. A comparação de custo do planner entre os dois planos não é conclusiva, e os tempos são apenas exploratórios."
+  ],
+  "semanticRisks": [
+    "As duas formas são equivalentes quando a junção com payments PAID só pode produzir zero ou uma linha por pedido. Se houver pagamentos PAID duplicados, o LEFT JOIN ... IS NULL continua sem inflar o resultado, porque só mantém linhas sem correspondência. Ainda assim, a equivalência foi verificada apenas em dois seeds (42 e 43), o que é evidência limitada.",
+    "Em tese, o candidate depende de p.id nunca ser NULL em linhas reais de payments. Se p.id puder ser NULL, uma linha PAID existente seria tratada como ausência. O contexto não informa essa restrição, mas ela é esperada para uma chave primária."
+  ],
+  "confidence": 0.8
+}

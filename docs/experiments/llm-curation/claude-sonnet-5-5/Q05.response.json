@@ -1,0 +1,18 @@
+{
+  "queryId": "Q05",
+  "decision": "original",
+  "rationale": [
+    "O SQL do candidato é idêntico ao original, assim como o plano (mesmos nós, custos estimados e linhas reais), então não há mudança a avaliar. Como é um controle negativo, a decisão correta é manter a consulta original.",
+    "A diferença de mediana (30,343 ms contra 30,288 ms) é de cerca de 0,05 ms, ou 0,2%. Isso é ruído de medição, e não ganho real, o que confirma o papel de controle da consulta."
+  ],
+  "planEvidence": [
+    "Os planos são idênticos: WindowAgg sobre Sort, Subquery Scan e Aggregate, com Gather Merge, Hash Join e Seq Scan nas folhas. O custo estimado do planner é 6651,8 (unidade sem preço) nas duas variantes.",
+    "As contagens de linhas são iguais nas duas variantes: 502 linhas agregadas e 121 linhas finais no WindowAgg após o filtro position<=3.",
+    "O p95 e o máximo diferem (33,996 ms no original e 32,042 ms no candidato), mas com 7 repetições isso é variação exploratória e não indica melhoria."
+  ],
+  "semanticRisks": [
+    "Não há risco semântico, pois o SQL é idêntico. DENSE_RANK foi mantido, então os empates continuam no resultado, como pede a semântica esperada.",
+    "A equivalência foi verificada em apenas dois seeds (42 e 43), uma evidência limitada. Ela tem pouco peso aqui, porque não há transformação a validar."
+  ],
+  "confidence": 0.97
+}

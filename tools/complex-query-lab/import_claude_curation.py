@@ -26,6 +26,9 @@ def main():
     parser.add_argument("--dashboard-summary", type=Path,
                         default=ROOT / "vigil-bootstrap/src/main/resources/static/curation.json")
     args = parser.parse_args()
+    args.source_directory = args.source_directory.resolve()
+    args.destination_directory = args.destination_directory.resolve()
+    args.dashboard_summary = args.dashboard_summary.resolve()
     if args.destination_directory.exists():
         parser.error("destination directory must be new")
     manifest_path = args.source_directory / "manifest.json"

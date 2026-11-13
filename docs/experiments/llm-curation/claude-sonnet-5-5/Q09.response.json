@@ -1,0 +1,20 @@
+{
+  "queryId": "Q09",
+  "decision": "candidate",
+  "rationale": [
+    "O candidato substitui o predicado com função sobre placed_at (date_trunc) por um intervalo semiaberto [2024-06-01, 2024-07-01), que é sargable e permite o uso do índice, conforme a hipótese prévia.",
+    "O plano mudou de Seq Scan em orders para Bitmap Index Scan + Bitmap Heap Scan, com custo total do planner caindo de 1737,09 para 1139,39 (unidade sem preço) e mediana exploratória de 7,546 ms para 3,122 ms.",
+    "A estimativa de linhas melhorou: o original estimava 255 linhas contra 4170 reais, enquanto o candidato estima 4137 contra 4170, o que sustenta um plano mais confiável."
+  ],
+  "planEvidence": [
+    "Original: Seq Scan em orders com estimativa de 255 linhas e 4170 reais; Hash Join e Sort herdam a subestimação.",
+    "Candidato: Bitmap Index Scan (4870 estimadas, 4918 reais) seguido de Bitmap Heap Scan (4137 estimadas, 4170 reais), alinhado ao resultado real.",
+    "Custo total do planner de 1737,09 para 1139,39 e mediana de 7,546 ms para 3,122 ms (p95 10,767 para 4,437 ms), com 7 repetições; evidência exploratória, não conclusiva."
+  ],
+  "semanticRisks": [
+    "Equivalência depende de timezone UTC fixado pelo runner: date_trunc('month', timestamptz) usa o fuso da sessão, e o intervalo literal usa +00. Não generalizar a outros fusos.",
+    "A equivalência foi verificada como multiconjunto em apenas dois seeds (42 e 43), o que é evidência limitada.",
+    "A remoção da subquery com SELECT * é segura para JOIN interno, e o número de linhas (4170) e de grupos (3) coincide nos dois planos, mas isso não prova equivalência em dados com bordas temporais exatas."
+  ],
+  "confidence": 0.85
+}

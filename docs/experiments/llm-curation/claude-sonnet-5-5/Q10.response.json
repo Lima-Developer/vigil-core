@@ -1,0 +1,20 @@
+{
+  "queryId": "Q10",
+  "decision": "candidate",
+  "rationale": [
+    "O candidate manteve o mesmo multiconjunto de resultados nos seeds 42 e 43. Ele tem a mesma contagem real de 1091 linhas e o mesmo desempate (occurred_at DESC, id DESC) do original.",
+    "A mediana caiu de 3,836 ms para 1,532 ms (cerca de 2,5x), e o p95 caiu de 3,911 ms para 1,610 ms. Os intervalos min/max não se sobrepõem, mas os tempos são pequenos e vêm de 7 repetições, então são evidência exploratória.",
+    "O custo do planner caiu de 1209,43 para 730,53, em unidade sem preço. As estimativas de linhas ficaram bem mais próximas da realidade."
+  ],
+  "planEvidence": [
+    "O original estima 1 linha no Seq Scan, no Sort, no WindowAgg e no Nested Loop, mas retorna 1092 e 1091 linhas. Isso é uma subestimação grande, e o planner escolheu Nested Loop com 1091 Index Scans.",
+    "O candidate usa Bitmap Index Scan seguido de Bitmap Heap Scan, que é compatível com o uso de GIN pela hipótese de containment. A estimativa é de 1087 linhas contra 1092 reais, e o Hash Join estima 1008 contra 1091 reais.",
+    "O candidate troca row_number por Sort, Unique (DISTINCT ON) e Hash Join. Isso evita o WindowAgg e o Nested Loop com 1091 loops do original."
+  ],
+  "semanticRisks": [
+    "A equivalência vem de apenas dois seeds e do schema JSON controlado (objetos e strings). O @> pode divergir de ->> e #>> em JSON arbitrário, por exemplo quando type ou tier forem arrays, números ou objetos, ou quando o payload não for um objeto.",
+    "A exclusão de chave ausente e de JSON null parece preservada, porque o @> exige o valor string exato. Isso só foi confirmado nos dados controlados.",
+    "customer_id nulo é tratado de forma equivalente pelo DISTINCT ON e pelo PARTITION BY, e o JOIN o descarta nos dois casos. Dados fora do schema controlado exigiriam novos testes antes de generalizar a conclusão."
+  ],
+  "confidence": 0.82
+}

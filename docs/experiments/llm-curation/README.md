@@ -67,6 +67,16 @@ As decisões coincidiram com a seleção medida em Q02–Q10. Em Q01 o Claude ma
 cautelosa, mas não demonstra superioridade universal porque os dois seeds têm sinais opostos. Portanto, o dashboard
 mantém Q01 como caso que exige revisão humana antes de qualquer promoção.
 
+## Execução real posterior: Claude Sonnet 5.5 — 13/11/2026
+
+O mesmo protocolo foi executado com o identificador explícito `claude-sonnet-5-5`. As dez respostas estruturadas,
+envelopes brutos e o manifest ficam em [`claude-sonnet-5-5`](claude-sonnet-5-5/). O CLI reportou **US$ 0,490676**,
+90,371 s acumulados, 33.820 tokens de input, 36.212 de cache criado, 137.196 de cache lido e 8.719 de saída.
+
+As decisões foram idênticas às do Sonnet 4.6: candidata em Q02, Q04, Q06, Q08, Q09 e Q10; original em Q01, Q03,
+Q05 e Q07. Q01 continua classificado na apresentação como decisão cautelosa, não como ganho comprovado, pois os
+dois seeds de desempenho apontam em direções opostas.
+
 ## Próxima coleta: Claude Code em outra máquina
 
 O repositório já contém um runner para executar **as mesmas 10 decisões pareadas**, com o mesmo contexto sintético,

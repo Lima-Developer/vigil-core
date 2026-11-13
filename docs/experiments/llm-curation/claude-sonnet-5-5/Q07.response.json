@@ -1,0 +1,21 @@
+{
+  "queryId": "Q07",
+  "decision": "original",
+  "rationale": [
+    "A variante original foi consideravelmente mais rápida (mediana 7,848 ms contra 17,925 ms, cerca de 2,3x), e a diferença é maior que a dispersão observada (p95 de 8,082 ms contra mínimo de 16,545 ms na candidata), embora seja evidência exploratória.",
+    "A candidata usa LATERAL com LIMIT 3 por cliente, mas executa 2000 loops de Bitmap Index Scan, Bitmap Heap Scan, Sort e Limit; neste volume (scale 3), o custo de repetição supera a economia do sort global evitado.",
+    "A hipótese de que o LIMIT por cliente reduziria o sort global não se confirmou neste experimento, e não há vantagem que justifique trocar a consulta."
+  ],
+  "planEvidence": [
+    "Original: Hash Join de 50919 pedidos com 2000 clientes, depois Sort de 8487 linhas e WindowAgg, em uma única passagem; custo estimado do planner 3267,69 (unidade sem preço).",
+    "Candidata: Nested Loop com custo estimado de 158570,09, cerca de 48x o da original, e 2000 execuções do subplano com Bitmap Index Scan, Bitmap Heap Scan e Sort por cliente.",
+    "Ambos os planos retornam 2700 linhas reais; a candidata estimou 6000 e a original, 16989 antes do filtro rn<=3, e a estimativa de linhas da original (16989 contra 8487 reais) é imprecisa, mas não alterou o desfecho.",
+    "A mediana e o p95 da original (7,848 ms e 8,082 ms) ficam abaixo do mínimo da candidata (16,545 ms), então os intervalos não se sobrepõem nas 7 repetições."
+  ],
+  "semanticRisks": [
+    "A equivalência de multiconjunto foi verificada só nos seeds 42 e 43, evidência limitada que não cobre outras distribuições, como cliente concentrado ou empates em total_cents.",
+    "As duas variantes usam NULLS LAST explícito e desempate por o.id DESC, então a semântica esperada parece preservada, mas isso não foi provado além dos dois seeds.",
+    "Como a candidata não foi escolhida, o risco semântico de adotá-la não se aplica, e manter a original evita introduzir qualquer divergência."
+  ],
+  "confidence": 0.85
+}

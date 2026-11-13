@@ -1,0 +1,20 @@
+{
+  "queryId": "Q08",
+  "decision": "candidate",
+  "rationale": [
+    "A variante candidate usa uma única agregação com FILTER sobre LEFT JOIN, preservando todos os clientes e a granularidade de uma linha por c.id. Ela também preserva as semânticas de contagem e soma esperadas.",
+    "count(o.id) conta apenas pedidos reais e retorna 0 para clientes sem pedidos ou sem pedidos no status filtrado. sum(...) FILTER retorna NULL nesses casos, igual às subqueries originais, e não há uso de count(*), que viraria 1 por causa do LEFT JOIN.",
+    "Na evidência exploratória, a mediana caiu de 117,365 ms para 14,95 ms, com p95 de 16,408 ms contra 123,794 ms. O multiconjunto de resultados foi equivalente nos seeds 42 e 43."
+  ],
+  "planEvidence": [
+    "O plano original executa três subplanos Aggregate com Bitmap Heap Scan e Bitmap Index Scan, cada um com 6000 loops, ou seja, uma busca por cliente em cada subquery.",
+    "O plano candidate faz um Hash Join com Seq Scan nas duas tabelas e um Aggregate. O custo estimado do planner é 2540,61 contra 1421854,52 no original, ambos em unidade sem preço.",
+    "No Hash Join, as linhas reais (63299) ficaram próximas das estimadas (60000), e o Aggregate final retornou 6000 linhas, o mesmo número de clientes."
+  ],
+  "semanticRisks": [
+    "A equivalência foi verificada em apenas dois seeds, então é evidência limitada e não prova geral.",
+    "A correção depende de c.id ser único em corpus.customers e de o.id ser não nulo em pedidos reais. Se c.id não fosse único, GROUP BY c.id poderia colapsar linhas que o original manteria separadas.",
+    "Os tempos são exploratórios (escala 3, 7 repetições) e podem variar com dados maiores, cache e distribuição de status."
+  ],
+  "confidence": 0.9
+}

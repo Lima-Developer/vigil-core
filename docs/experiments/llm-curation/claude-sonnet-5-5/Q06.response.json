@@ -1,0 +1,21 @@
+{
+  "queryId": "Q06",
+  "decision": "candidate",
+  "rationale": [
+    "A variante candidata calcula o fechamento da árvore uma única vez (ancestral, descendente) e agrega os produtos por ancestral. A original executa uma CTE recursiva para cada uma das 41 categorias (loops=41).",
+    "A mediana caiu de 0,562 ms para 0,333 ms, com p95 de 0,632 ms para 0,418 ms. Os valores são sub-milissegundo e servem apenas como evidência exploratória. O custo do planner caiu de 2513,89 para 228,22, em unidade sem preço, o que concorda com a eliminação da recursão repetida.",
+    "A semântica esperada é preservada: o LEFT JOIN com count(p.id) devolve zero para categorias sem produtos. Em árvore acíclica cada par (ancestral, descendente) aparece uma vez, então a multiplicidade dos produtos se mantém. O resultado foi equivalente como multiconjunto nos seeds 42 e 43."
+  ],
+  "planEvidence": [
+    "Original: Seq Scan externo com 41 linhas e Aggregate com loops=41. O Recursive Union roda 41 vezes e o Hash Join recursivo roda 63 vezes, com poucas linhas por iteração (actualRows=4 por execução).",
+    "Candidata: um único Recursive Union (loops=1) com 147 linhas reais (41 na âncora e 106 na parte recursiva em 5 iterações). Um único Hash Join com products produz 1786 linhas, seguido de um Aggregate que devolve as 41 linhas esperadas.",
+    "A candidata estima 200 linhas no Aggregate final e 861 no Recursive Union, contra 41 e 147 reais. A superestimação é moderada e não altera a conclusão. O custo estimado menor e o tempo medido menor apontam na mesma direção."
+  ],
+  "semanticRisks": [
+    "A equivalência foi verificada em apenas dois seeds (42 e 43), em escala 3. É evidência limitada e não prova de equivalência geral.",
+    "Ambas as versões usam UNION ALL sem proteção contra ciclos. Se o dado deixar de ser uma árvore acíclica, as duas podem não terminar ou duplicar contagens, e isso exigiria uma política própria.",
+    "Se uma categoria for alcançável por mais de um caminho (grafo não-árvore), a candidata contaria o mesmo descendente mais de uma vez para o mesmo ancestral. A original sofreria do mesmo problema dentro de cada CTE.",
+    "Os ganhos de tempo são sub-milissegundo com 7 repetições, então ruído de medição pode ser relevante. A decisão se apoia mais na redução estrutural da recursão do que na magnitude dos tempos."
+  ],
+  "confidence": 0.8
+}

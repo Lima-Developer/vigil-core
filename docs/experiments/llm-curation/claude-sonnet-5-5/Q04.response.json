@@ -1,0 +1,19 @@
+{
+  "queryId": "Q04",
+  "decision": "candidate",
+  "rationale": [
+    "O candidato pré-agrega order_items por order_id antes dos joins, reduzindo o volume intermediário de ~152,7 mil linhas (com Sort para count(DISTINCT)) para ~50,9 mil, eliminando o Sort e o count(distinct). A mediana exploratória caiu de 126,4 ms para 54,8 ms, com p95 também menor (185,8 para 57,1 ms) e menor dispersão.",
+    "O custo estimado do planner caiu de 24477,22 para 14228,52 (unidade sem preço), consistente com a redução de tempo. Há equivalência de multiconjunto nos seeds 42 e 43, o que é evidência limitada, mas favorável."
+  ],
+  "planEvidence": [
+    "Original: Seq Scan de 180002 itens e Hash Joins produzem 152759 linhas, seguidos de Sort (custo 22565,92) para sustentar count(DISTINCT o.id).",
+    "Candidato: Aggregate sobre order_items produz 60000 linhas (estimado 59934) e os Hash Joins processam apenas 50919 linhas, sem Sort, com estimativas muito próximas das linhas reais.",
+    "O custo total do plano caiu de 24477,22 para 14228,52, e a mediana de tempo de 126,436 ms para 54,811 ms; as medições vêm de 7 repetições em scale 3, portanto são exploratórias."
+  ],
+  "semanticRisks": [
+    "count(*) substitui count(DISTINCT o.id): só é equivalente porque os itens são agregados a uma linha por order_id e o join é interno, de modo que cada pedido aparece no máximo uma vez.",
+    "Pedidos sem itens continuam excluídos pelo JOIN interno com a CTE, preservando a semântica esperada. A soma usa quantity::bigint*unit_cents, sem confundir com orders.total_cents.",
+    "A equivalência foi verificada apenas em dois seeds (42 e 43), e a vantagem depende da seletividade: com filtros mais seletivos em status, a pré-agregação de todos os itens pode perder a vantagem."
+  ],
+  "confidence": 0.85
+}

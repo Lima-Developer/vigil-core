@@ -1,0 +1,18 @@
+{
+  "queryId": "Q01",
+  "decision": "original",
+  "rationale": [
+    "A variante original teve mediana de 7,664 ms contra 8,968 ms do candidato, ou seja, o candidato foi mais lento nesta evidência exploratória, e o custo estimado do planner também foi maior (1858,4 contra 1676,31 — unidade sem preço, e neste caso o candidato aparece menor, então o custo não sustenta uma preferência clara).",
+    "A hipótese de ganho ao antecipar o filtro de segmento não se confirmou nos tempos medidos, e a equivalência em apenas dois seeds é evidência limitada para justificar a troca."
+  ],
+  "planEvidence": [
+    "Original: Hash Join com agregação sobre Seq Scan de 50.919 linhas de orders antes do join, produzindo 2.701 grupos e 901 linhas finais; estimativas de linhas bem alinhadas com as reais.",
+    "Candidato: Hash Join entre orders (50.919 linhas) e customers antes do Aggregate; o join emitiu 33.946 linhas reais contra 16.989 estimadas (subestimação de ~2x), e o Aggregate estimou 2.702 linhas mas produziu 901.",
+    "Custo estimado do candidato (1676,31) é menor que o do original (1858,4), mas o tempo medido contradiz essa vantagem; o planner não reduziu o volume lido de orders em nenhum dos planos."
+  ],
+  "semanticRisks": [
+    "O candidato usa INNER JOIN com customers antes de agregar; em princípio retorna o mesmo conjunto (uma linha por cliente ENTERPRISE com pedidos COMPLETED), mas a equivalência foi verificada somente nos seeds 42 e 43.",
+    "A remoção de MATERIALIZED permite inlining pelo planner, e a subestimação de cardinalidade no join do candidato indica sensibilidade à distribuição dos dados que pode mudar o plano em outros volumes."
+  ],
+  "confidence": 0.7
+}
