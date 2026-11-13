@@ -75,7 +75,7 @@ A Visão Geral apresenta evidências medidas do corpus sintético. Casos expõe 
 - As seis abas têm conteúdos distintos. Visão Geral/Casos/Auditoria mostram evidências reais do corpus sintético, separadas do caso SQLite e da prévia de telemetria.
 - Exportação reproduzível: `python3 tools/complex-query-lab/export_workspace.py`. Apenas o corpus sintético versionado é publicado em `corpus.json`; não inclui dados do target.
 - API de telemetria v1 e leitura somente leitura do espaço utilizável local. HTTP 200, campos nulos para fontes não conectadas e `Cache-Control: no-store` conferidos na aplicação em execução.
-- `verify` final aprovado: 1.100 testes reportados, zero falhas/erros e três testes preexistentes desabilitados. A cobertura adicionada inclui deltas/reset de telemetria, atividade agregada do PostgreSQL, retenção SQLite, ciclo do coletor e contrato HTTP de indisponibilidade.
+- `verify` final aprovado: 1.126 testes reportados, zero falhas/erros e três testes preexistentes desabilitados. A cobertura adicionada inclui deltas/reset de telemetria, atividade agregada do PostgreSQL, retenção SQLite, ciclo do coletor e contrato HTTP de indisponibilidade.
 - Validação usou JDK 21, settings Maven temporários apontando a Central (mirror corporativo retornava 401) e `TESTCONTAINERS_HOST_OVERRIDE=127.0.0.1` após falha de conexão do Ryuk em localhost. Nenhuma configuração global foi alterada.
 - Interface conferida em desktop e 375 px: alinhamento expandido/recolhido, tema no drawer, deep link de query, SQL/planos, estados sem coleta e pausa/retomada da leitura local.
 - Esta validação cobre a branch `codex/VIG-087-integrated-prep`; o gate final terminou com `BUILD SUCCESS` em 12/11/2026. A publicação do PR permanece como o último passo técnico externo.
