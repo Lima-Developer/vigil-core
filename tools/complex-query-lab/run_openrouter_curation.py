@@ -45,6 +45,12 @@ def totals(runs):
     }
 
 
+def response_quality(runs):
+    valid = sum(run.get("status") == "curated" for run in runs)
+    invalid = sum(run.get("status") == "invalid_response" for run in runs)
+    return {"validResponses": valid, "invalidResponses": invalid, "validResponseRate": round(valid / len(runs), 4) if runs else 0}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -106,27 +112,41 @@ def main():
             choice = raw.get("choices", [{}])[0] if isinstance(raw.get("choices"), list) else {}
             message = choice.get("message") if isinstance(choice, dict) else {}
             content = message.get("content") if isinstance(message, dict) else None
-            if not isinstance(content, str) or not content.strip():
-                raise RuntimeError(
-                    f"{query_id}: OpenRouter returned no textual JSON content "
-                    f"(finish_reason={choice.get('finish_reason') if isinstance(choice, dict) else None!r}); "
-                    f"inspect {raw_file.name} for the provider response. "
-                    "Retry with the default reasoning disabled or increase --max-output-tokens when using --reasoning."
-                )
-            response = parse_json_text(content)
-            validate_response(response, query_id)
-            response_file = args.output / f"{query_id}.response.json"
-            response_file.write_text(json.dumps(response, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             usage = raw.get("usage") or {}
-            manifest["runs"].append({
+            run = {
                 "queryId": query_id, "durationMs": duration_ms, "usage": usage,
                 "reportedCostUsd": usage.get("cost") if isinstance(usage.get("cost"), (int, float)) else None,
-                "responseFile": response_file.name, "rawUsageEvidenceFile": raw_file.name,
-            })
-            print(f"{query_id}: curated, provider usage preserved", flush=True)
+                "rawUsageEvidenceFile": raw_file.name,
+            }
+            try:
+                if not isinstance(content, str) or not content.strip():
+                    raise ValueError(
+                        "no textual JSON content "
+                        f"(finish_reason={choice.get('finish_reason') if isinstance(choice, dict) else None!r})"
+                    )
+                response = parse_json_text(content)
+                response_file = args.output / f"{query_id}.response.json"
+                response_file.write_text(json.dumps(response, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                validate_response(response, query_id)
+                run.update({"status": "curated", "responseFile": response_file.name})
+                print(f"{query_id}: curated, provider usage preserved", flush=True)
+            except (ValueError, json.JSONDecodeError) as error:
+                evidence_file = args.output / f"{query_id}.validation-error.json"
+                evidence_file.write_text(json.dumps({
+                    "queryId": query_id,
+                    "validationError": str(error),
+                    "rawUsageEvidenceFile": raw_file.name,
+                }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                run.update({"status": "invalid_response", "validationError": str(error),
+                            "validationEvidenceFile": evidence_file.name})
+                print(f"{query_id}: invalid response preserved ({error})", flush=True)
+            manifest["runs"].append(run)
         if not args.dry_run:
             manifest["totals"] = totals(manifest["runs"])
-        manifest["status"] = "planned" if args.dry_run else "passed"
+            manifest["quality"] = response_quality(manifest["runs"])
+        manifest["status"] = "planned" if args.dry_run else (
+            "passed" if manifest["quality"]["invalidResponses"] == 0 else "completed_with_invalid_responses"
+        )
     except Exception as error:
         manifest["status"] = "failed"
         manifest["error"] = str(error)
