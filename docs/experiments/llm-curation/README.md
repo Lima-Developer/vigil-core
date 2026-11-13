@@ -33,7 +33,8 @@ O CLI foi autenticado pela assinatura do usuário e não reportou custo faturado
 permanece nulo. Aplicando aos tokens reportados as tarifas API padrão, short-context, vigentes em 12/11/2026:
 
 - GPT-6 Sol: **US$ 0,083191** de equivalência tarifária;
-- Claude Sonnet 5.5: **US$ 0,158382** usando a mesma quantidade de tokens apenas como projeção.
+- Claude Sonnet 5.5: **US$ 0,158382** usando a mesma quantidade de tokens apenas como projeção histórica de
+  12/11/2026; ela não representa a coleta real posterior do Claude Sonnet 4.6.
 
 A projeção Claude abaixo não era benchmark entre provedores em 12/11/2026: a CLI `claude` não estava instalada, logo não houve chamada,
 tokenização, latência ou resposta Claude. O arquivo de preços versionado e as URLs oficiais ficam em
