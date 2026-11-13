@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "effectiveDate": "2026-11-13",
+  "currency": "USD",
+  "unit": "per_1m_tokens",
+  "models": {
+    "qwen/qwen3.8-27b": {
+      "input": 0.035,
+      "cachedInput": 0.0175,
+      "output": 1.5,
+      "source": "https://openrouter.ai/qwen/qwen3.8-27b",
+      "note": "Pinned public OpenRouter aggregate model-page rate. Provider-specific routing prices vary; verify the page immediately before a paid run."
+    },
+    "qwen/qwen3-32b": {
+      "input": 0.08,
+      "cachedInput": 0.08,
+      "output": 0.28,
+      "source": "https://openrouter.ai/qwen/qwen3-32b/pricing",
+      "note": "Pinned public OpenRouter model-page rate. Verify the page immediately before a paid run; provider routing and catalog prices can change."
+    }
+  }
+}

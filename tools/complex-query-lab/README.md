@@ -106,3 +106,8 @@ python3 tools/complex-query-lab/run_codex_curation.py \
 ```
 
 Cada diretório é exclusivo para impedir sobrescrita silenciosa. A aprovação humana continua obrigatória.
+
+Também há runners reproduzíveis para uma coleta posterior via Claude Code em máquina autenticada e para Qwen3-32B
+hospedado no OpenRouter. Eles enviam somente o corpus sintético, mantêm prompt/usage/resposta por caso e exigem
+diretório de saída novo. Veja instruções, limites de custo e a separação entre benchmark hospedado e execução local em
+[curadoria assistida](../../docs/experiments/llm-curation/README.md).
