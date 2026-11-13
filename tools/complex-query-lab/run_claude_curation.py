@@ -18,6 +18,9 @@ def claude_command(executable, prompt, model):
     # directly when shell=False, so run only the resolved launcher through the native command interpreter.
     if os.name == "nt" and Path(executable).suffix.lower() in {".cmd", ".bat"}:
         return [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/s", "/c", subprocess.list2cmdline(command)]
+    if os.name == "nt" and Path(executable).suffix.lower() == ".ps1":
+        powershell = shutil.which("powershell.exe") or shutil.which("pwsh.exe") or "powershell.exe"
+        return [powershell, "-NoProfile", "-File", executable, *command[1:]]
     return command
 
 
@@ -34,6 +37,8 @@ def main():
     claude = shutil.which("claude")
     if not args.dry_run and not claude:
         parser.error("Claude Code CLI not found. Install and authenticate on this machine, then rerun; --dry-run needs no CLI.")
+    if not args.dry_run:
+        print(f"Claude launcher: {claude}", flush=True)
     manifest = {
         "schemaVersion": 1, "promptVersion": PROMPT_VERSION, "provider": "anthropic-claude-code-cli",
         "model": args.model, "source": "synthetic-versioned-corpus-only", "runs": [],
@@ -51,13 +56,17 @@ def main():
                 continue
             command = claude_command(claude, prompt, args.model)
             started = time.monotonic()
-            result = subprocess.run(command, text=True, encoding="utf-8", capture_output=True, timeout=300)
+            # PowerShell shims can write stderr in a legacy Windows code page. Keep provider output as bytes,
+            # preserve it verbatim, and decode only at the boundary where structured JSON is needed.
+            result = subprocess.run(command, capture_output=True, timeout=300)
             duration_ms = round((time.monotonic() - started) * 1000)
             raw_file = args.output / f"{query_id}.claude.json"
-            raw_file.write_text(result.stdout, encoding="utf-8")
+            raw_file.write_bytes(result.stdout)
+            stdout = result.stdout.decode("utf-8", errors="replace")
+            stderr = result.stderr.decode("utf-8", errors="replace")
             if result.returncode:
-                raise RuntimeError(f"{query_id}: Claude Code failed with exit {result.returncode}: {result.stderr[-500:]}")
-            envelope = json.loads(result.stdout)
+                raise RuntimeError(f"{query_id}: Claude Code failed with exit {result.returncode}: {stderr[-500:]}")
+            envelope = json.loads(stdout)
             response = parse_json_text(envelope.get("result", ""))
             validate_response(response, query_id)
             response_file = args.output / f"{query_id}.response.json"

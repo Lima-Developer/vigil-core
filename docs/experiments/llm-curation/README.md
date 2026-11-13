@@ -79,7 +79,7 @@ python3 tools/complex-query-lab/run_claude_curation.py \
   --model sonnet
 ```
 
-No Windows, o runner reconhece automaticamente instalações npm que expõem `claude.cmd`; use sempre um diretório de
+No Windows, o runner reconhece automaticamente instalações npm que expõem `claude.cmd` ou `claude.ps1`; use sempre um diretório de
 saída novo. O dry-run é silencioso no terminal por intenção: confirme-o por `manifest.json` com `status: planned` e
 dez itens em `runs`.
 
