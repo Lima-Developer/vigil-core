@@ -10,9 +10,14 @@ import time
 
 from curation_common import PROMPT_VERSION, parse_json_text, prompt_for, selected_cases, validate_response, write_manifest
 
+STDIN_INSTRUCTION = (
+    "Leia integralmente o contexto UTF-8 recebido pela entrada padrão. Siga as instruções nele e responda somente "
+    "com o objeto JSON solicitado, sem Markdown."
+)
 
-def claude_command(executable, prompt, model):
-    command = [executable, "-p", prompt, "--output-format", "json", "--model", model,
+
+def claude_command(executable, model):
+    command = [executable, "-p", STDIN_INSTRUCTION, "--output-format", "json", "--model", model,
                "--max-turns", "1", "--disallowedTools", "Bash,Read,Edit,Write,Glob,Grep,WebFetch,WebSearch"]
     # npm commonly installs Claude Code as claude.cmd on Windows. CreateProcess cannot execute that launcher
     # directly when shell=False. Prefer its sibling PowerShell shim, which safely preserves paths with spaces.
@@ -58,11 +63,11 @@ def main():
             if args.dry_run:
                 manifest["runs"].append({"queryId": query_id, "promptFile": prompt_file.name, "status": "planned"})
                 continue
-            command = claude_command(claude, prompt, args.model)
+            command = claude_command(claude, args.model)
             started = time.monotonic()
             # PowerShell shims can write stderr in a legacy Windows code page. Keep provider output as bytes,
             # preserve it verbatim, and decode only at the boundary where structured JSON is needed.
-            result = subprocess.run(command, capture_output=True, timeout=300)
+            result = subprocess.run(command, input=prompt.encode("utf-8"), capture_output=True, timeout=300)
             duration_ms = round((time.monotonic() - started) * 1000)
             raw_file = args.output / f"{query_id}.claude.json"
             raw_file.write_bytes(result.stdout)
@@ -71,13 +76,22 @@ def main():
             if result.returncode:
                 raise RuntimeError(f"{query_id}: Claude Code failed with exit {result.returncode}: {stderr[-500:]}")
             envelope = json.loads(stdout)
-            response = parse_json_text(envelope.get("result", ""))
-            validate_response(response, query_id)
+            try:
+                response = parse_json_text(envelope.get("result", ""))
+                validate_response(response, query_id)
+            except (TypeError, ValueError, json.JSONDecodeError) as error:
+                manifest["runs"].append({
+                    "queryId": query_id, "durationMs": duration_ms, "usage": envelope.get("usage") or {},
+                    "reportedCostUsd": envelope.get("total_cost_usd"), "rawUsageEvidenceFile": raw_file.name,
+                    "status": "invalid_structured_response", "providerResult": envelope.get("result", ""),
+                })
+                raise RuntimeError(f"{query_id}: Claude returned no valid curation JSON: {envelope.get('result', '')[:300]}") from error
             response_file = args.output / f"{query_id}.response.json"
             response_file.write_text(json.dumps(response, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             usage = envelope.get("usage") or {}
             manifest["runs"].append({
                 "queryId": query_id, "durationMs": duration_ms, "usage": usage,
+                "reportedCostUsd": envelope.get("total_cost_usd"),
                 "responseFile": response_file.name, "rawUsageEvidenceFile": raw_file.name,
             })
             print(f"{query_id}: curated, provider usage preserved", flush=True)
