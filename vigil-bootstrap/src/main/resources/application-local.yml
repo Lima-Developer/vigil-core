@@ -2,6 +2,11 @@ spring:
   config:
     activate:
       on-profile: local
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-store: true
 vigil:
   target:
     name: ${VIGIL_TARGET_NAME:local-postgres}
