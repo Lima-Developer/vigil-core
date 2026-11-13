@@ -360,6 +360,9 @@ class VigilCliTest {
     private static Result runInChildJvm(Class<?> entry, Map<String, String> env, String... args) throws Exception {
         var command = new java.util.ArrayList<String>();
         command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
+        command.add("-Dfile.encoding=UTF-8");
+        command.add("-Dstdout.encoding=UTF-8");
+        command.add("-Dstderr.encoding=UTF-8");
         command.add("-Djava.io.tmpdir=" + System.getProperty("java.io.tmpdir"));
         command.add("-cp");
         command.add(System.getProperty("java.class.path"));
@@ -374,14 +377,18 @@ class VigilCliTest {
             var process = builder.start();
             if (!process.waitFor(60, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
-                throw new AssertionError("Child JVM timed out. stdout=" + Files.readString(outFile)
-                        + " stderr=" + Files.readString(errFile));
+                throw new AssertionError("Child JVM timed out. stdout=" + readUtf8(outFile)
+                        + " stderr=" + readUtf8(errFile));
             }
-            return new Result(process.exitValue(), Files.readString(outFile), Files.readString(errFile));
+            return new Result(process.exitValue(), readUtf8(outFile), readUtf8(errFile));
         } finally {
             Files.deleteIfExists(outFile);
             Files.deleteIfExists(errFile);
         }
+    }
+
+    private static String readUtf8(Path file) throws IOException {
+        return Files.readString(file, StandardCharsets.UTF_8);
     }
 
     private record Result(int exit, String out, String err) {
