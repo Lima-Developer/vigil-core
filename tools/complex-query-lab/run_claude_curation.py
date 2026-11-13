@@ -15,8 +15,12 @@ def claude_command(executable, prompt, model):
     command = [executable, "-p", prompt, "--output-format", "json", "--model", model,
                "--max-turns", "1", "--disallowedTools", "Bash,Read,Edit,Write,Glob,Grep,WebFetch,WebSearch"]
     # npm commonly installs Claude Code as claude.cmd on Windows. CreateProcess cannot execute that launcher
-    # directly when shell=False, so run only the resolved launcher through the native command interpreter.
+    # directly when shell=False. Prefer its sibling PowerShell shim, which safely preserves paths with spaces.
     if os.name == "nt" and Path(executable).suffix.lower() in {".cmd", ".bat"}:
+        powershell_shim = Path(executable).with_suffix(".ps1")
+        if powershell_shim.is_file():
+            powershell = shutil.which("powershell.exe") or shutil.which("pwsh.exe") or "powershell.exe"
+            return [powershell, "-NoProfile", "-File", str(powershell_shim), *command[1:]]
         return [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/s", "/c", subprocess.list2cmdline(command)]
     if os.name == "nt" and Path(executable).suffix.lower() == ".ps1":
         powershell = shutil.which("powershell.exe") or shutil.which("pwsh.exe") or "powershell.exe"
