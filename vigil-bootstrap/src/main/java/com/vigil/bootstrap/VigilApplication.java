@@ -1,6 +1,6 @@
 package com.vigil.bootstrap;
 
-import java.util.Map;
+import java.util.Arrays;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -10,15 +10,14 @@ public class VigilApplication {
     public static void main(String[] args) {
         var ephemeral = EphemeralDemoStorage.prepare(args, System.getenv()).orElse(null);
         var application = new SpringApplication(VigilApplication.class);
+        String[] effectiveArguments = args;
         if (ephemeral != null) {
-            application.setDefaultProperties(Map.of(
-                    "vigil.sqlite.path", ephemeral.databaseFile().toString(),
-                    "vigil.sqlite.minimum-free-bytes", "1048576"));
+            effectiveArguments = withEphemeralStorageArguments(args, ephemeral);
             // The hook below closes Spring before deleting the SQLite files.
             application.setRegisterShutdownHook(false);
         }
         try {
-            var context = application.run(args);
+            var context = application.run(effectiveArguments);
             if (ephemeral != null) {
                 var storage = ephemeral;
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -33,5 +32,12 @@ public class VigilApplication {
             if (ephemeral != null) ephemeral.close();
             throw failure;
         }
+    }
+
+    private static String[] withEphemeralStorageArguments(String[] arguments, EphemeralDemoStorage storage) {
+        var values = Arrays.copyOf(arguments, arguments.length + 2);
+        values[arguments.length] = "--vigil.sqlite.path=" + storage.databaseFile();
+        values[arguments.length + 1] = "--vigil.sqlite.minimum-free-bytes=1048576";
+        return values;
     }
 }
