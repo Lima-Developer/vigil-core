@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assumptions;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFilePermissions;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -67,7 +68,7 @@ class SqliteStorageProbeTest {
 
     @Test
     void reportsReadOnlyDatabaseWithActionablePath() throws Exception {
-        Assumptions.assumeFalse("root".equals(System.getProperty("user.name")));
+        assumePosixPermissionMutation();
         var file = directory.resolve("vigil.db");
         try (var ignored = new SqliteConnectionFactory(file).open()) {
             // Create a real database before changing permissions.
@@ -83,7 +84,7 @@ class SqliteStorageProbeTest {
 
     @Test
     void reportsReadOnlyDirectory() throws Exception {
-        Assumptions.assumeFalse("root".equals(System.getProperty("user.name")));
+        assumePosixPermissionMutation();
         try {
             Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("r-xr-xr-x"));
             assertFalse(new SqliteStorageProbe().inspect(directory.resolve("vigil.db")).directoryWritable());
@@ -104,5 +105,12 @@ class SqliteStorageProbeTest {
         var facts = new SqliteStorageProbe().inspect(file);
         assertTrue(facts.failure() != null || (facts.integrityResult() != null
                 && !"ok".equals(facts.integrityResult())));
+    }
+
+    private void assumePosixPermissionMutation() throws java.io.IOException {
+        Assumptions.assumeFalse("root".equals(System.getProperty("user.name")));
+        Assumptions.assumeTrue(Files.getFileStore(directory)
+                .supportsFileAttributeView(PosixFileAttributeView.class),
+                "O filesystem atual não oferece permissões POSIX");
     }
 }
