@@ -1,0 +1,22 @@
+{
+  "queryId": "Q02",
+  "decision": "candidate",
+  "rationale": [
+    "Candidate elimina 3.000 execuções de agregado correlacionado (1.500 loops × 2 subqueries) substituindo-as por uma única passagem sobre corpus.orders; a redução de ~3,3× na mediana (25,5 ms → 7,6 ms) é consistente com essa diferença estrutural de plano.",
+    "O LEFT JOIN preserva clientes sem pedidos COMPLETED exatamente como as subqueries correlacionadas: ambos retornam NULL em revenue e latest, mantendo a semântica de inclusão exigida pelo expectedSemantics.",
+    "A equivalência de multiset confirmada nos seeds 42 e 43 fornece evidência empírica limitada mas positiva de correção; nenhum risco semântico identificado invalida a promoção."
+  ],
+  "planEvidence": [
+    "Original: custo estimado 237.121 (dominado por 1.500 loops × Bitmap Index Scan + Bitmap Heap Scan repetidos em cada subquery); candidate: custo estimado 1.837 — redução de ~129× no custo do planner.",
+    "Candidate executa um único Seq Scan em corpus.orders (50.919 linhas reais) e um único Aggregate (2.701 grupos), eliminando completamente o overhead de re-entrada no executor por cliente.",
+    "Acurácia do planner no candidate é alta: estimou 2.702 grupos, obteve 2.701; no original estimou 19 linhas por probe, obteve 8 — subestimativa de seletividade que eleva o custo real das subqueries correlacionadas além do estimado.",
+    "Hash Join opera com 1.500 linhas na sonda e 2.701 no lado build; tamanho gerenciável sem risco de spill em configurações padrão no scale=3."
+  ],
+  "semanticRisks": [
+    "Candidate agrega pedidos de TODAS as regiões antes do filtro de região; não altera o resultado mas implica leitura de dados extras. Em scales muito maiores com NORTH representando fração pequena do total, esse custo adicional pode crescer além dos ganhos de eliminação de loops — risco latente, não observado no scale=3.",
+    "SUM NULL: ambas as variantes retornam NULL (não zero) para clientes sem pedidos COMPLETED — comportamento idêntico e esperado, sem divergência semântica.",
+    "A CTE não é materializada por padrão no PostgreSQL 12+; se o planner optar por inline em versões futuras, o plano pode mudar, mas a semântica permanece inalterada.",
+    "Nenhum risco de duplicação: a agregação na CTE garante no máximo um registro por customer_id no lado build do Hash Join, eliminando possibilidade de fan-out."
+  ],
+  "confidence": 0.87
+}

@@ -1,0 +1,21 @@
+{
+  "queryId": "Q05",
+  "decision": "original",
+  "rationale": [
+    "Original e candidate são SQL e plano de execução byte-a-byte idênticos; nenhuma otimização foi proposta, o que é o comportamento esperado para uma query de controle.",
+    "A diferença de tempo entre as variantes (mediana: 30,343 ms vs 30,288 ms, delta de 0,055 ms) está dentro do ruído de medição esperado e não constitui evidência de melhoria real.",
+    "Como query de controle negativo, o resultado confirma que o ambiente de benchmark é estável: variância entre seeds 42 e 43 é compatível com flutuação de hardware, não com divergência de plano."
+  ],
+  "planEvidence": [
+    "Ambas as variantes compartilham o mesmo plano raiz WindowAgg → Sort → Subquery Scan → Aggregate → Gather Merge, sem nenhum nó divergente.",
+    "Custos estimados idênticos em todos os níveis (ex.: WindowAgg estimatedCost 6651,8; Hash Join externo 4623,26).",
+    "Contagens de linhas reais idênticas em cada nó (actualRows: WindowAgg 121, Aggregate 502, Hash Join 76380×2), eliminando qualquer hipótese de caminho alternativo.",
+    "A presença de Gather Merge com loops=2 indica paralelismo ativo; o plano é reproduzível e consistente entre ambas as variantes."
+  ],
+  "semanticRisks": [
+    "Nenhum risco semântico: DENSE_RANK está preservado em ambas as variantes, garantindo que empates na receita resultem em múltiplas linhas com a mesma position, conforme expectedSemantics.",
+    "O filtro WHERE position<=3 opera sobre o resultado do window function (via CTE ranked), comportamento semanticamente correto — sem risco de pushdown prematuro.",
+    "Sem alteração de SQL, não há risco de introdução de ROW_NUMBER ou RANK, que quebrariam a semântica de empate documentada em knownRisk."
+  ],
+  "confidence": 0.97
+}

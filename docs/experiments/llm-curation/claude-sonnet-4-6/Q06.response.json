@@ -1,0 +1,22 @@
+{
+  "queryId": "Q06",
+  "decision": "candidate",
+  "rationale": [
+    "O candidato constrói o fechamento transitivo uma única vez e executa um único Aggregate global, eliminando a recursão correlacionada que o original dispara 41 vezes — uma por categoria — dentro de uma subquery escalar.",
+    "O tempo mediano cai de 0,562 ms para 0,333 ms (~41 % de ganho) com custo estimado ~11× menor (228,22 vs 2513,89), e a equivalência de multiset confirmada nos seeds 42 e 43 valida que a semântica é preservada.",
+    "O LEFT JOIN com count(p.id) no candidato mantém corretamente categorias com zero produtos, satisfazendo explicitamente a semântica esperada de 'inclusive zero'."
+  ],
+  "planEvidence": [
+    "O original executa Aggregate + Recursive Union com loops=41 (um por categoria); o candidato executa a recursão inteira com loops=1, eliminando 40 invocações redundantes do motor recursivo do PostgreSQL.",
+    "Custo estimado do planner: 2513,89 (original) vs 228,22 (candidato) — redução de ~11×, diretamente atribuível à eliminação da correlação e à execução única do Hash Join sobre products (loops=1 vs loops=41 no original).",
+    "O Aggregate final do candidato produz actualRows=41, alinhado ao número real de categorias, confirmando corretude estrutural sem fanout espúrio.",
+    "O P95 do candidato (0,418 ms) fica abaixo da mediana do original (0,562 ms), indicando variância mais controlada além do ganho de nível médio."
+  ],
+  "semanticRisks": [
+    "Ambas as variantes usam UNION ALL na recursão; em um DAG com múltiplos caminhos para o mesmo nó (diamante), o fechamento geraria pares duplicados e count(p.id) inflaria o resultado — risco idêntico nas duas, porém latente se o schema deixar de impor árvore estrita.",
+    "A equivalência de multiset foi verificada apenas em dois seeds (42 e 43) com scale=3; datasets maiores ou árvores com maior profundidade máxima podem alterar o plano escolhido pelo planner e expor divergências não observadas aqui.",
+    "O candidato materializa o fechamento completo na CTE antes do join; em árvores muito profundas ou com alto fator de ramificação, o tamanho da CTE pode pressionar work_mem — não observável neste scale, mas é risco real em produção.",
+    "A diferença entre count(*)+JOIN interno (original) e count(p.id)+LEFT JOIN (candidato) é semanticamente equivalente para o caso de zero produtos, mas deve ser documentada para evitar regressão em refatorações futuras."
+  ],
+  "confidence": 0.82
+}

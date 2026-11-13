@@ -1,0 +1,22 @@
+{
+  "queryId": "Q04",
+  "decision": "candidate",
+  "rationale": [
+    "A pré-agregação de itens no CTE reduz o volume de linhas no join de ~152 759 para ~50 919, eliminando o nó Sort que a implementação de count(DISTINCT) exigia; a mediana cai 2,3× (54,8 ms vs 126,4 ms) e o p95 torna-se muito mais estável (57 ms vs 186 ms).",
+    "A substituição de count(DISTINCT o.id) por count(*) é semanticamente segura: como o CTE garante exatamente uma linha por order_id, o join externo produz no máximo uma linha por pedido COMPLETED, tornando as duas contagens equivalentes; a distributividade do SUM preserva o revenue.",
+    "A equivalência multiconjunto confirmada nos seeds 42 e 43 fornece evidência empírica direta de identidade de resultados; o custo estimado cai 42% (24 477 → 14 228), alinhado com a redução de volume observada."
+  ],
+  "planEvidence": [
+    "O nó Sort (custo estimado 22 565, dominante no plano original) desaparece inteiramente no candidato — o planejador não precisa mais ordenar 152 759 linhas para resolver o count(DISTINCT).",
+    "O candidato usa Index Scan em order_items dentro do CTE Aggregate (custo 8 346) em vez do Seq Scan do original (custo 2 947); embora o acesso unitário seja mais caro, o ganho do volume reduzido nos joins subsequentes mais que compensa.",
+    "As estimativas de cardinalidade do candidato são precisas: 59 934 estimado vs 60 000 real no Aggregate do CTE; 50 910 estimado vs 50 919 real no Hash Join — indica estatísticas saudáveis e ausência de surpresas no plano.",
+    "O plano original registra 152 759 linhas reais após o primeiro Hash Join com loops=1, confirmando que o skew vinha de múltiplos itens por pedido; a pré-agregação elimina esse skew estruturalmente antes dos joins com orders e customers."
+  ],
+  "semanticRisks": [
+    "count(*) é equivalente a count(DISTINCT o.id) somente se order_id for NOT NULL em order_items (esperado por FK); um NULL quebraria o agrupamento do CTE e sub-contaria pedidos silenciosamente.",
+    "Pedidos sem itens continuam excluídos em ambas as versões via INNER JOIN, preservando a semântica descrita em knownRisk — nenhuma mudança de comportamento nesse ponto.",
+    "A distributividade do SUM em inteiros (bigint) garante que sum(revenue_por_pedido) por região seja idêntico a sum(quantity*unit_cents) global por região, sem risco de divergência numérica.",
+    "A equivalência foi verificada em dois seeds com scale factor 3; em datasets com skew extremo de itens por pedido ou regiões muito desbalanceadas o ganho de performance pode variar, mas a correção semântica não é afetada."
+  ],
+  "confidence": 0.88
+}

@@ -1,0 +1,21 @@
+{
+  "queryId": "Q09",
+  "decision": "candidate",
+  "rationale": [
+    "Candidate substitui date_trunc() na coluna por intervalo semiaberto, eliminando a opacificação do índice e reduzindo o custo estimado de 1737.09 para 1139.39 — confirmando a hipótese prévia sobre placed_at.",
+    "Mediana de execução cai de 7.546ms para 3.122ms (~2.4×); p95 de 10.767ms para 4.437ms, ganho consistente ao longo das 7 repetições.",
+    "Equivalência de multiset confirmada em dois seeds (42 e 43) com actualRows idênticas (4170), eliminando dúvida sobre divergência semântica no intervalo de fronteira."
+  ],
+  "planEvidence": [
+    "Original executa Seq Scan em orders (custo 1550.0) porque date_trunc() na coluna impede uso de índice; estimativa de 255 linhas contra 4170 reais representa subestimação de ~16×, risco crescente em escalas maiores.",
+    "Candidate usa Bitmap Index Scan (custo 68.99) + Bitmap Heap Scan (custo 655.25); estimativa de 4137 contra 4170 reais — erro inferior a 1%, planejador confiável.",
+    "A subestimação severa do original pode forçar planos subótimos (ex.: Nested Loop em vez de Hash Join) conforme o volume cresce; candidate elimina essa fragilidade.",
+    "Custo do Hash sobre customers (98.0) e do Seq Scan em customers (98.0) são idênticos nos dois planos; toda a diferença de custo (~598 unidades) origina-se exclusivamente no acesso a orders."
+  ],
+  "semanticRisks": [
+    "Equivalência válida somente com timezone=UTC; reimplantação em ambiente com fuso distinto pode produzir divergência para placed_at exatamente na virada do mês — risco conhecido, não generalizar.",
+    "Intervalo semiaberto exclui '2024-07-01 00:00:00+00' exatamente, comportamento idêntico ao date_trunc para junho UTC; sem risco de inclusão ou exclusão indevida de linhas.",
+    "Remoção da subquery interna não altera semântica do JOIN; o otimizador aplica push-down equivalente e actualRows confirmam isso."
+  ],
+  "confidence": 0.91
+}

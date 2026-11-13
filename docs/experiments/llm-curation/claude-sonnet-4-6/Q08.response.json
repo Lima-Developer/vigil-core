@@ -1,0 +1,22 @@
+{
+  "queryId": "Q08",
+  "decision": "candidate",
+  "rationale": [
+    "A candidate substitui três subqueries correlacionadas por uma única passagem de Hash Join + agregação com FILTER, mantendo semântica idêntica: count(o.id) FILTER retorna 0 (não NULL) para clientes sem pedidos, equivalente ao count(*) das subqueries originais, e sum FILTER retorna NULL quando não há COMPLETED, igual ao original.",
+    "O risco documentado de LEFT JOIN produzindo count(*) = 1 não se aplica aqui pois a candidate usa count(o.id): quando o LEFT JOIN produz uma linha com o.id NULL, o COUNT ignora o NULL, resultando em 0 — comportamento correto e igual ao original.",
+    "A equivalência multiset confirmada nos seeds 42 e 43 fornece evidência empírica adicional de que nenhuma divergência semântica foi introduzida."
+  ],
+  "planEvidence": [
+    "O plano original executa 18.000 suboperações de Bitmap Index Scan + Heap Scan + Aggregate (3 subqueries × 6.000 loops), gerando custo estimado de 1.421.854; a candidate resolve tudo em um único Hash Join + Seq Scan com custo estimado de 2.540 — redução de ~560×.",
+    "Tempo de execução mediano: 14,95 ms (candidate) contra 117,37 ms (original), ganho de ~7,8× com p95 de 16,4 ms vs 123,8 ms, faixa estreita indicando comportamento estável sem outliers.",
+    "O Hash Join da candidate produz 63.299 linhas reais contra 60.000 estimadas, indicando leve subestimativa de pedidos por cliente, mas o Aggregate posterior consolida corretamente para 6.000 linhas — sem impacto semântico.",
+    "O planner da candidate opera em espaço de memória previsível (hash de 6.000 clientes), enquanto o original sofre pressão de cache repetida a cada iteração das 6.000 subqueries."
+  ],
+  "semanticRisks": [
+    "count(o.id) vs count(*): sem risco — count de coluna nullable retorna 0 quando todos os valores são NULL (clientes sem pedidos via LEFT JOIN), comportamento idêntico ao count(*) da subquery correlacionada.",
+    "sum FILTER para clientes sem pedidos COMPLETED retorna NULL em ambas as variantes; se a aplicação espera 0, o risco existe igualmente nas duas versões e não é introduzido pela candidate.",
+    "GROUP BY c.id pressupõe que c.id é chave primária ou única em corpus.customers; se não fosse, a candidate poderia colapsar linhas duplicadas — mas a presença de 6.000 linhas na saída (igual ao scan original) confirma unicidade.",
+    "A candidate não preserva a ordem implícita das subqueries (ORDER BY c.id não está presente em nenhuma das variantes); qualquer dependência de ordem no código consumidor precisa ser explicitada."
+  ],
+  "confidence": 0.93
+}

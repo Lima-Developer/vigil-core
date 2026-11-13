@@ -1,0 +1,21 @@
+{
+  "queryId": "Q07",
+  "decision": "original",
+  "rationale": [
+    "O candidato é 2,3× mais lento na mediana (17,925 ms vs 7,848 ms) e o P95 diverge ainda mais (21,209 ms vs 8,082 ms), invalidando a hipótese de que LIMIT por cliente reduziria o custo global de ordenação neste scale.",
+    "O plano LATERAL executa 2000 iterações de Nested Loop, cada uma com Bitmap Heap Scan + Sort interno; o custo estimado pelo planner (158.570) é ~48× maior que o original (3.267), e os tempos medidos confirmam essa desvantagem real, não apenas estimada.",
+    "O original realiza um único Hash Join + Sort global + WindowAgg em um único passe sobre os dados, o que a scale 3 com 2000 clientes STARTUP é estruturalmente mais eficiente do que 2000 buscas de índice independentes."
+  ],
+  "planEvidence": [
+    "Candidate: loops=2000 no nó Limit com actualRows=1 em média indica que a maioria dos clientes STARTUP tem menos de 3 pedidos COMPLETED, fazendo cada iteração subutilizar o LIMIT e desperdiçar overhead de abertura de bitmap.",
+    "Candidate: planner estimou 19 linhas por cliente no Bitmap Heap Scan; o real foi 4 — superestimativa de ~5×, sinalizando estatísticas de correlação status+segment pouco precisas para o planner neste scale.",
+    "Original: Hash Join retornou exatamente 8487 linhas (vs estimativa 16989, fator ~0,5), e o WindowAgg filtrou para 2700 com rn<=3 — plano mais previsível e com menor variância entre min e max (7,742–8,082 ms, spread de 0,34 ms vs 4,66 ms do candidato).",
+    "Ambos retornam 2700 linhas em seeds 42 e 43, confirmando equivalência semântica; a diferença é exclusivamente de desempenho e estabilidade do plano."
+  ],
+  "semanticRisks": [
+    "Nenhum risco semântico identificado: ambas as variantes aplicam ORDER BY total_cents DESC NULLS LAST, id DESC e retornam exatamente os mesmos multisets nos dois seeds testados.",
+    "Risco latente de escala: em datasets muito maiores (scale >>10) com índice composto cobridor em (customer_id, status, total_cents DESC, id DESC), o LATERAL pode inverter o resultado — a decisão atual é válida para scale 3 e deve ser revisitada se o volume de pedidos por cliente crescer significativamente.",
+    "O Bitmap Index Scan do candidato não é um Index-Only Scan; heap fetches adicionais mantêm o custo por iteração alto enquanto o índice não for covering, o que é um risco de regressão caso o índice seja dropped ou recriado sem a coluna total_cents."
+  ],
+  "confidence": 0.84
+}

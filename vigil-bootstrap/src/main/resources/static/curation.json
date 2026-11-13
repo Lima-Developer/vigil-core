@@ -43,8 +43,10 @@
   },
   "providerAvailability": {
     "claude-code": {
-      "status": "not_executed",
-      "reason": "CLI_NOT_INSTALLED_ON_2026-11-12"
+      "status": "executed",
+      "model": "claude-sonnet-4-6",
+      "runs": 10,
+      "billedCostUsd": 0.685617
     }
   },
   "decisions": [
@@ -298,6 +300,562 @@
         "A equivalência de resultados foi observada apenas nos seeds 42 e 43.",
         "A equivalência entre contenção JSONB e extração de texto depende do schema controlado com objetos e strings; JSON arbitrário exige novos testes, inclusive para chaves ausentes e JSON null."
       ]
+    }
+  ],
+  "additionalExecutions": [
+    {
+      "provider": "anthropic-claude-code-cli",
+      "model": "claude-sonnet-4-6",
+      "runs": 10,
+      "durationMs": 405093,
+      "tokens": {
+        "input_tokens": 20,
+        "cache_creation_input_tokens": 50512,
+        "cache_read_input_tokens": 106849,
+        "output_tokens": 23362
+      },
+      "billedCostUsd": 0.685617,
+      "billingReason": "Valor reportado pelo Claude Code por execução; inclui cache creation/read e não é projeção.",
+      "decisions": [
+        {
+          "queryId": "Q01",
+          "decision": "original",
+          "rationale": [
+            "O candidato é ~17% mais lento na mediana (8.968 ms vs 7.664 ms) e ~5% mais lento no p95, contrariando diretamente a hipótese de que puxar o filtro de segmento para dentro da CTE reduziria custo.",
+            "O planner subestimou o Hash Join interno do candidato por fator 2× (estimado 16 989 linhas, obtido 33 946), sinalizando estatísticas desatualizadas sobre a seletividade do segmento ENTERPRISE — risco de plano ainda pior em escala maior.",
+            "O original ancorou MATERIALIZED explicitamente; o candidato remove essa garantia sem nenhuma compensação de desempenho observada nos dados coletados."
+          ],
+          "planEvidence": [
+            "Original: nó Aggregate estima 2 702 linhas e obtém 2 701 (erro < 0,04%); candidato estima 2 702 no nó raiz mas obtém 901 — estimativa do planner completamente desconectada da cardinalidade real após o filtro.",
+            "O candidato força um Hash Join de 50 919 × 2 000 linhas antes de agregar, processando ~34 k linhas intermediárias; o original materializa 2 701 tuplas e só então faz o join — trabalho por linha processada é menor no original.",
+            "Custo estimado do planner: candidato 1 676 vs original 1 858 — planner prefere o candidato, mas o tempo medido desmente o custo estimado; a mis-estimativa do join interno inflou o plano real além do previsto.",
+            "Ranges de execução sem sobreposição: original [7.586, 8.683 ms] vs candidato [8.925, 9.108 ms] em 7 repetições — diferença estável, não ruído."
+          ],
+          "semanticRisks": [
+            "Equivalência de multiset confirmada em seeds 42 e 43; nenhum risco de correção detectado no dataset de teste com scale 3.",
+            "Sem MATERIALIZED, o planner pode inlinar a CTE em versões futuras do PostgreSQL ou sob configurações distintas de enable_material, alterando o plano silenciosamente.",
+            "A mis-estimativa 2× no Hash Join do candidato indica que as estatísticas de pg_statistic para a coluna segment estão desatualizadas; em scale maior o erro de cardinalidade pode cascatear para escolha de nested-loop ou merge join inadequados.",
+            "O candidato agrega por o.customer_id e retorna como coluna 'id' sem alias de tabela explícito; se corpus.customers não possuir constraint UNIQUE em id, um join duplicado inflaria revenue antes da agregação — risco estrutural que depende de constraint não visível no plano."
+          ],
+          "confidence": 0.8,
+          "durationMs": 51260,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 8637,
+            "cache_read_input_tokens": 6868,
+            "output_tokens": 2996,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 8637,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 2996,
+                "cache_read_input_tokens": 6868,
+                "cache_creation_input_tokens": 8637,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 8637
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "reportedCostUsd": 0.09882840000000001
+        },
+        {
+          "queryId": "Q02",
+          "decision": "candidate",
+          "rationale": [
+            "Candidate elimina 3.000 execuções de agregado correlacionado (1.500 loops × 2 subqueries) substituindo-as por uma única passagem sobre corpus.orders; a redução de ~3,3× na mediana (25,5 ms → 7,6 ms) é consistente com essa diferença estrutural de plano.",
+            "O LEFT JOIN preserva clientes sem pedidos COMPLETED exatamente como as subqueries correlacionadas: ambos retornam NULL em revenue e latest, mantendo a semântica de inclusão exigida pelo expectedSemantics.",
+            "A equivalência de multiset confirmada nos seeds 42 e 43 fornece evidência empírica limitada mas positiva de correção; nenhum risco semântico identificado invalida a promoção."
+          ],
+          "planEvidence": [
+            "Original: custo estimado 237.121 (dominado por 1.500 loops × Bitmap Index Scan + Bitmap Heap Scan repetidos em cada subquery); candidate: custo estimado 1.837 — redução de ~129× no custo do planner.",
+            "Candidate executa um único Seq Scan em corpus.orders (50.919 linhas reais) e um único Aggregate (2.701 grupos), eliminando completamente o overhead de re-entrada no executor por cliente.",
+            "Acurácia do planner no candidate é alta: estimou 2.702 grupos, obteve 2.701; no original estimou 19 linhas por probe, obteve 8 — subestimativa de seletividade que eleva o custo real das subqueries correlacionadas além do estimado.",
+            "Hash Join opera com 1.500 linhas na sonda e 2.701 no lado build; tamanho gerenciável sem risco de spill em configurações padrão no scale=3."
+          ],
+          "semanticRisks": [
+            "Candidate agrega pedidos de TODAS as regiões antes do filtro de região; não altera o resultado mas implica leitura de dados extras. Em scales muito maiores com NORTH representando fração pequena do total, esse custo adicional pode crescer além dos ganhos de eliminação de loops — risco latente, não observado no scale=3.",
+            "SUM NULL: ambas as variantes retornam NULL (não zero) para clientes sem pedidos COMPLETED — comportamento idêntico e esperado, sem divergência semântica.",
+            "A CTE não é materializada por padrão no PostgreSQL 12+; se o planner optar por inline em versões futuras, o plano pode mudar, mas a semântica permanece inalterada.",
+            "Nenhum risco de duplicação: a agregação na CTE garante no máximo um registro por customer_id no lado build do Hash Join, eliminando possibilidade de fan-out."
+          ],
+          "confidence": 0.87,
+          "durationMs": 37677,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4470,
+            "cache_read_input_tokens": 11109,
+            "output_tokens": 2247,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4470,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 2247,
+                "cache_read_input_tokens": 11109,
+                "cache_creation_input_tokens": 4470,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4470
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "reportedCostUsd": 0.0638637
+        },
+        {
+          "queryId": "Q03",
+          "decision": "original",
+          "rationale": [
+            "O original é 39% mais rápido na mediana (11,5 ms vs 16,0 ms) e 66% mais rápido no P95 (11,7 ms vs 19,4 ms), diferença consistente ao longo das 7 repetições, não ruído.",
+            "O planner subestimou em ~10.000× as linhas intermediárias do candidato (estimou 1, obteve 10.673), escolhendo Nested Loop + Sort em vez de Hash Join puro; o custo estimado menor do candidato (2537 vs 3033) é artefato de má calibração, não de ganho real.",
+            "O original produz estimativas precisas (10.702 estimado vs 10.673 real) e executa dois Hash Joins encadeados sem Sort, plano mais estável e previsível para operações de anti-join nesta escala."
+          ],
+          "planEvidence": [
+            "Sort node presente no candidato e ausente no original é o principal vetor de overhead: materializa 10.673 linhas inesperadas antes do Aggregate, inflando P95 para 19,4 ms.",
+            "Nested Loop com Index Scan (loops=10.673) no candidato confirma que o planner apostou em cardinalidade ínfima; em scale maior essa escolha tende a piorar de forma super-linear.",
+            "Original alcança Hash Join em dois níveis com desvio relativo de estimativa < 0,1%; isso indica estatísticas confiáveis e plano estável entre execuções.",
+            "Equivalência de multiset verificada nos seeds 42 e 43 confirma que a diferença é exclusivamente de plano e desempenho, sem divergência semântica detectável."
+          ],
+          "semanticRisks": [
+            "LEFT JOIN com IS NULL é semanticamente equivalente ao NOT EXISTS quando o filtro de status está na cláusula ON; os seeds corroboram essa equivalência nesta base.",
+            "Pagamentos não-PAID não participam da junção do candidato (a condição ON exclui status ≠ 'PAID'), portanto não geram linhas extras que inflariam count ou sum.",
+            "Pagamentos PAID duplicados por pedido produziriam múltiplas linhas não-nulas no candidato, todas removidas pelo IS NULL; o count não seria inflado.",
+            "Misestimação de 10.000× é risco operacional: em escalas maiores ou com distribuições skewed o planner pode regredir para planos ainda mais custosos no candidato."
+          ],
+          "confidence": 0.85,
+          "durationMs": 50210,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4572,
+            "cache_read_input_tokens": 11109,
+            "output_tokens": 3019,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4572,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 3019,
+                "cache_read_input_tokens": 11109,
+                "cache_creation_input_tokens": 4572,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4572
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "reportedCostUsd": 0.0760557
+        },
+        {
+          "queryId": "Q04",
+          "decision": "candidate",
+          "rationale": [
+            "A pré-agregação de itens no CTE reduz o volume de linhas no join de ~152 759 para ~50 919, eliminando o nó Sort que a implementação de count(DISTINCT) exigia; a mediana cai 2,3× (54,8 ms vs 126,4 ms) e o p95 torna-se muito mais estável (57 ms vs 186 ms).",
+            "A substituição de count(DISTINCT o.id) por count(*) é semanticamente segura: como o CTE garante exatamente uma linha por order_id, o join externo produz no máximo uma linha por pedido COMPLETED, tornando as duas contagens equivalentes; a distributividade do SUM preserva o revenue.",
+            "A equivalência multiconjunto confirmada nos seeds 42 e 43 fornece evidência empírica direta de identidade de resultados; o custo estimado cai 42% (24 477 → 14 228), alinhado com a redução de volume observada."
+          ],
+          "planEvidence": [
+            "O nó Sort (custo estimado 22 565, dominante no plano original) desaparece inteiramente no candidato — o planejador não precisa mais ordenar 152 759 linhas para resolver o count(DISTINCT).",
+            "O candidato usa Index Scan em order_items dentro do CTE Aggregate (custo 8 346) em vez do Seq Scan do original (custo 2 947); embora o acesso unitário seja mais caro, o ganho do volume reduzido nos joins subsequentes mais que compensa.",
+            "As estimativas de cardinalidade do candidato são precisas: 59 934 estimado vs 60 000 real no Aggregate do CTE; 50 910 estimado vs 50 919 real no Hash Join — indica estatísticas saudáveis e ausência de surpresas no plano.",
+            "O plano original registra 152 759 linhas reais após o primeiro Hash Join com loops=1, confirmando que o skew vinha de múltiplos itens por pedido; a pré-agregação elimina esse skew estruturalmente antes dos joins com orders e customers."
+          ],
+          "semanticRisks": [
+            "count(*) é equivalente a count(DISTINCT o.id) somente se order_id for NOT NULL em order_items (esperado por FK); um NULL quebraria o agrupamento do CTE e sub-contaria pedidos silenciosamente.",
+            "Pedidos sem itens continuam excluídos em ambas as versões via INNER JOIN, preservando a semântica descrita em knownRisk — nenhuma mudança de comportamento nesse ponto.",
+            "A distributividade do SUM em inteiros (bigint) garante que sum(revenue_por_pedido) por região seja idêntico a sum(quantity*unit_cents) global por região, sem risco de divergência numérica.",
+            "A equivalência foi verificada em dois seeds com scale factor 3; em datasets com skew extremo de itens por pedido ou regiões muito desbalanceadas o ganho de performance pode variar, mas a correção semântica não é afetada."
+          ],
+          "confidence": 0.88,
+          "durationMs": 51934,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4685,
+            "cache_read_input_tokens": 11109,
+            "output_tokens": 3297,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4685,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 3297,
+                "cache_read_input_tokens": 11109,
+                "cache_creation_input_tokens": 4685,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4685
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "reportedCostUsd": 0.0809037
+        },
+        {
+          "queryId": "Q05",
+          "decision": "original",
+          "rationale": [
+            "Original e candidate são SQL e plano de execução byte-a-byte idênticos; nenhuma otimização foi proposta, o que é o comportamento esperado para uma query de controle.",
+            "A diferença de tempo entre as variantes (mediana: 30,343 ms vs 30,288 ms, delta de 0,055 ms) está dentro do ruído de medição esperado e não constitui evidência de melhoria real.",
+            "Como query de controle negativo, o resultado confirma que o ambiente de benchmark é estável: variância entre seeds 42 e 43 é compatível com flutuação de hardware, não com divergência de plano."
+          ],
+          "planEvidence": [
+            "Ambas as variantes compartilham o mesmo plano raiz WindowAgg → Sort → Subquery Scan → Aggregate → Gather Merge, sem nenhum nó divergente.",
+            "Custos estimados idênticos em todos os níveis (ex.: WindowAgg estimatedCost 6651,8; Hash Join externo 4623,26).",
+            "Contagens de linhas reais idênticas em cada nó (actualRows: WindowAgg 121, Aggregate 502, Hash Join 76380×2), eliminando qualquer hipótese de caminho alternativo.",
+            "A presença de Gather Merge com loops=2 indica paralelismo ativo; o plano é reproduzível e consistente entre ambas as variantes."
+          ],
+          "semanticRisks": [
+            "Nenhum risco semântico: DENSE_RANK está preservado em ambas as variantes, garantindo que empates na receita resultem em múltiplas linhas com a mesma position, conforme expectedSemantics.",
+            "O filtro WHERE position<=3 opera sobre o resultado do window function (via CTE ranked), comportamento semanticamente correto — sem risco de pushdown prematuro.",
+            "Sem alteração de SQL, não há risco de introdução de ROW_NUMBER ou RANK, que quebrariam a semântica de empate documentada em knownRisk."
+          ],
+          "confidence": 0.97,
+          "durationMs": 20333,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 5132,
+            "cache_read_input_tokens": 11109,
+            "output_tokens": 992,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 5132,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 992,
+                "cache_read_input_tokens": 11109,
+                "cache_creation_input_tokens": 5132,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 5132
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "reportedCostUsd": 0.049010700000000004
+        },
+        {
+          "queryId": "Q06",
+          "decision": "candidate",
+          "rationale": [
+            "O candidato constrói o fechamento transitivo uma única vez e executa um único Aggregate global, eliminando a recursão correlacionada que o original dispara 41 vezes — uma por categoria — dentro de uma subquery escalar.",
+            "O tempo mediano cai de 0,562 ms para 0,333 ms (~41 % de ganho) com custo estimado ~11× menor (228,22 vs 2513,89), e a equivalência de multiset confirmada nos seeds 42 e 43 valida que a semântica é preservada.",
+            "O LEFT JOIN com count(p.id) no candidato mantém corretamente categorias com zero produtos, satisfazendo explicitamente a semântica esperada de 'inclusive zero'."
+          ],
+          "planEvidence": [
+            "O original executa Aggregate + Recursive Union com loops=41 (um por categoria); o candidato executa a recursão inteira com loops=1, eliminando 40 invocações redundantes do motor recursivo do PostgreSQL.",
+            "Custo estimado do planner: 2513,89 (original) vs 228,22 (candidato) — redução de ~11×, diretamente atribuível à eliminação da correlação e à execução única do Hash Join sobre products (loops=1 vs loops=41 no original).",
+            "O Aggregate final do candidato produz actualRows=41, alinhado ao número real de categorias, confirmando corretude estrutural sem fanout espúrio.",
+            "O P95 do candidato (0,418 ms) fica abaixo da mediana do original (0,562 ms), indicando variância mais controlada além do ganho de nível médio."
+          ],
+          "semanticRisks": [
+            "Ambas as variantes usam UNION ALL na recursão; em um DAG com múltiplos caminhos para o mesmo nó (diamante), o fechamento geraria pares duplicados e count(p.id) inflaria o resultado — risco idêntico nas duas, porém latente se o schema deixar de impor árvore estrita.",
+            "A equivalência de multiset foi verificada apenas em dois seeds (42 e 43) com scale=3; datasets maiores ou árvores com maior profundidade máxima podem alterar o plano escolhido pelo planner e expor divergências não observadas aqui.",
+            "O candidato materializa o fechamento completo na CTE antes do join; em árvores muito profundas ou com alto fator de ramificação, o tamanho da CTE pode pressionar work_mem — não observável neste scale, mas é risco real em produção.",
+            "A diferença entre count(*)+JOIN interno (original) e count(p.id)+LEFT JOIN (candidato) é semanticamente equivalente para o caso de zero produtos, mas deve ser documentada para evitar regressão em refatorações futuras."
+          ],
+          "confidence": 0.82,
+          "durationMs": 51163,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4791,
+            "cache_read_input_tokens": 11109,
+            "output_tokens": 3049,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4791,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 3049,
+                "cache_read_input_tokens": 11109,
+                "cache_creation_input_tokens": 4791,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4791
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "reportedCostUsd": 0.07781969999999999
+        },
+        {
+          "queryId": "Q07",
+          "decision": "original",
+          "rationale": [
+            "O candidato é 2,3× mais lento na mediana (17,925 ms vs 7,848 ms) e o P95 diverge ainda mais (21,209 ms vs 8,082 ms), invalidando a hipótese de que LIMIT por cliente reduziria o custo global de ordenação neste scale.",
+            "O plano LATERAL executa 2000 iterações de Nested Loop, cada uma com Bitmap Heap Scan + Sort interno; o custo estimado pelo planner (158.570) é ~48× maior que o original (3.267), e os tempos medidos confirmam essa desvantagem real, não apenas estimada.",
+            "O original realiza um único Hash Join + Sort global + WindowAgg em um único passe sobre os dados, o que a scale 3 com 2000 clientes STARTUP é estruturalmente mais eficiente do que 2000 buscas de índice independentes."
+          ],
+          "planEvidence": [
+            "Candidate: loops=2000 no nó Limit com actualRows=1 em média indica que a maioria dos clientes STARTUP tem menos de 3 pedidos COMPLETED, fazendo cada iteração subutilizar o LIMIT e desperdiçar overhead de abertura de bitmap.",
+            "Candidate: planner estimou 19 linhas por cliente no Bitmap Heap Scan; o real foi 4 — superestimativa de ~5×, sinalizando estatísticas de correlação status+segment pouco precisas para o planner neste scale.",
+            "Original: Hash Join retornou exatamente 8487 linhas (vs estimativa 16989, fator ~0,5), e o WindowAgg filtrou para 2700 com rn<=3 — plano mais previsível e com menor variância entre min e max (7,742–8,082 ms, spread de 0,34 ms vs 4,66 ms do candidato).",
+            "Ambos retornam 2700 linhas em seeds 42 e 43, confirmando equivalência semântica; a diferença é exclusivamente de desempenho e estabilidade do plano."
+          ],
+          "semanticRisks": [
+            "Nenhum risco semântico identificado: ambas as variantes aplicam ORDER BY total_cents DESC NULLS LAST, id DESC e retornam exatamente os mesmos multisets nos dois seeds testados.",
+            "Risco latente de escala: em datasets muito maiores (scale >>10) com índice composto cobridor em (customer_id, status, total_cents DESC, id DESC), o LATERAL pode inverter o resultado — a decisão atual é válida para scale 3 e deve ser revisitada se o volume de pedidos por cliente crescer significativamente.",
+            "O Bitmap Index Scan do candidato não é um Index-Only Scan; heap fetches adicionais mantêm o custo por iteração alto enquanto o índice não for covering, o que é um risco de regressão caso o índice seja dropped ou recriado sem a coluna total_cents."
+          ],
+          "confidence": 0.84,
+          "durationMs": 37970,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4520,
+            "cache_read_input_tokens": 11109,
+            "output_tokens": 1829,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4520,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 1829,
+                "cache_read_input_tokens": 11109,
+                "cache_creation_input_tokens": 4520,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4520
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "reportedCostUsd": 0.05789369999999999
+        },
+        {
+          "queryId": "Q08",
+          "decision": "candidate",
+          "rationale": [
+            "A candidate substitui três subqueries correlacionadas por uma única passagem de Hash Join + agregação com FILTER, mantendo semântica idêntica: count(o.id) FILTER retorna 0 (não NULL) para clientes sem pedidos, equivalente ao count(*) das subqueries originais, e sum FILTER retorna NULL quando não há COMPLETED, igual ao original.",
+            "O risco documentado de LEFT JOIN produzindo count(*) = 1 não se aplica aqui pois a candidate usa count(o.id): quando o LEFT JOIN produz uma linha com o.id NULL, o COUNT ignora o NULL, resultando em 0 — comportamento correto e igual ao original.",
+            "A equivalência multiset confirmada nos seeds 42 e 43 fornece evidência empírica adicional de que nenhuma divergência semântica foi introduzida."
+          ],
+          "planEvidence": [
+            "O plano original executa 18.000 suboperações de Bitmap Index Scan + Heap Scan + Aggregate (3 subqueries × 6.000 loops), gerando custo estimado de 1.421.854; a candidate resolve tudo em um único Hash Join + Seq Scan com custo estimado de 2.540 — redução de ~560×.",
+            "Tempo de execução mediano: 14,95 ms (candidate) contra 117,37 ms (original), ganho de ~7,8× com p95 de 16,4 ms vs 123,8 ms, faixa estreita indicando comportamento estável sem outliers.",
+            "O Hash Join da candidate produz 63.299 linhas reais contra 60.000 estimadas, indicando leve subestimativa de pedidos por cliente, mas o Aggregate posterior consolida corretamente para 6.000 linhas — sem impacto semântico.",
+            "O planner da candidate opera em espaço de memória previsível (hash de 6.000 clientes), enquanto o original sofre pressão de cache repetida a cada iteração das 6.000 subqueries."
+          ],
+          "semanticRisks": [
+            "count(o.id) vs count(*): sem risco — count de coluna nullable retorna 0 quando todos os valores são NULL (clientes sem pedidos via LEFT JOIN), comportamento idêntico ao count(*) da subquery correlacionada.",
+            "sum FILTER para clientes sem pedidos COMPLETED retorna NULL em ambas as variantes; se a aplicação espera 0, o risco existe igualmente nas duas versões e não é introduzido pela candidate.",
+            "GROUP BY c.id pressupõe que c.id é chave primária ou única em corpus.customers; se não fosse, a candidate poderia colapsar linhas duplicadas — mas a presença de 6.000 linhas na saída (igual ao scan original) confirma unicidade.",
+            "A candidate não preserva a ordem implícita das subqueries (ORDER BY c.id não está presente em nenhuma das variantes); qualquer dependência de ordem no código consumidor precisa ser explicitada."
+          ],
+          "confidence": 0.93,
+          "durationMs": 31243,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4576,
+            "cache_read_input_tokens": 11109,
+            "output_tokens": 1645,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4576,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 1645,
+                "cache_read_input_tokens": 11109,
+                "cache_creation_input_tokens": 4576,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4576
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "reportedCostUsd": 0.0554697
+        },
+        {
+          "queryId": "Q09",
+          "decision": "candidate",
+          "rationale": [
+            "Candidate substitui date_trunc() na coluna por intervalo semiaberto, eliminando a opacificação do índice e reduzindo o custo estimado de 1737.09 para 1139.39 — confirmando a hipótese prévia sobre placed_at.",
+            "Mediana de execução cai de 7.546ms para 3.122ms (~2.4×); p95 de 10.767ms para 4.437ms, ganho consistente ao longo das 7 repetições.",
+            "Equivalência de multiset confirmada em dois seeds (42 e 43) com actualRows idênticas (4170), eliminando dúvida sobre divergência semântica no intervalo de fronteira."
+          ],
+          "planEvidence": [
+            "Original executa Seq Scan em orders (custo 1550.0) porque date_trunc() na coluna impede uso de índice; estimativa de 255 linhas contra 4170 reais representa subestimação de ~16×, risco crescente em escalas maiores.",
+            "Candidate usa Bitmap Index Scan (custo 68.99) + Bitmap Heap Scan (custo 655.25); estimativa de 4137 contra 4170 reais — erro inferior a 1%, planejador confiável.",
+            "A subestimação severa do original pode forçar planos subótimos (ex.: Nested Loop em vez de Hash Join) conforme o volume cresce; candidate elimina essa fragilidade.",
+            "Custo do Hash sobre customers (98.0) e do Seq Scan em customers (98.0) são idênticos nos dois planos; toda a diferença de custo (~598 unidades) origina-se exclusivamente no acesso a orders."
+          ],
+          "semanticRisks": [
+            "Equivalência válida somente com timezone=UTC; reimplantação em ambiente com fuso distinto pode produzir divergência para placed_at exatamente na virada do mês — risco conhecido, não generalizar.",
+            "Intervalo semiaberto exclui '2024-07-01 00:00:00+00' exatamente, comportamento idêntico ao date_trunc para junho UTC; sem risco de inclusão ou exclusão indevida de linhas.",
+            "Remoção da subquery interna não altera semântica do JOIN; o otimizador aplica push-down equivalente e actualRows confirmam isso."
+          ],
+          "confidence": 0.91,
+          "durationMs": 32809,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4516,
+            "cache_read_input_tokens": 11109,
+            "output_tokens": 2084,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4516,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 2084,
+                "cache_read_input_tokens": 11109,
+                "cache_creation_input_tokens": 4516,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4516
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "reportedCostUsd": 0.0616947
+        },
+        {
+          "queryId": "Q10",
+          "decision": "candidate",
+          "rationale": [
+            "O candidato é ~2,5× mais rápido (mediana 1,532 ms vs 3,836 ms) com P95 estável em 1,61 ms, ganho consistente nos 7 repetições e confirmado em dois seeds.",
+            "O Bitmap Index Scan do candidato confirma uso efetivo do índice GIN no payload, reduzindo custo estimado de 1209,43 para 730,53 (~40%) sem depender de Nested Loop sensível a estimativas ruins.",
+            "A estimativa de linhas do original (1 estimado vs 1091 real, erro ~99,9%) é um risco de escala oculto: Nested Loop amplificado por estimativa quebrada pode regredir severamente com volume maior; o candidato estima 1008 vs 1091 (~7% de erro), sinalizando estatísticas calibradas pelo operador de contenção."
+          ],
+          "planEvidence": [
+            "Bitmap Index Scan no candidato confirma que o índice GIN sobre payload está ativo e sendo usado para o predicado @>; o original usa Seq Scan sobre JSONB sem suporte de índice para ->> e #>>.",
+            "Original: estimativa 1 linha, real 1091 — erro de 109.000%. Nested Loop com esse grau de subestimação é frágil; a qualquer aumento de volume o planner pode não reconsiderar o plano.",
+            "Candidato: estimativa 1008, real 1091 — erro de ~7,5%. Hash Join com estimativa próxima da realidade é robusto a crescimento de dados.",
+            "Custo estimado do candidato (730,53) vs original (1209,43): redução de ~40%, coerente com a eliminação do Seq Scan sobre JSONB e substituição por varredura de bitmap."
+          ],
+          "semanticRisks": [
+            "Risco de paridade de tipo JSON: @> exige correspondência exata de tipo JSON — se algum registro armazenar o campo type como número ou booleano, o candidato não vai matchá-lo, enquanto o original o matcharia via coerção de texto por ->>. Validar distribuição de tipos no payload antes de promover.",
+            "JSON null explícito: payload->>'type' retorna a string 'null' para JSON null, enquanto @> não satisfaz '\"type\":\"checkout\"' para JSON null — registros legados ou malformados podem divergir. O knownRisk já documenta esse limite; aceitável no schema controlado atual.",
+            "DISTINCT ON vs ROW_NUMBER com ORDER BY idêntico (occurred_at DESC, id DESC): semanticamente equivalentes para o caso de último evento por partição — sem gap identificado nessa dimensão.",
+            "Ausência de chave / path inexistente: ambos os predicados retornam falso/nulo quando a chave não existe, portanto o comportamento de exclusão de registros sem o path é equivalente nos dois variants."
+          ],
+          "confidence": 0.82,
+          "durationMs": 40494,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4613,
+            "cache_read_input_tokens": 11109,
+            "output_tokens": 2204,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 4613,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 2204,
+                "cache_read_input_tokens": 11109,
+                "cache_creation_input_tokens": 4613,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4613
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          },
+          "reportedCostUsd": 0.0640767
+        }
+      ],
+      "artifactDirectory": "docs/experiments/llm-curation/claude-sonnet-4-6"
     }
   ]
 }

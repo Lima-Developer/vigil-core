@@ -35,7 +35,7 @@ permanece nulo. Aplicando aos tokens reportados as tarifas API padrão, short-co
 - GPT-6 Sol: **US$ 0,083191** de equivalência tarifária;
 - Claude Sonnet 5.5: **US$ 0,158382** usando a mesma quantidade de tokens apenas como projeção.
 
-A projeção Claude não é benchmark entre provedores: a CLI `claude` não estava instalada, logo não houve chamada,
+A projeção Claude abaixo não era benchmark entre provedores em 12/11/2026: a CLI `claude` não estava instalada, logo não houve chamada,
 tokenização, latência ou resposta Claude. O arquivo de preços versionado e as URLs oficiais ficam em
 [`pricing-2026-11-12.json`](../../../tools/complex-query-lab/pricing-2026-11-12.json). O cálculo reproduzível é:
 
@@ -53,6 +53,18 @@ python3 tools/complex-query-lab/summarize_curation.py \
 - A IA recebeu métricas após a validação; portanto este experimento mede curadoria baseada em evidências, não geração.
 - Confiança é autorrelatada pelo modelo e não uma probabilidade calibrada.
 - A aprovação final continua humana e deve registrar motivação, inclusive quando rejeitar uma recomendação da IA.
+
+## Execução real posterior: Claude Sonnet 4.6 — 13/11/2026
+
+A coleta foi concluída posteriormente em uma máquina Windows autenticada, usando o mesmo corpus sintético e as dez
+decisões pareadas. Foram preservados manifest, envelopes brutos do Claude Code e respostas validadas em
+[`claude-sonnet-4-6`](claude-sonnet-4-6/). O CLI reportou **US$ 0,685617**, 405,093 s de duração acumulada,
+50.512 tokens de cache criado, 106.849 de cache lido e 23.362 de saída. Os 20 tokens de input são apenas a instrução
+curta enviada ao CLI; o contexto grande aparece contabilizado nos campos de cache do provedor.
+
+As decisões coincidiram com a seleção medida em Q02–Q10. Em Q01 o Claude manteve a original; essa é uma escolha
+cautelosa, mas não demonstra superioridade universal porque os dois seeds têm sinais opostos. Portanto, o dashboard
+mantém Q01 como caso que exige revisão humana antes de qualquer promoção.
 
 ## Próxima coleta: Claude Code em outra máquina
 

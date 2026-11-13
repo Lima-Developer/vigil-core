@@ -1,0 +1,22 @@
+{
+  "queryId": "Q03",
+  "decision": "original",
+  "rationale": [
+    "O original é 39% mais rápido na mediana (11,5 ms vs 16,0 ms) e 66% mais rápido no P95 (11,7 ms vs 19,4 ms), diferença consistente ao longo das 7 repetições, não ruído.",
+    "O planner subestimou em ~10.000× as linhas intermediárias do candidato (estimou 1, obteve 10.673), escolhendo Nested Loop + Sort em vez de Hash Join puro; o custo estimado menor do candidato (2537 vs 3033) é artefato de má calibração, não de ganho real.",
+    "O original produz estimativas precisas (10.702 estimado vs 10.673 real) e executa dois Hash Joins encadeados sem Sort, plano mais estável e previsível para operações de anti-join nesta escala."
+  ],
+  "planEvidence": [
+    "Sort node presente no candidato e ausente no original é o principal vetor de overhead: materializa 10.673 linhas inesperadas antes do Aggregate, inflando P95 para 19,4 ms.",
+    "Nested Loop com Index Scan (loops=10.673) no candidato confirma que o planner apostou em cardinalidade ínfima; em scale maior essa escolha tende a piorar de forma super-linear.",
+    "Original alcança Hash Join em dois níveis com desvio relativo de estimativa < 0,1%; isso indica estatísticas confiáveis e plano estável entre execuções.",
+    "Equivalência de multiset verificada nos seeds 42 e 43 confirma que a diferença é exclusivamente de plano e desempenho, sem divergência semântica detectável."
+  ],
+  "semanticRisks": [
+    "LEFT JOIN com IS NULL é semanticamente equivalente ao NOT EXISTS quando o filtro de status está na cláusula ON; os seeds corroboram essa equivalência nesta base.",
+    "Pagamentos não-PAID não participam da junção do candidato (a condição ON exclui status ≠ 'PAID'), portanto não geram linhas extras que inflariam count ou sum.",
+    "Pagamentos PAID duplicados por pedido produziriam múltiplas linhas não-nulas no candidato, todas removidas pelo IS NULL; o count não seria inflado.",
+    "Misestimação de 10.000× é risco operacional: em escalas maiores ou com distribuições skewed o planner pode regredir para planos ainda mais custosos no candidato."
+  ],
+  "confidence": 0.85
+}
