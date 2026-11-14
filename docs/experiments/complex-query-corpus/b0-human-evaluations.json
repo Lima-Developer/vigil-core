@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "protocol": "B0",
+  "title": "Avaliação humana independente — corpus sintético Vigil",
+  "decisionVocabulary": ["original", "candidate", "human_review"],
+  "evaluations": [
+    {"queryId":"Q01","decision":"human_review","summary":"Agregação antes do filtro desperdiça grupos; comparar original, sem MATERIALIZED e reescrita, com e sem índice parcial."},
+    {"queryId":"Q02","decision":"human_review","summary":"Eliminar probes correlacionados, mas validar a alternativa por volume e seletividade antes de promover."},
+    {"queryId":"Q03","decision":"original","summary":"NOT EXISTS produziu Hash Anti Join estável; LEFT JOIN com filtro nulo induziu erro de cardinalidade e Nested Loop frágil."},
+    {"queryId":"Q04","decision":"candidate","summary":"Pré-agregação elimina fan-out, DISTINCT e spill; validar correlação do índice e comportamento em cache frio."},
+    {"queryId":"Q05","decision":"original","summary":"Variantes idênticas; não há alteração a promover."},
+    {"queryId":"Q06","decision":"candidate","summary":"Fecho transitivo único evita recursão e join repetidos; proteger a hierarquia contra ciclos."},
+    {"queryId":"Q07","decision":"original","summary":"LATERAL sem índice ordenado adequado multiplica probes e sorts; avaliar somente sob outra distribuição e índice compatível."},
+    {"queryId":"Q08","decision":"candidate","summary":"Agregação condicional elimina 18 mil probes; preservar LEFT JOIN e filtros em FILTER ou ON."},
+    {"queryId":"Q09","decision":"candidate","summary":"Intervalo semiaberto torna o predicado sargável; definir explicitamente o fuso do mês de negócio."},
+    {"queryId":"Q10","decision":"candidate","summary":"Containment JSONB usa GIN e evita Seq Scan/probes por cliente; validar seletividade e tipos JSON em produção."}
+  ]
+}

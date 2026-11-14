@@ -171,3 +171,64 @@ Codex e Claude.
 Fontes: [OpenRouter Chat Completions](https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request),
 [Qwen3.8-27B no OpenRouter](https://openrouter.ai/qwen/qwen3.8-27b) e
 [referência do Claude Code](https://docs.anthropic.com/en/docs/claude-code/cli-usage).
+
+## Protocolo experimental B0–B3
+
+O repositório contém agora um protocolo reexecutável para separar a decisão humana, regras
+determinísticas e curadoria por LLM. O baseline B0 é
+[`b0-human-evaluations.json`](../complex-query-corpus/b0-human-evaluations.json): ele foi preenchido
+por avaliador humano antes de comparar os resultados dos protocolos seguintes. Não o altere durante a
+execução B1–B3.
+
+| Protocolo | Papel | Entrada permitida |
+|---|---|---|
+| B0 | Rubrica humana | SQL, planos e métricas apresentados ao avaliador |
+| B1 | Regras determinísticas | equivalência nos seeds 42/43, controle idêntico e mediana dos dois seeds |
+| B2 | LLM sem regras | contrato semântico, SQL versionado, métricas e planos compactos |
+| B3 | LLM híbrido | entrada B2 + decisão e evidências produzidas pelo B1; exige referências de grounding |
+
+As regras B1 não fingem provar equivalência universal: elas promovem uma variante somente se a
+equivalência multiconjunto passou nos dois seeds e a vantagem de mediana for de ao menos 10% nos dois.
+Resultado inconsistente é encaminhado a `human_review`. B2 e B3 não executam SQL, não recebem dados
+do target, credenciais ou rede de banco; utilizam apenas o corpus sintético versionado.
+
+Na máquina com Claude Code autenticado, a sequência completa é:
+
+```sh
+# Na raiz do repositório. Cada diretório de saída deve ser novo.
+stamp=$(date +%Y%m%d%H%M%S)
+base="/tmp/vigil-b0-b3-$stamp"
+
+python3 tools/complex-query-lab/run_b1_deterministic.py \
+  --output "$base/b1"
+
+# Prévia local: não chama Claude nem consome janela.
+python3 tools/complex-query-lab/run_claude_protocol.py \
+  --protocol B2 --model sonnet --output "$base/b2-dry-run" --dry-run
+
+python3 tools/complex-query-lab/run_claude_protocol.py \
+  --protocol B2 --model sonnet --output "$base/b2"
+
+python3 tools/complex-query-lab/run_claude_protocol.py \
+  --protocol B3 --model sonnet --b1-directory "$base/b1" --output "$base/b3"
+
+python3 tools/complex-query-lab/summarize_b0_b3.py \
+  --b0 docs/experiments/complex-query-corpus/b0-human-evaluations.json \
+  --b1-directory "$base/b1" \
+  --b2-directory "$base/b2" \
+  --b3-directory "$base/b3" \
+  --output "$base/b0-b3-summary.json"
+```
+
+Em PowerShell, substitua as três primeiras linhas por:
+
+```powershell
+$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$base = ".\docs\experiments\b0-b3-$stamp"
+```
+
+e use `python` no lugar de `python3`. A síntese final não chama provedores: ela informa concordância
+exata com B0, promoções inseguras (B1/B2/B3 promovem candidata quando B0 não a aprova), aprovações
+humanas não reproduzidas e os tokens/durações reportados pelos manifestos. Copie o diretório completo
+`$base` de volta para a evidência do experimento antes de versioná-lo; os envelopes brutos de Claude e
+as respostas estruturadas são necessários para auditoria e reprodutibilidade.
