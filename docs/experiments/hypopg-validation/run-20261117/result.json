@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "executedAtUtc": "2026-11-17T20:36:29.067890+00:00",
+  "environment": {
+    "image": "ghcr.io/digib/postgres:18",
+    "database": "ephemeral Docker PostgreSQL",
+    "data": "synthetic"
+  },
+  "safety": {
+    "targetDatabaseAccessed": false,
+    "physicalIndexCreated": false,
+    "explainAnalyzeUsedWithHypoPG": false,
+    "containerRemovalRequested": true
+  },
+  "query": "SELECT count(*), sum(total_cents) FROM lab_orders WHERE customer_id = 4242 AND status = 'COMPLETED'",
+  "hypotheticalIndexDdl": "CREATE INDEX ON lab_orders (customer_id) INCLUDE (total_cents) WHERE status = 'COMPLETED'",
+  "registeredHypotheticalIndex": "<13640>btree_lab_orders_customer_id_total_cents",
+  "visibleHypotheticalIndexes": [
+    "<13640>btree_lab_orders_customer_id_total_cents"
+  ],
+  "before": {
+    "nodeType": "Aggregate",
+    "totalCost": 4203.98,
+    "planRows": 1,
+    "indexName": null
+  },
+  "after": {
+    "nodeType": "Aggregate",
+    "totalCost": 63.44,
+    "planRows": 1,
+    "indexName": "<13640>btree_lab_orders_customer_id_total_cents"
+  }
+}

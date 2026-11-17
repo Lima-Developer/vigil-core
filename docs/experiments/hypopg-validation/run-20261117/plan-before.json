@@ -1,0 +1,60 @@
+{
+  "Plan": {
+    "Node Type": "Aggregate",
+    "Strategy": "Plain",
+    "Partial Mode": "Finalize",
+    "Parallel Aware": false,
+    "Async Capable": false,
+    "Startup Cost": 4203.97,
+    "Total Cost": 4203.98,
+    "Plan Rows": 1,
+    "Plan Width": 16,
+    "Disabled": false,
+    "Plans": [
+      {
+        "Node Type": "Gather",
+        "Parent Relationship": "Outer",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 4203.75,
+        "Total Cost": 4203.96,
+        "Plan Rows": 2,
+        "Plan Width": 16,
+        "Disabled": false,
+        "Workers Planned": 1,
+        "Single Copy": false,
+        "Plans": [
+          {
+            "Node Type": "Aggregate",
+            "Strategy": "Plain",
+            "Partial Mode": "Partial",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Startup Cost": 3203.75,
+            "Total Cost": 3203.76,
+            "Plan Rows": 1,
+            "Plan Width": 16,
+            "Disabled": false,
+            "Plans": [
+              {
+                "Node Type": "Seq Scan",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": true,
+                "Async Capable": false,
+                "Relation Name": "lab_orders",
+                "Alias": "lab_orders",
+                "Startup Cost": 0.0,
+                "Total Cost": 3203.71,
+                "Plan Rows": 9,
+                "Plan Width": 4,
+                "Disabled": false,
+                "Filter": "((customer_id = 4242) AND (status = 'COMPLETED'::text))"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

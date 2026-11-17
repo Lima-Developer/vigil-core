@@ -1,0 +1,45 @@
+{
+  "Plan": {
+    "Node Type": "Aggregate",
+    "Strategy": "Plain",
+    "Partial Mode": "Simple",
+    "Parallel Aware": false,
+    "Async Capable": false,
+    "Startup Cost": 63.43,
+    "Total Cost": 63.44,
+    "Plan Rows": 1,
+    "Plan Width": 16,
+    "Disabled": false,
+    "Plans": [
+      {
+        "Node Type": "Bitmap Heap Scan",
+        "Parent Relationship": "Outer",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Relation Name": "lab_orders",
+        "Alias": "lab_orders",
+        "Startup Cost": 4.17,
+        "Total Cost": 63.35,
+        "Plan Rows": 16,
+        "Plan Width": 4,
+        "Disabled": false,
+        "Recheck Cond": "((customer_id = 4242) AND (status = 'COMPLETED'::text))",
+        "Plans": [
+          {
+            "Node Type": "Bitmap Index Scan",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Index Name": "<13640>btree_lab_orders_customer_id_total_cents",
+            "Startup Cost": 0.0,
+            "Total Cost": 4.17,
+            "Plan Rows": 16,
+            "Plan Width": 0,
+            "Disabled": false,
+            "Index Cond": "(customer_id = 4242)"
+          }
+        ]
+      }
+    ]
+  }
+}
