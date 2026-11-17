@@ -7,7 +7,7 @@ CREATE TABLE analysis_case (
         CHECK (typeof(created_at) = 'text'
             AND created_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]Z'),
     status                        TEXT    NOT NULL
-        CHECK (status IN ('DISCOVERED', 'TRIAGED', 'EVIDENCE_COLLECTED')),
+        CHECK (status IN ('DISCOVERED', 'TRIAGED', 'EVIDENCE_COLLECTED', 'SANITIZED', 'DIAGNOSED', 'HYPOTHESIS_PROPOSED', 'VALIDATING', 'VALIDATED', 'INVALIDATED', 'INCONCLUSIVE', 'AWAITING_HUMAN', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED', 'ARCHIVED')),
     version                       INTEGER NOT NULL DEFAULT 0
         CHECK (typeof(version) = 'integer' AND version >= 0),
     query_fingerprint             TEXT
@@ -30,9 +30,9 @@ CREATE TABLE case_event (
     sequence    INTEGER NOT NULL
         CHECK (typeof(sequence) = 'integer' AND sequence > 0),
     from_status TEXT    NOT NULL
-        CHECK (from_status IN ('DISCOVERED', 'TRIAGED', 'EVIDENCE_COLLECTED')),
+        CHECK (from_status IN ('DISCOVERED', 'TRIAGED', 'EVIDENCE_COLLECTED', 'SANITIZED', 'DIAGNOSED', 'HYPOTHESIS_PROPOSED', 'VALIDATING', 'VALIDATED', 'INVALIDATED', 'INCONCLUSIVE', 'AWAITING_HUMAN', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED', 'ARCHIVED')),
     to_status   TEXT    NOT NULL
-        CHECK (to_status IN ('DISCOVERED', 'TRIAGED', 'EVIDENCE_COLLECTED')),
+        CHECK (to_status IN ('DISCOVERED', 'TRIAGED', 'EVIDENCE_COLLECTED', 'SANITIZED', 'DIAGNOSED', 'HYPOTHESIS_PROPOSED', 'VALIDATING', 'VALIDATED', 'INVALIDATED', 'INCONCLUSIVE', 'AWAITING_HUMAN', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED', 'ARCHIVED')),
     actor       TEXT    NOT NULL
         CHECK (typeof(actor) = 'text' AND length(trim(actor, char(32, 9, 10, 13))) > 0),
     reason      TEXT    NOT NULL

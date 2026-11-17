@@ -59,7 +59,7 @@ class AnalysisCaseRowMapperTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"ARCHIVED", "", "triaged"})
+    @ValueSource(strings = {"UNKNOWN_STATUS", "", "triaged"})
     void shouldRejectUnknownStatusInsteadOfDefaulting(String status) {
         assertThrows(CorruptAnalysisCaseDataException.class, () -> read(valid(status), mapper::read));
     }
