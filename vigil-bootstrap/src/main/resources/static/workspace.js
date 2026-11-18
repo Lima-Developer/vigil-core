@@ -239,7 +239,11 @@
   document.addEventListener('visibilitychange',startTelemetry);
   function renderCases() {
     const root=section('caso');
-    root.innerHTML='<div class="view-toolbar"><span class="subtle">Acervo de queries complexas</span><label class="search-field">'+icon('caso')+'<input id="case-search" type="search" aria-label="Filtrar queries" placeholder="Filtrar por ID ou cenário"></label></div><div class="case-layout"><div class="dash-card case-list" aria-label="Queries do acervo"></div><div class="case-detail"></div></div><details class="manual-case"><summary>Caso de triagem local · identidade e histórico persistidos fora do modo demo</summary><div id="manual-case-host"></div></details>';
+    const isStaticPreview=location.port==='8767';
+    const rehearsalCta=isStaticPreview
+      ?'<a class="text-link persisted-case-link" href="http://127.0.0.1:8768/#caso">Abrir instância persistida →</a>'
+      :'<span class="persisted-case-state">Fluxo local carregado abaixo</span>';
+    root.innerHTML='<section id="ensaio-persistido" class="persisted-case-section" aria-labelledby="persisted-case-title"><div class="persisted-case-heading"><div><p class="eyebrow">ENSAIO DA DEFESA</p><h2 id="persisted-case-title">Caso persistido com decisão humana</h2><p class="card-copy">Acompanhe a sequência auditável do caso local: descoberta, triagem, evidências, validação e decisão. Nenhuma alteração é aplicada ao banco monitorado.</p></div>'+rehearsalCta+'</div><div id="manual-case-host"></div></section><div class="view-toolbar"><span class="subtle">Acervo de queries complexas</span><label class="search-field"><span class="sr-only">Filtrar consultas do acervo</span>'+icon('caso')+'<input id="case-search" type="search" aria-label="Filtrar consultas por ID ou cenário" placeholder="Filtrar por ID ou cenário" autocomplete="off"></label></div><div class="case-layout"><div class="dash-card case-list" aria-label="Queries do acervo"></div><div class="case-detail"></div></div>';
     $('#manual-case-host').append(caseContent);
     $('#case-search').oninput=renderCaseList;
     renderCaseList();

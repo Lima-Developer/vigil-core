@@ -375,7 +375,19 @@ button:hover { transform: none; }
 /* Forms, tables and case review */
 .view-toolbar { color: var(--ax-text-secondary); }.secondary-button { background: var(--ax-surface); border-color: var(--ax-border-strong); color: var(--ax-text); font-weight: 600; }.secondary-button:hover { background: var(--ax-surface-muted); }
 .notice, .notice.demo { border-color: color-mix(in srgb, var(--ax-warning) 32%, var(--ax-border)); background: var(--notice); color: var(--notice-ink); border-radius: var(--ax-radius-md); }
-.search-field { background: var(--ax-surface); border-color: var(--ax-border-strong); border-radius: var(--ax-radius-sm); }.search-field:focus-within { border-color: var(--ax-accent); box-shadow: 0 0 0 3px var(--ax-accent-muted); }.search-field input { color: var(--ax-text); }
+.search-field { flex: 0 1 320px; min-width: min(100%, 240px); min-height: 42px; background: var(--ax-surface); border-color: var(--ax-border-strong); border-radius: var(--ax-radius-sm); }
+.search-field:focus-within { border-color: var(--ax-accent); box-shadow: 0 0 0 3px var(--ax-accent-muted); }
+.search-field input { flex: 1 1 auto; width: 100%; min-width: 0; min-height: 40px; margin: 0; padding: 0; border: 0; outline: 0; box-shadow: none; color: var(--ax-text); line-height: 1.4; }
+.search-field input:focus, .search-field input:focus-visible { outline: 0; box-shadow: none; }
+.search-field input::-webkit-search-cancel-button { cursor: pointer; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.persisted-case-section { margin: 0 0 22px; padding: 18px; border: 1px solid var(--ax-border); border-radius: var(--ax-radius-lg); background: var(--ax-surface); box-shadow: 0 1px 2px rgba(5,54,89,.04); }
+.persisted-case-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--ax-border); }
+.persisted-case-heading h2 { margin: 3px 0 6px; color: var(--ax-text); font-size: 17px; font-weight: 650; }
+.persisted-case-heading .card-copy { max-width: 730px; margin: 0; }
+.persisted-case-link { flex: none; min-height: 44px; display: inline-flex; align-items: center; white-space: nowrap; }
+.persisted-case-state { flex: none; margin-top: 3px; padding: 6px 9px; border-radius: 999px; background: var(--ax-success-muted); color: var(--ax-success); font-size: 11px; font-weight: 650; white-space: nowrap; }
+.persisted-case-section .legacy-case.content { padding-top: 18px; }
 .case-layout { gap: 12px; grid-template-columns: 258px minmax(0, 1fr); }.case-list { padding: 6px; }.case-row { border-radius: var(--ax-radius-md); }.case-row:hover { background: var(--ax-surface-muted); }.case-row.selected { background: var(--ax-accent-muted); border-color: transparent; box-shadow: inset 3px 0 0 var(--ax-accent); }.badge { border-color: var(--ax-border-strong); border-radius: 999px; color: var(--ax-text-secondary); font-weight: 600; }
 .case-detail .kpi-card { background: var(--ax-surface-muted); }.sql { background: #101a24; color: #d7e5f7; border: 1px solid rgba(194, 218, 242, .16); border-radius: var(--ax-radius-md); }.phase-track .complete { border-color: var(--ax-accent); color: var(--ax-text); }.plan-tree ul { border-left-color: var(--ax-border-strong); }
 table { color: var(--ax-text); } th, td { border-bottom-color: var(--ax-border); } th { background: var(--ax-surface-muted); color: var(--ax-text-secondary); font-weight: 650; } tr:hover td { background: var(--ax-surface-muted); }
@@ -402,6 +414,11 @@ textarea { border-color: var(--ax-border-strong); background: var(--ax-surface);
   .kpi-card { padding: 13px; }
   .view-toolbar { align-items: stretch; }
   .case-layout { display: block; }
+  .persisted-case-section { padding: 14px; margin-bottom: 18px; }
+  .persisted-case-heading { display: block; }
+  .persisted-case-link { margin-top: 8px; }
+  .persisted-case-state { display: inline-block; margin-top: 10px; white-space: normal; }
+  .search-field { flex-basis: 100%; width: 100%; min-width: 0; }
   .case-list { display: block; max-height: 286px; overflow-y: auto; margin-bottom: 12px; padding: 5px; }
   .case-row { min-height: 78px; padding: 11px 10px; }
   .case-row > strong { margin: 5px 0; line-height: 1.45; }
