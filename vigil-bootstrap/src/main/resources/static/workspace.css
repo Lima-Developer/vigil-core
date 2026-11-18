@@ -387,5 +387,31 @@ textarea { border-color: var(--ax-border-strong); background: var(--ax-surface);
 .audit-events li { border-bottom-color: var(--ax-border); }.audit-events p, .audit-events time { color: var(--ax-text-secondary); }
 
 :focus-visible { outline: 2px solid var(--ax-accent); outline-offset: 3px; }
-@media (max-width: 1000px) { :root { --rail: 204px; } .workspace { padding: 18px 18px 32px; } .overview-layout { grid-template-columns: 1fr; } }
-@media (max-width: 750px) { .workspace { padding: 16px 14px 28px; } .dash-card, .panel, .case-summary { padding: 14px; } .workspace-header { padding-inline: 10px; } .kpi-card { padding: 13px; } }
+@media (max-width: 1000px) {
+  :root { --rail: 204px; }
+  .workspace { padding: 18px 18px 32px; }
+  .overview-layout { grid-template-columns: 1fr; }
+  /* This must follow the desktop case-grid override above. */
+  .case-layout { grid-template-columns: minmax(0, 1fr); }
+  .case-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 320px; overflow-y: auto; }
+}
+@media (max-width: 750px) {
+  .workspace { padding: 16px 14px 28px; }
+  .dash-card, .panel, .case-summary { padding: 14px; }
+  .workspace-header { padding-inline: 10px; }
+  .kpi-card { padding: 13px; }
+  .view-toolbar { align-items: stretch; }
+  .case-layout { display: block; }
+  .case-list { display: block; max-height: 286px; overflow-y: auto; margin-bottom: 12px; padding: 5px; }
+  .case-row { min-height: 78px; padding: 11px 10px; }
+  .case-row > strong { margin: 5px 0; line-height: 1.45; }
+  .case-detail { gap: 10px; min-width: 0; }
+  .detail-heading { align-items: flex-start; gap: 10px; }
+  .case-detail .kpi-grid { grid-template-columns: 1fr; gap: 8px; }
+  .case-detail .kpi-card { min-height: 0; }
+  .query-panels, .plan-columns { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 12px; }
+  .sql { max-height: 260px; padding: 12px; font-size: 10px; overflow: auto; }
+  .phase-track { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 14px 0; }
+  .phase-track li { overflow-wrap: anywhere; }
+  .table-wrap { margin-inline: -14px; padding-inline: 14px; overflow-x: auto; }
+}
