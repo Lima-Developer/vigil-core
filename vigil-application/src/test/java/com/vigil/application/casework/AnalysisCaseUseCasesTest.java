@@ -8,18 +8,26 @@ import com.vigil.application.port.out.interfaces.Clock;
 import com.vigil.application.port.out.interfaces.IdGenerator;
 import com.vigil.core.domain.AnalysisCase;
 import com.vigil.core.domain.AnalysisCaseDiscovered;
+import com.vigil.core.domain.Evidence;
+import com.vigil.core.domain.PlanSummaryEvidencePayload;
 import com.vigil.core.domain.QueryTriaged;
+import com.vigil.core.domain.TransitionMetadata;
 import com.vigil.core.domain.ObservationWindow;
 import com.vigil.core.domain.ObservedQuery;
 import com.vigil.core.domain.ObservedQueryMetrics;
 import com.vigil.core.domain.QueryFingerprint;
 import com.vigil.core.domain.enums.CaseStatus;
 import com.vigil.core.domain.enums.CommandType;
+import com.vigil.core.domain.enums.EvidenceConfidence;
+import com.vigil.core.domain.enums.EvidenceSource;
+import com.vigil.core.domain.enums.PlanNodeType;
 import com.vigil.core.domain.enums.TelemetrySource;
+import com.vigil.core.domain.enums.ValidationOutcome;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -153,6 +161,36 @@ class AnalysisCaseUseCasesTest {
         );
     }
 
+    @Test
+    void shouldRecordAnAuditableHumanDecisionOnlyAfterHumanReviewIsReady() {
+        var repository = new FakeAnalysisCaseRepository();
+        var analysisCase = awaitingHumanReviewCase();
+        repository.save(analysisCase);
+        var useCase = new RecordHumanDecisionUseCase(repository, fixedClock());
+
+        useCase.execute(new RecordHumanDecisionCommand(NEW_CASE_ID, HumanDecision.APPROVE,
+                "Evidências sintéticas suficientes para aprovar a recomendação.", "reviewer"));
+
+        assertAll(
+                () -> assertEquals(CaseStatus.APPROVED, analysisCase.status()),
+                () -> assertEquals("reviewer", analysisCase.events().getLast().actor()),
+                () -> assertEquals(2, repository.saves())
+        );
+    }
+
+    @Test
+    void shouldRejectHumanDecisionBeforeHumanReviewWithoutPersisting() {
+        var repository = new FakeAnalysisCaseRepository();
+        var analysisCase = AnalysisCase.discover(NEW_CASE_ID, NOW);
+        repository.save(analysisCase);
+        var useCase = new RecordHumanDecisionUseCase(repository, fixedClock());
+
+        assertThrows(InvalidAnalysisCaseTransition.class, () -> useCase.execute(
+                new RecordHumanDecisionCommand(NEW_CASE_ID, HumanDecision.REJECT,
+                        "Ainda não existe recomendação a revisar.", "reviewer")));
+        assertEquals(1, repository.saves());
+    }
+
     private static DiscoverObservedQueryCommand discoveryCommand(String idempotencyKey) {
         return new DiscoverObservedQueryCommand(observedQuery(), idempotencyKey);
     }
@@ -171,6 +209,24 @@ class AnalysisCaseUseCasesTest {
 
     private static Clock fixedClock() {
         return () -> NOW;
+    }
+
+    private static AnalysisCase awaitingHumanReviewCase() {
+        var analysisCase = AnalysisCase.discover(NEW_CASE_ID, NOW);
+        var metadata = new TransitionMetadata("system", "Laboratório sintético", NOW);
+        analysisCase.triage(metadata);
+        var payload = new PlanSummaryEvidencePayload(List.of(PlanNodeType.SEQUENTIAL_SCAN), 100,
+                Optional.of(BigDecimal.TEN));
+        analysisCase.collectEvidence(new Evidence(UUID.randomUUID(), NEW_CASE_ID, payload.type(),
+                EvidenceSource.POSTGRESQL_EXPLAIN, NOW, "test", EvidenceConfidence.HIGH, payload, Optional.empty()),
+                "system", NOW);
+        analysisCase.sanitize(metadata);
+        analysisCase.diagnose(metadata);
+        analysisCase.proposeHypothesis(metadata);
+        analysisCase.startValidation(metadata);
+        analysisCase.recordValidation(ValidationOutcome.VALIDATED, metadata);
+        analysisCase.prepareRecommendation(metadata);
+        return analysisCase;
     }
 
     private static final class FixedIdGenerator implements IdGenerator {

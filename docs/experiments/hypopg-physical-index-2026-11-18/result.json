@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "executedAtUtc": "2026-11-18T12:56:51.091857+00:00",
+  "environment": {
+    "image": "postgres:16.4",
+    "database": "ephemeral Docker PostgreSQL",
+    "data": "200000 deterministic synthetic rows"
+  },
+  "safety": {
+    "targetDatabaseAccessed": false,
+    "physicalIndexCreated": true,
+    "explainAnalyzeUsed": true,
+    "containerRemovalRequested": true
+  },
+  "query": "SELECT count(*), sum(total_cents) FROM lab_orders WHERE customer_id = 4242 AND status = 'COMPLETED'",
+  "physicalIndexDdl": "CREATE INDEX lab_orders_customer_completed_cover_idx ON lab_orders (customer_id) INCLUDE (total_cents) WHERE status = 'COMPLETED'",
+  "before": {
+    "nodeType": "Aggregate",
+    "totalCost": 4203.88,
+    "actualTotalTimeMs": 4.348,
+    "executionTimeMs": 4.372,
+    "planningTimeMs": 0.139,
+    "sharedHitBlocks": 1439,
+    "sharedReadBlocks": 0,
+    "indexName": null
+  },
+  "after": {
+    "nodeType": "Aggregate",
+    "totalCost": 4.79,
+    "actualTotalTimeMs": 0.032,
+    "executionTimeMs": 0.051,
+    "planningTimeMs": 0.151,
+    "sharedHitBlocks": 1,
+    "sharedReadBlocks": 3,
+    "indexName": "lab_orders_customer_completed_cover_idx"
+  }
+}

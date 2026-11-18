@@ -11,6 +11,7 @@ import com.vigil.adapters.postgres.PostgresPreflightProbes;
 import com.vigil.adapters.postgres.PostgresExecutionPlanSource;
 import com.vigil.adapters.sqlite.SqliteWorkspaceTelemetryHistory;
 import com.vigil.application.casework.DiscoverObservedQueryUseCase;
+import com.vigil.application.casework.RecordHumanDecisionUseCase;
 import com.vigil.application.casework.TriageAnalysisCaseUseCase;
 import com.vigil.application.configuration.StorageConfiguration;
 import com.vigil.application.configuration.TargetProfile;
@@ -117,6 +118,9 @@ class VigilWiring {
     @Bean TriageAnalysisCaseUseCase triageAnalysisCaseUseCase(AnalysisCaseRepository repository,
                                                               Clock clock, IdGenerator ids) {
         return new TriageAnalysisCaseUseCase(repository, clock, ids);
+    }
+    @Bean RecordHumanDecisionUseCase recordHumanDecisionUseCase(AnalysisCaseRepository repository, Clock clock) {
+        return new RecordHumanDecisionUseCase(repository, clock);
     }
 
     @Bean CaseFlow caseFlow(DiscoverObservedQueryUseCase discover, TriageAnalysisCaseUseCase triage,

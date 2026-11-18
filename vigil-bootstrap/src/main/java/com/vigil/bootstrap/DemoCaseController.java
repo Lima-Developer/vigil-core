@@ -3,6 +3,9 @@ package com.vigil.bootstrap;
 import com.vigil.adapters.postgres.PostgresExecutionPlanSource;
 import com.vigil.application.casework.DiscoverObservedQueryCommand;
 import com.vigil.application.casework.DiscoverObservedQueryUseCase;
+import com.vigil.application.casework.HumanDecision;
+import com.vigil.application.casework.RecordHumanDecisionCommand;
+import com.vigil.application.casework.RecordHumanDecisionUseCase;
 import com.vigil.application.casework.TriageAnalysisCaseCommand;
 import com.vigil.application.casework.TriageAnalysisCaseUseCase;
 import com.vigil.application.configuration.TargetProfile;
@@ -10,12 +13,20 @@ import com.vigil.application.port.out.interfaces.AnalysisCaseAuditReader;
 import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
 import com.vigil.application.port.out.interfaces.Clock;
 import com.vigil.core.domain.AnalysisCase;
+import com.vigil.core.domain.Evidence;
 import com.vigil.core.domain.ObservationWindow;
 import com.vigil.core.domain.ObservedQuery;
 import com.vigil.core.domain.ObservedQueryMetrics;
+import com.vigil.core.domain.PlanSummaryEvidencePayload;
 import com.vigil.core.domain.QueryFingerprint;
+import com.vigil.core.domain.TransitionMetadata;
 import com.vigil.core.domain.enums.CommandType;
+import com.vigil.core.domain.enums.EvidenceConfidence;
+import com.vigil.core.domain.enums.EvidenceSource;
+import com.vigil.core.domain.enums.PlanNodeType;
 import com.vigil.core.domain.enums.TelemetrySource;
+import com.vigil.core.domain.enums.ValidationOutcome;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -45,17 +56,20 @@ class DemoCaseController {
     private final AnalysisCaseAuditReader audit;
     private final DiscoverObservedQueryUseCase discover;
     private final TriageAnalysisCaseUseCase triage;
+    private final RecordHumanDecisionUseCase humanDecisions;
     private final Clock clock;
     private final TargetProfile target;
     private final VigilProperties properties;
 
     DemoCaseController(AnalysisCaseRepository cases, AnalysisCaseAuditReader audit,
                        DiscoverObservedQueryUseCase discover, TriageAnalysisCaseUseCase triage,
+                       RecordHumanDecisionUseCase humanDecisions,
                        Clock clock, TargetProfile target, VigilProperties properties) {
         this.cases = cases;
         this.audit = audit;
         this.discover = discover;
         this.triage = triage;
+        this.humanDecisions = humanDecisions;
         this.clock = clock;
         this.target = target;
         this.properties = properties;
@@ -80,13 +94,54 @@ class DemoCaseController {
 
     @PostMapping("/{id}/triage")
     CaseView triage(@PathVariable("id") UUID id, @RequestBody TriageRequest request) {
-        var current = cases.findByIdempotencyKey(KEY).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Caso ainda não criado"));
-        if (!current.caseId().equals(id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Caso não encontrado");
+        requireDemoCase(id);
         if (request == null || request.reason() == null || request.reason().trim().length() < 8)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Justificativa deve ter ao menos 8 caracteres");
         triage.execute(new TriageAnalysisCaseCommand(id, request.reason().trim(), ACTOR));
         return view(cases.getById(id));
+    }
+
+    /** Prepares only the deterministic synthetic fixture; it never calls the monitored database. */
+    @PostMapping("/{id}/prepare-human-review")
+    CaseView prepareHumanReview(@PathVariable("id") UUID id) {
+        var analysisCase = requireDemoCase(id);
+        if (analysisCase.status() != com.vigil.core.domain.enums.CaseStatus.TRIAGED)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "O caso precisa estar triado antes da curadoria");
+        var now = clock.now();
+        var payload = new PlanSummaryEvidencePayload(List.of(PlanNodeType.SEQUENTIAL_SCAN), 100,
+                Optional.of(new BigDecimal("12.00")));
+        var evidence = new Evidence(UUID.randomUUID(), id, payload.type(), EvidenceSource.POSTGRESQL_EXPLAIN,
+                now, "vigil-web-demo-v1", EvidenceConfidence.HIGH, payload, Optional.empty());
+        var metadata = new TransitionMetadata(ACTOR, "Fixture de laboratório preparada para demonstração.", now);
+        analysisCase.collectEvidence(evidence, ACTOR, now);
+        analysisCase.sanitize(metadata);
+        analysisCase.diagnose(metadata);
+        analysisCase.proposeHypothesis(metadata);
+        analysisCase.startValidation(metadata);
+        analysisCase.recordValidation(ValidationOutcome.VALIDATED, metadata);
+        analysisCase.prepareRecommendation(metadata);
+        cases.save(analysisCase);
+        return view(cases.getById(id));
+    }
+
+    @PostMapping("/{id}/decision")
+    CaseView recordDecision(@PathVariable("id") UUID id, @RequestBody HumanDecisionRequest request) {
+        requireDemoCase(id);
+        if (request == null || request.decision() == null || request.reason() == null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma decisão e informe a justificativa");
+        try {
+            humanDecisions.execute(new RecordHumanDecisionCommand(id, request.decision(), request.reason(), ACTOR));
+        } catch (IllegalArgumentException invalid) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, invalid.getMessage());
+        }
+        return view(cases.getById(id));
+    }
+
+    private AnalysisCase requireDemoCase(UUID id) {
+        var current = cases.findByIdempotencyKey(KEY).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Caso ainda não criado"));
+        if (!current.caseId().equals(id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Caso não encontrado");
+        return current;
     }
 
     private CaseView view(AnalysisCase analysisCase) {
@@ -123,10 +178,11 @@ class DemoCaseController {
 
     @ExceptionHandler(com.vigil.application.exception.InvalidAnalysisCaseTransition.class)
     ResponseEntity<Map<String, String>> invalidTransition() {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Caso já triado"));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Transição não permitida para o estado atual do caso"));
     }
 
     record TriageRequest(String reason) { }
+    record HumanDecisionRequest(HumanDecision decision, String reason) { }
     record EventView(String type, String detail, Instant at) { }
     record WindowView(Instant start, Instant end) { }
     record MetricsView(long calls, long totalExecutionMillis, long meanExecutionMillis, long rows) { }

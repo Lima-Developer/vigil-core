@@ -36,6 +36,15 @@ class DemoCaseControllerTest {
                     assertEquals("TRIAGED", api.show().status());
                     assertThrows(com.vigil.application.exception.InvalidAnalysisCaseTransition.class,
                             () -> api.triage(created.id(), new DemoCaseController.TriageRequest("Motivo duplicado")));
+                    var reviewReady = api.prepareHumanReview(created.id());
+                    assertEquals("AWAITING_HUMAN", reviewReady.status());
+                    assertTrue(reviewReady.events().stream().anyMatch(event -> event.type().contains("AWAITING_HUMAN")));
+                    var approved = api.recordDecision(created.id(),
+                            new DemoCaseController.HumanDecisionRequest(
+                                    com.vigil.application.casework.HumanDecision.APPROVE,
+                                    "A evidência sintética sustenta a recomendação."));
+                    assertEquals("APPROVED", approved.status());
+                    assertTrue(approved.events().stream().anyMatch(event -> event.type().contains("APPROVED")));
                 });
     }
 }
