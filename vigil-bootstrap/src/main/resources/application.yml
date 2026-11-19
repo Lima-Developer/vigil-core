@@ -27,6 +27,9 @@ vigil:
   inference:
     enabled: false
     timeout: 5s
+    endpoint: ${VIGIL_INFERENCE_ENDPOINT:http://127.0.0.1:11434}
+  validation:
+    artifact-path: ${VIGIL_VALIDATION_ARTIFACT:docs/experiments/hypopg-physical-index-2026-11-18/result.json}
   demo:
     select: ${VIGIL_DEMO_SELECT:SELECT 1}
     postgres-user: ${VIGIL_TARGET_USER:}

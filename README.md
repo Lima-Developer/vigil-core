@@ -25,7 +25,7 @@ O sistema reúne:
 - contexto sanitizado e *fail-closed* para impedir o envio de SQL ou identificadores inseguros;
 - diagnóstico determinístico e validações em *sandbox* com dados sintéticos;
 - comparação reproduzível de queries complexas, planos e decisões B0–B3;
-- integração de inferência desacoplada de fornecedor, sempre subordinada a evidências e à curadoria humana;
+- porta de inferência desacoplada de fornecedor e adaptador local Ollama, sempre subordinados a contexto aprovado e à curadoria humana;
 - interface local para explorar casos, telemetria, auditoria, uso de IA e o roteiro da demonstração.
 
 ## Demonstração visual
@@ -35,12 +35,12 @@ A interface local inclui um acervo de 10 consultas complexas, seus planos, medi�
 ```text
 Consulta observada
   → triagem justificada
-  → evidência sintética e validação de demonstração
+  → evidência sintética e classificação automática baseada em artefato isolado
   → AWAITING_HUMAN
   → aprovar | rejeitar | solicitar alterações
 ```
 
-No modo `?demo=1`, todos os dados são sintéticos e nenhuma alteração é persistida. No modo local com SQLite, a decisão e os eventos do caso são persistidos, mas o fluxo continua sem executar DDL/DML no target.
+No modo `?demo=1`, todos os dados são sintéticos e nenhuma alteração é persistida. No modo local com SQLite, a decisão e os eventos do caso são persistidos. A classificação encadeada só lê o resultado versionado do laboratório físico isolado; não executa DDL/DML no target.
 
 ## Início rápido
 
@@ -73,6 +73,12 @@ O comando abaixo cria um SQLite temporário e o remove quando a aplicação é e
 Abra [http://127.0.0.1:8080/?demo=1#overview](http://127.0.0.1:8080/?demo=1#overview).
 
 Para a demonstração de caso persistida localmente, consulte o [roteiro de avaliação visual](docs/bootstrap/caso-demonstracao.md). Para uma apresentação sem dependência de rede, use também `?demo=1`.
+
+### Inferência local opcional
+
+O adaptador local usa o contrato HTTP do [Ollama](https://ollama.com/) em `http://127.0.0.1:11434/api/generate`. Ele não é iniciado nem chamado automaticamente: uma funcionalidade deve fornecer um contexto já sanitizado e autorizado. Para configurá-lo, defina `VIGIL_INFERENCE_ENDPOINT`, `vigil.inference.enabled=true` e `vigil.inference.model=<modelo>`; a ausência do serviço local é tratada como falha explícita, sem *fallback* para um provedor externo.
+
+O fluxo de demonstração avalia a hipótese por `ArtifactHypothesisValidationAdapter`, que lê somente `docs/experiments/hypopg-physical-index-2026-11-18/result.json`. Esse artefato exige `EXPLAIN (ANALYZE, BUFFERS)`, índice físico no laboratório e confirmação de que o banco monitorado não foi acessado. O resultado é classificado automaticamente como `VALIDATED`, `INVALIDATED` ou `INCONCLUSIVE` antes de chegar à decisão humana.
 
 ## Arquitetura
 

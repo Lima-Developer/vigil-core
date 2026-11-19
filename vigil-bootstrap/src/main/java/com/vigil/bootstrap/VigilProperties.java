@@ -1,16 +1,17 @@
 package com.vigil.bootstrap;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /** Typed external settings; validated by the application's own configuration value objects. */
 @ConfigurationProperties(prefix = "vigil")
-public record VigilProperties(Target target, Sqlite sqlite, Inference inference, Demo demo, Telemetry telemetry) {
+public record VigilProperties(Target target, Sqlite sqlite, Inference inference, Validation validation, Demo demo, Telemetry telemetry) {
     public record Target(String name, String environment, String host, String port, String database,
                          String sslMode, Duration connectTimeout) { }
     public record Sqlite(Path path, Long minimumFreeBytes) { }
-    public record Inference(Boolean enabled, String model, Duration timeout) {
+    public record Inference(Boolean enabled, String model, Duration timeout, URI endpoint) {
         public Inference {
             if (Boolean.TRUE.equals(enabled) && (model == null || model.isBlank())) {
                 throw new IllegalArgumentException("vigil.inference.model é obrigatório quando inferência está ativa");
@@ -21,6 +22,7 @@ public record VigilProperties(Target target, Sqlite sqlite, Inference inference,
             }
         }
     }
+    public record Validation(Path artifactPath) { }
     public record Demo(String select, String postgresUser, Path sslRootCert) { }
     public record Telemetry(Boolean enabled, String postgresUser, String sslRootCert, Duration interval,
                             Duration retention, Integer maximumSamples) { }

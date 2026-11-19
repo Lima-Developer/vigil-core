@@ -8,6 +8,8 @@ import com.vigil.application.casework.RecordHumanDecisionCommand;
 import com.vigil.application.casework.RecordHumanDecisionUseCase;
 import com.vigil.application.casework.TriageAnalysisCaseCommand;
 import com.vigil.application.casework.TriageAnalysisCaseUseCase;
+import com.vigil.application.casework.ValidateAnalysisCaseCommand;
+import com.vigil.application.casework.ValidateAnalysisCaseUseCase;
 import com.vigil.application.configuration.TargetProfile;
 import com.vigil.application.port.out.interfaces.AnalysisCaseAuditReader;
 import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
@@ -25,7 +27,6 @@ import com.vigil.core.domain.enums.EvidenceConfidence;
 import com.vigil.core.domain.enums.EvidenceSource;
 import com.vigil.core.domain.enums.PlanNodeType;
 import com.vigil.core.domain.enums.TelemetrySource;
-import com.vigil.core.domain.enums.ValidationOutcome;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -57,6 +58,7 @@ class DemoCaseController {
     private final DiscoverObservedQueryUseCase discover;
     private final TriageAnalysisCaseUseCase triage;
     private final RecordHumanDecisionUseCase humanDecisions;
+    private final ValidateAnalysisCaseUseCase validation;
     private final Clock clock;
     private final TargetProfile target;
     private final VigilProperties properties;
@@ -64,12 +66,14 @@ class DemoCaseController {
     DemoCaseController(AnalysisCaseRepository cases, AnalysisCaseAuditReader audit,
                        DiscoverObservedQueryUseCase discover, TriageAnalysisCaseUseCase triage,
                        RecordHumanDecisionUseCase humanDecisions,
+                       ValidateAnalysisCaseUseCase validation,
                        Clock clock, TargetProfile target, VigilProperties properties) {
         this.cases = cases;
         this.audit = audit;
         this.discover = discover;
         this.triage = triage;
         this.humanDecisions = humanDecisions;
+        this.validation = validation;
         this.clock = clock;
         this.target = target;
         this.properties = properties;
@@ -101,7 +105,7 @@ class DemoCaseController {
         return view(cases.getById(id));
     }
 
-    /** Prepares only the deterministic synthetic fixture; it never calls the monitored database. */
+    /** Builds fixture evidence, then chains isolated automatic classification; it never calls the monitored database. */
     @PostMapping("/{id}/prepare-human-review")
     CaseView prepareHumanReview(@PathVariable("id") UUID id) {
         var analysisCase = requireDemoCase(id);
@@ -118,9 +122,8 @@ class DemoCaseController {
         analysisCase.diagnose(metadata);
         analysisCase.proposeHypothesis(metadata);
         analysisCase.startValidation(metadata);
-        analysisCase.recordValidation(ValidationOutcome.VALIDATED, metadata);
-        analysisCase.prepareRecommendation(metadata);
         cases.save(analysisCase);
+        validation.execute(new ValidateAnalysisCaseCommand(id, ACTOR));
         return view(cases.getById(id));
     }
 
@@ -148,9 +151,9 @@ class DemoCaseController {
         Instant observed = analysisCase.createdAt();
         var events = new ArrayList<EventView>();
         for (var event : audit.eventsOf(analysisCase.caseId()))
-            events.add(new EventView(event.type(), event.actor(), event.occurredAt()));
+            events.add(new EventView(event.type(), "Evento de domínio persistido.", event.actor(), event.occurredAt()));
         for (var event : analysisCase.events())
-            events.add(new EventView("Transição: " + event.toStatus(), event.reason(), event.occuredAt()));
+            events.add(new EventView("Transição: " + event.toStatus(), event.reason(), event.actor(), event.occuredAt()));
         events.sort(Comparator.comparing(EventView::at));
         return new CaseView(analysisCase.caseId(), analysisCase.status().name(),
                 "fixture de laboratório", "SELECT", observed,
@@ -183,7 +186,7 @@ class DemoCaseController {
 
     record TriageRequest(String reason) { }
     record HumanDecisionRequest(HumanDecision decision, String reason) { }
-    record EventView(String type, String detail, Instant at) { }
+    record EventView(String type, String detail, String actor, Instant at) { }
     record WindowView(Instant start, Instant end) { }
     record MetricsView(long calls, long totalExecutionMillis, long meanExecutionMillis, long rows) { }
     record PlanView(boolean estimated, String text) { }

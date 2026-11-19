@@ -2,6 +2,8 @@ package com.vigil.bootstrap;
 
 import com.vigil.adapters.SystemClockAdapter;
 import com.vigil.adapters.UuidIdGeneratorAdapter;
+import com.vigil.adapters.inference.OllamaInferenceAdapter;
+import com.vigil.adapters.lab.ArtifactHypothesisValidationAdapter;
 import com.vigil.adapters.sqlite.SqliteAnalysisCaseAuditReader;
 import com.vigil.adapters.sqlite.SqliteAnalysisCaseRepository;
 import com.vigil.adapters.sqlite.SqliteConnectionFactory;
@@ -13,6 +15,7 @@ import com.vigil.adapters.sqlite.SqliteWorkspaceTelemetryHistory;
 import com.vigil.application.casework.DiscoverObservedQueryUseCase;
 import com.vigil.application.casework.RecordHumanDecisionUseCase;
 import com.vigil.application.casework.TriageAnalysisCaseUseCase;
+import com.vigil.application.casework.ValidateAnalysisCaseUseCase;
 import com.vigil.application.configuration.StorageConfiguration;
 import com.vigil.application.configuration.TargetProfile;
 import com.vigil.application.configuration.TargetSslMode;
@@ -26,6 +29,8 @@ import com.vigil.application.port.out.interfaces.AnalysisCaseAuditReader;
 import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
 import com.vigil.application.port.out.interfaces.Clock;
 import com.vigil.application.port.out.interfaces.IdGenerator;
+import com.vigil.application.port.out.interfaces.InferencePort;
+import com.vigil.application.port.out.interfaces.HypothesisValidationPort;
 import com.vigil.application.port.out.interfaces.WorkspaceTelemetryHistory;
 import java.time.Duration;
 import java.util.Objects;
@@ -34,6 +39,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.context.annotation.Lazy;
 import java.nio.file.Path;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -121,6 +127,22 @@ class VigilWiring {
     }
     @Bean RecordHumanDecisionUseCase recordHumanDecisionUseCase(AnalysisCaseRepository repository, Clock clock) {
         return new RecordHumanDecisionUseCase(repository, clock);
+    }
+    @Bean HypothesisValidationPort hypothesisValidationPort(VigilProperties properties) {
+        Path path = properties.validation() != null && properties.validation().artifactPath() != null
+                ? properties.validation().artifactPath()
+                : Path.of("docs", "experiments", "hypopg-physical-index-2026-11-18", "result.json");
+        return new ArtifactHypothesisValidationAdapter(path);
+    }
+    @Bean ValidateAnalysisCaseUseCase validateAnalysisCaseUseCase(AnalysisCaseRepository repository,
+                                                                   HypothesisValidationPort validator, Clock clock) {
+        return new ValidateAnalysisCaseUseCase(repository, validator, clock);
+    }
+    @Bean @Lazy InferencePort inferencePort(VigilProperties properties) {
+        var inference = properties.inference();
+        URI endpoint = inference != null && inference.endpoint() != null
+                ? inference.endpoint() : URI.create("http://127.0.0.1:11434");
+        return new OllamaInferenceAdapter(endpoint);
     }
 
     @Bean CaseFlow caseFlow(DiscoverObservedQueryUseCase discover, TriageAnalysisCaseUseCase triage,

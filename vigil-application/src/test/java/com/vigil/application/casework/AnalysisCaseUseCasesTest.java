@@ -6,6 +6,7 @@ import com.vigil.application.exception.InvalidAnalysisCaseTransition;
 import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
 import com.vigil.application.port.out.interfaces.Clock;
 import com.vigil.application.port.out.interfaces.IdGenerator;
+import com.vigil.application.port.out.interfaces.HypothesisValidationPort;
 import com.vigil.core.domain.AnalysisCase;
 import com.vigil.core.domain.AnalysisCaseDiscovered;
 import com.vigil.core.domain.Evidence;
@@ -191,6 +192,25 @@ class AnalysisCaseUseCasesTest {
         assertEquals(1, repository.saves());
     }
 
+    @Test
+    void shouldChainAutomaticClassificationBeforeHumanReview() {
+        var repository = new FakeAnalysisCaseRepository();
+        var analysisCase = validatingCase();
+        repository.save(analysisCase);
+        HypothesisValidationPort validator = ignored -> new HypothesisValidationPort.ValidationAssessment(
+                ValidationOutcome.VALIDATED, "Índice parcial reduziu o tempo no laboratório isolado.");
+        var useCase = new ValidateAnalysisCaseUseCase(repository, validator, fixedClock());
+
+        var result = useCase.execute(new ValidateAnalysisCaseCommand(NEW_CASE_ID, "vigil-system"));
+
+        assertAll(
+                () -> assertEquals(ValidationOutcome.VALIDATED, result.outcome()),
+                () -> assertEquals(CaseStatus.AWAITING_HUMAN, analysisCase.status()),
+                () -> assertEquals(2, repository.saves()),
+                () -> assertEquals(CaseStatus.AWAITING_HUMAN, analysisCase.events().getLast().toStatus())
+        );
+    }
+
     private static DiscoverObservedQueryCommand discoveryCommand(String idempotencyKey) {
         return new DiscoverObservedQueryCommand(observedQuery(), idempotencyKey);
     }
@@ -226,6 +246,22 @@ class AnalysisCaseUseCasesTest {
         analysisCase.startValidation(metadata);
         analysisCase.recordValidation(ValidationOutcome.VALIDATED, metadata);
         analysisCase.prepareRecommendation(metadata);
+        return analysisCase;
+    }
+
+    private static AnalysisCase validatingCase() {
+        var analysisCase = AnalysisCase.discover(NEW_CASE_ID, NOW);
+        var metadata = new TransitionMetadata("system", "Laboratório sintético", NOW);
+        analysisCase.triage(metadata);
+        var payload = new PlanSummaryEvidencePayload(List.of(PlanNodeType.SEQUENTIAL_SCAN), 100,
+                Optional.of(BigDecimal.TEN));
+        analysisCase.collectEvidence(new Evidence(UUID.randomUUID(), NEW_CASE_ID, payload.type(),
+                EvidenceSource.POSTGRESQL_EXPLAIN, NOW, "test", EvidenceConfidence.HIGH, payload, Optional.empty()),
+                "system", NOW);
+        analysisCase.sanitize(metadata);
+        analysisCase.diagnose(metadata);
+        analysisCase.proposeHypothesis(metadata);
+        analysisCase.startValidation(metadata);
         return analysisCase;
     }
 

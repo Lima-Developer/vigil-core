@@ -36,7 +36,7 @@ function updateDecisionPanel(data) {
     copy.textContent = 'Registre o motivo da triagem. Nenhuma alteração é feita no banco monitorado.';
   } else if (status === 'TRIAGED') {
     title.textContent = 'Preparar curadoria';
-    copy.textContent = 'O próximo passo monta a fixture sintética e auditável até a recomendação; o banco monitorado não é acessado.';
+    copy.textContent = 'O próximo passo monta a fixture sintética, classifica o resultado do laboratório isolado e prepara a recomendação; o banco monitorado não é acessado.';
   } else if (status === 'AWAITING_HUMAN') {
     title.textContent = 'Registrar decisão';
     copy.textContent = 'A decisão será persistida na auditoria. Aprovar, rejeitar ou solicitar alterações não executa DDL ou DML.';
@@ -66,8 +66,9 @@ function render(data) {
     const heading = document.createElement('strong');
     heading.textContent = ({ ANALYSIS_CASE_DISCOVERED: 'Consulta descoberta', QUERY_TRIAGED: 'Consulta triada' })[event.type] || event.type || 'Evento';
     const details = document.createElement('div'); details.textContent = event.detail || '';
+    const actor = document.createElement('small'); actor.textContent = event.actor ? `Ator: ${event.actor}` : '';
     const when = document.createElement('time'); when.dateTime = event.at || ''; when.textContent = date(event.at);
-    item.append(heading, details, when); list.append(item);
+    item.append(heading, details, actor, when); list.append(item);
   }
   if (!list.children.length) { const item = document.createElement('li'); item.textContent = 'Ainda não há eventos registrados.'; list.append(item); }
   updateDecisionPanel(data);
@@ -170,7 +171,7 @@ $('prepare-review').addEventListener('click', async () => {
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       render(await response.json());
-      $('decision-feedback').textContent = 'Caso preparado para decisão humana e persistido na auditoria.';
+      $('decision-feedback').textContent = 'Classificação automática concluída; caso preparado para decisão humana e persistido na auditoria.';
     }
     $('decision-feedback').classList.add('ok');
   } catch {
