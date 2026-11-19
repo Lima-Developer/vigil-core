@@ -93,6 +93,18 @@ $env:VIGIL_OLLAMA_MODEL = 'qwen3:8b'
 .\mvnw.cmd -pl vigil-adapters -Dtest=OllamaInferenceAdapterLocalTest -Dvigil.ollama.e2e=true test
 ```
 
+Para executar as dez curadorias do mesmo corpus sintético, preservar JSON, grounding, duração, tokens e taxa de geração do runtime local, use:
+
+```powershell
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+python tools\complex-query-lab\run_ollama_curation.py `
+  --model 'qwen3:8b' `
+  --hardware 'Informe aqui GPU, VRAM e RAM' `
+  --output ".\docs\experiments\llm-curation\ollama-qwen3-8b-$stamp"
+```
+
+O `manifest.json` produzido é a única fonte para declarar no relatório modelo, runtime, hardware declarado, JSONs válidos, duração e tokens por segundo. Ele confirma que o corpus enviado é sintético e versionado; a concordância com B0 exige a execução separada do protocolo B0–B3.
+
 O fluxo de demonstração avalia a hipótese por `ArtifactHypothesisValidationAdapter`, que lê somente `docs/experiments/hypopg-physical-index-2026-11-18/result.json`. Esse artefato exige `EXPLAIN (ANALYZE, BUFFERS)`, índice físico no laboratório e confirmação de que o banco monitorado não foi acessado. O resultado é classificado automaticamente como `VALIDATED`, `INVALIDATED` ou `INCONCLUSIVE` antes de chegar à decisão humana.
 
 ## Arquitetura

@@ -40,6 +40,17 @@ class ArtifactHypothesisValidationAdapterTest {
         assertEquals(ValidationOutcome.INCONCLUSIVE, result.outcome());
     }
 
+    @Test
+    void invalidatesAComparableExperimentWithoutMeasuredImprovement() throws Exception {
+        var artifact = Files.createTempFile("vigil-validation", ".json");
+        Files.writeString(artifact, """
+                {"schemaVersion":1,"safety":{"targetDatabaseAccessed":false,"physicalIndexCreated":true,"explainAnalyzeUsed":true},
+                "before":{"executionTimeMs":12.0},"after":{"executionTimeMs":12.5,"indexName":"orders_cover_idx"}}
+                """);
+        var result = new ArtifactHypothesisValidationAdapter(artifact).validate(validatingCase());
+        assertEquals(ValidationOutcome.INVALIDATED, result.outcome());
+    }
+
     private static AnalysisCase validatingCase() {
         var now = Instant.parse("2026-11-18T12:00:00Z");
         var analysisCase = AnalysisCase.discover(UUID.randomUUID(), now);
