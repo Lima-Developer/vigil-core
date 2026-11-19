@@ -78,6 +78,18 @@ A senha continua sendo lida pela política existente de ambiente; não há senha
 `freeLocalStorage` permanece `unsupported` até existir adapter oficial para um provedor escolhido. O espaço do
 filesystem do processo não é apresentado como capacidade livre do banco remoto.
 
+## Overhead de coleta avaliado em laboratório
+
+O impacto de leitura do coletor foi medido em PostgreSQL 16.4 efêmero com `pgbench`, comparando três pares
+intercalados do mesmo *workload*, com e sem as consultas somente leitura equivalentes aos adapters do Vigil. Com o
+intervalo padrão de 30 segundos, 4 clientes, 2 *threads* e 20 segundos por execução, a mediana foi de 3.142,365 para
+3.054,038 TPS (−2,811%) e de 1,273 para 1,310 ms de latência (+2,907%). Cada ciclo de coleta durou 155,812 ms na
+mediana e não apresentou erro.
+
+O resultado avalia o impacto das consultas no banco em cenário sintético; não representa garantia de produção nem
+inclui processo Spring, TLS, SQLite, rede remota ou volume real de entradas em `pg_stat_statements`. O protocolo,
+os dados brutos e os limites estão em [telemetry-overhead-default-2026-11-19](../experiments/telemetry-overhead-default-2026-11-19/README.md).
+
 ## Interface
 
 A aba Telemetria consulta o endpoint a cada 30 segundos enquanto visível, sem requisições concorrentes, com timeout

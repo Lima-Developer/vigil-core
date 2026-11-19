@@ -163,6 +163,7 @@ O repositório preserva artefatos e scripts para repetir os cenários de pesquis
 | Curadoria por LLM | Protocolos e importação de resultados de Codex, Claude e OpenRouter | [documentação](docs/experiments/llm-curation/README.md) |
 | HypoPG | Avaliação hipotética de índice sem alterar o target | [documentação](docs/experiments/hypopg-validation/README.md) |
 | Índice físico isolado | `EXPLAIN (ANALYZE, BUFFERS)` antes/depois em PostgreSQL efêmero | [resultado](docs/experiments/hypopg-physical-index-2026-11-18/README.md) |
+| Overhead de coleta | `pgbench` com e sem as consultas somente leitura do coletor | [resultado](docs/experiments/telemetry-overhead-default-2026-11-19/README.md) |
 
 Os resultados são evidências de laboratório; não devem ser extrapolados como previsão de desempenho de outro ambiente.
 

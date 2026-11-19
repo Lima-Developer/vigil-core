@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "executedAtUtc": "2026-11-19T19:30:49.780058+00:00",
+  "environment": {
+    "image": "postgres:16.4",
+    "database": "ephemeral Docker PostgreSQL",
+    "targetDatabaseAccessed": false,
+    "pgStatStatementsEnabled": true
+  },
+  "method": {
+    "workload": "pgbench built-in prepared workload",
+    "comparison": "interleaved baseline and collector runs with alternating order",
+    "collector": "read-only SQL equivalent to Vigil PgStatStatementsTelemetryAdapter and PostgresDatabaseActivityAdapter",
+    "excluded": "Spring process, TLS connection setup, SQLite persistence and external target access"
+  },
+  "parameters": {
+    "scale": 3,
+    "clients": 4,
+    "threads": 2,
+    "secondsPerRun": 20,
+    "rounds": 3,
+    "collectorIntervalSeconds": 30.0
+  },
+  "baseline": {
+    "runs": [
+      {
+        "tps": 3230.937156,
+        "latencyAverageMs": 1.238,
+        "wallClockSeconds": 20.171
+      },
+      {
+        "tps": 3041.805779,
+        "latencyAverageMs": 1.315,
+        "wallClockSeconds": 20.187
+      },
+      {
+        "tps": 3142.365045,
+        "latencyAverageMs": 1.273,
+        "wallClockSeconds": 20.178
+      }
+    ],
+    "medianTps": 3142.365,
+    "medianLatencyAverageMs": 1.273
+  },
+  "withCollector": {
+    "runs": [
+      {
+        "tps": 3054.037557,
+        "latencyAverageMs": 1.31,
+        "wallClockSeconds": 20.195,
+        "collectorCycles": 1
+      },
+      {
+        "tps": 3156.027527,
+        "latencyAverageMs": 1.267,
+        "wallClockSeconds": 20.17,
+        "collectorCycles": 1
+      },
+      {
+        "tps": 2985.987608,
+        "latencyAverageMs": 1.34,
+        "wallClockSeconds": 20.2,
+        "collectorCycles": 1
+      }
+    ],
+    "medianTps": 3054.038,
+    "medianLatencyAverageMs": 1.31
+  },
+  "overhead": {
+    "throughputChangePercent": -2.811,
+    "latencyChangePercent": 2.907,
+    "collectorCycles": 3,
+    "collectorMedianDurationMs": 155.812
+  }
+}
