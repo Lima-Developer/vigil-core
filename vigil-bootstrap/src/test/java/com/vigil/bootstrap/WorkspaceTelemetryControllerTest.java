@@ -85,4 +85,36 @@ class WorkspaceTelemetryControllerTest {
                 () -> assertEquals(samples, snapshot.samples())
         );
     }
+
+    @Test void exposesWarmupAndErrorAsUnavailableInsteadOfSyntheticMetrics() {
+        var warming = new ArrayList<com.vigil.application.port.out.interfaces.WorkspaceTelemetrySample>();
+        warming.add(new com.vigil.application.port.out.interfaces.WorkspaceTelemetrySample(
+                NOW, null, "lab", "warming_up", "measured", null, null, null, null, null, null, null,
+                null, 2L, 1L, 0L, "FIRST_SAMPLE"));
+        var warmMetrics = controller(OptionalLong.of(1), warming).show().getBody().metrics();
+        assertEquals("warming_up", warmMetrics.get("sqlCalls").state());
+        assertEquals("FIRST_SAMPLE", warmMetrics.get("sqlCalls").reason());
+        assertEquals("available", warmMetrics.get("waitingSessions").state());
+        assertEquals(1L, warmMetrics.get("waitingSessions").value());
+
+        var failure = new ArrayList<com.vigil.application.port.out.interfaces.WorkspaceTelemetrySample>();
+        failure.add(new com.vigil.application.port.out.interfaces.WorkspaceTelemetrySample(
+                NOW, null, "lab", "error", "unknown", null, null, null, null, null, null, null,
+                null, null, null, null, "COLLECTION_FAILED"));
+        var errorMetrics = controller(OptionalLong.of(1), failure).show().getBody().metrics();
+        assertEquals("error", errorMetrics.get("sqlCalls").state());
+        assertEquals("error", errorMetrics.get("waitingSessions").state());
+        assertEquals("COLLECTION_FAILED", errorMetrics.get("waitingSessions").reason());
+    }
+
+    @Test void preservesPartialReasonForAvailableTelemetry() {
+        var samples = new ArrayList<com.vigil.application.port.out.interfaces.WorkspaceTelemetrySample>();
+        samples.add(new com.vigil.application.port.out.interfaces.WorkspaceTelemetrySample(
+                NOW, NOW.minusSeconds(30), "lab", "available", "partial", 1L,
+                BigDecimal.ONE, BigDecimal.ONE, 1L, 1L, 1L, 0L, 0L, 1L, 0L, 0L,
+                "PARTIAL_ACTIVITY_VISIBILITY"));
+        var metrics = controller(OptionalLong.of(1), samples).show().getBody().metrics();
+        assertEquals("partial", metrics.get("sqlCalls").quality());
+        assertEquals("PARTIAL_ACTIVITY_VISIBILITY", metrics.get("waitingSessions").reason());
+    }
 }

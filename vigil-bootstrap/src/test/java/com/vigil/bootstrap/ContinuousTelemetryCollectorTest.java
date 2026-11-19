@@ -98,6 +98,34 @@ class ContinuousTelemetryCollectorTest {
         }
     }
 
+    @Test
+    void recordsPartialVisibilityAndValidatesCollectorBounds() {
+        var history = new MemoryHistory();
+        try (var collector = new ContinuousTelemetryCollector(
+                at -> snapshot(at, 1),
+                at -> new DatabaseActivitySnapshot(at, 1, 1, 1, false),
+                history, () -> FIRST, "lab", Duration.ofSeconds(1), Duration.ofSeconds(1), 2)) {
+            collector.collectNow();
+            var sample = history.samples.getFirst();
+            assertEquals("partial", sample.quality());
+            assertEquals("FIRST_SAMPLE;PARTIAL_ACTIVITY_VISIBILITY", sample.reason());
+            collector.start();
+            assertTrue(collector.isRunning());
+            collector.stop();
+            assertFalse(collector.isRunning());
+        }
+        assertThrows(NullPointerException.class, () -> new ContinuousTelemetryCollector(null, at -> null,
+                new MemoryHistory(), () -> FIRST, "lab", Duration.ofSeconds(1), Duration.ofSeconds(1), 2));
+        assertThrows(IllegalArgumentException.class, () -> new ContinuousTelemetryCollector(at -> snapshot(at, 1), at -> null,
+                new MemoryHistory(), () -> FIRST, "lab", Duration.ZERO, Duration.ofSeconds(1), 2));
+        assertThrows(IllegalArgumentException.class, () -> new ContinuousTelemetryCollector(at -> snapshot(at, 1), at -> null,
+                new MemoryHistory(), () -> FIRST, "lab", Duration.ofSeconds(1), Duration.ZERO, 2));
+        assertThrows(IllegalArgumentException.class, () -> new ContinuousTelemetryCollector(at -> snapshot(at, 1), at -> null,
+                new MemoryHistory(), () -> FIRST, "lab", Duration.ofSeconds(1), Duration.ofSeconds(1), 1));
+        assertThrows(IllegalArgumentException.class, () -> new ContinuousTelemetryCollector(at -> snapshot(at, 1), at -> null,
+                new MemoryHistory(), () -> FIRST, "lab", Duration.ofSeconds(1), Duration.ofSeconds(1), 100_001));
+    }
+
     private static TelemetryCollection snapshot(Instant at, long calls) {
         var counters = new CumulativeQueryCounters(1, 2, 3, true, calls,
                 BigDecimal.valueOf(calls * 10), calls * 2, calls * 3, calls, 0, 0);
