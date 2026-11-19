@@ -78,6 +78,21 @@ Para a demonstração de caso persistida localmente, consulte o [roteiro de aval
 
 O adaptador local usa o contrato HTTP do [Ollama](https://ollama.com/) em `http://127.0.0.1:11434/api/generate`. Ele não é iniciado nem chamado automaticamente: uma funcionalidade deve fornecer um contexto já sanitizado e autorizado. Para configurá-lo, defina `VIGIL_INFERENCE_ENDPOINT`, `vigil.inference.enabled=true` e `vigil.inference.model=<modelo>`; a ausência do serviço local é tratada como falha explícita, sem *fallback* para um provedor externo.
 
+Para avaliar o adaptador contra um runtime real (sem enviar consulta ou dado de negócio), instale e inicie o Ollama, baixe um modelo local e execute:
+
+```bash
+ollama pull qwen3:8b
+VIGIL_OLLAMA_MODEL=qwen3:8b ./mvnw -pl vigil-adapters \
+  -Dtest=OllamaInferenceAdapterLocalTest -Dvigil.ollama.e2e=true test
+```
+
+No PowerShell:
+
+```powershell
+$env:VIGIL_OLLAMA_MODEL = 'qwen3:8b'
+.\mvnw.cmd -pl vigil-adapters -Dtest=OllamaInferenceAdapterLocalTest -Dvigil.ollama.e2e=true test
+```
+
 O fluxo de demonstração avalia a hipótese por `ArtifactHypothesisValidationAdapter`, que lê somente `docs/experiments/hypopg-physical-index-2026-11-18/result.json`. Esse artefato exige `EXPLAIN (ANALYZE, BUFFERS)`, índice físico no laboratório e confirmação de que o banco monitorado não foi acessado. O resultado é classificado automaticamente como `VALIDATED`, `INVALIDATED` ou `INCONCLUSIVE` antes de chegar à decisão humana.
 
 ## Arquitetura
