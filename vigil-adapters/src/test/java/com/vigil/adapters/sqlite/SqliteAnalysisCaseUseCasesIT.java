@@ -79,7 +79,7 @@ class SqliteAnalysisCaseUseCasesIT {
                 () -> assertEquals(FIRST_ID, retry.caseId()),
                 () -> assertEquals(CaseStatus.TRIAGED, stored.status()),
                 () -> assertEquals(2, stored.version()),
-                () -> assertEquals(Optional.of(new QueryFingerprint("sha256:observed-query", "v1")), stored.queryFingerprint()),
+                () -> assertEquals(Optional.of(new QueryFingerprint("hmac-sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "v1")), stored.queryFingerprint()),
                 () -> assertThrows(InvalidAnalysisCaseTransition.class, () -> triage.execute(
                         new TriageAnalysisCaseCommand(FIRST_ID, "Again.", "vigil-core")))
         );
@@ -154,7 +154,7 @@ class SqliteAnalysisCaseUseCasesIT {
 
     private static DiscoverObservedQueryCommand command(String key) {
         return new DiscoverObservedQueryCommand(new ObservedQuery(
-                new QueryFingerprint("sha256:observed-query", "v1"),
+                new QueryFingerprint("hmac-sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "v1"),
                 TelemetrySource.PG_STAT_STATEMENTS,
                 NOW,
                 Optional.empty(),

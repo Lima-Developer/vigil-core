@@ -21,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class AnalysisCaseRowMapperTest {
     private static final String CASE_ID = "11111111-1111-1111-1111-111111111111";
     private static final String AT = "2026-09-07T12:00:00.123456789Z";
+    private static final String FINGERPRINT =
+            "hmac-sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     private final AnalysisCaseRowMapper mapper = new AnalysisCaseRowMapper();
 
     private static String row(String caseId, String createdAt, String status, String version, String fingerprint,
@@ -31,7 +33,7 @@ class AnalysisCaseRowMapperTest {
     }
 
     private static String valid(String status) {
-        return row("'" + CASE_ID + "'", "'" + AT + "'", "'" + status + "'", "7", "'sha256:x'", "'v1'", "'key'");
+        return row("'" + CASE_ID + "'", "'" + AT + "'", "'" + status + "'", "7", "'" + FINGERPRINT + "'", "'v1'", "'key'");
     }
 
     @Test
@@ -43,7 +45,7 @@ class AnalysisCaseRowMapperTest {
                 () -> assertEquals(Instant.parse(AT), row.createdAt()),
                 () -> assertEquals(CaseStatus.TRIAGED, row.status()),
                 () -> assertEquals(7, row.version()),
-                () -> assertEquals(Optional.of(new QueryFingerprint("sha256:x", "v1")), row.fingerprint()),
+                () -> assertEquals(Optional.of(new QueryFingerprint(FINGERPRINT, "v1")), row.fingerprint()),
                 () -> assertEquals(Optional.of("key"), row.discoveryKey())
         );
     }

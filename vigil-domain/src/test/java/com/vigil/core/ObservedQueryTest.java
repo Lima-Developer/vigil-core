@@ -20,6 +20,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class ObservedQueryTest {
 
+    private static final String VALID_FINGERPRINT =
+            "hmac-sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
     @Test
     void shouldExposeOnlySafeObservedQueryComponents() {
         var componentNames = Arrays.stream(ObservedQuery.class.getRecordComponents())
@@ -44,7 +47,7 @@ public class ObservedQueryTest {
     void shouldCreateObservedQueryWithSafeAggregatedTelemetry() {
         // Given
         var fingerprint = new QueryFingerprint(
-                "pgss:8f15d2",
+                VALID_FINGERPRINT,
                 "v1"
         );
 
@@ -99,7 +102,7 @@ public class ObservedQueryTest {
     void shouldRejectFingerprintWhenAlgorithmVersionIsBlank() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new QueryFingerprint("pgss:8f15d2", "")
+                () -> new QueryFingerprint(VALID_FINGERPRINT, "")
         );
     }
 
@@ -189,7 +192,7 @@ public class ObservedQueryTest {
 
     @Test
     void shouldGroupEquivalentObservationsByVigilFingerprint() {
-        var fingerprint = new QueryFingerprint("vigil:8f15d2", "v1");
+        var fingerprint = new QueryFingerprint(VALID_FINGERPRINT, "v1");
         var firstObservation = observedQuery(
                 fingerprint,
                 Instant.parse("2026-09-07T12:05:00Z"),
@@ -210,7 +213,7 @@ public class ObservedQueryTest {
     @Test
     void shouldAllowObservationWithoutSourceQueryId() {
         var observedQuery = observedQuery(
-                new QueryFingerprint("vigil:8f15d2", "v1"),
+                new QueryFingerprint(VALID_FINGERPRINT, "v1"),
                 Instant.parse("2026-09-07T12:05:00Z"),
                 Optional.empty()
         );
@@ -231,6 +234,34 @@ public class ObservedQueryTest {
     @Test
     void shouldRejectBlankSourceQueryId() {
         assertThrows(IllegalArgumentException.class, () -> new SourceQueryId(" "));
+    }
+
+    @Test
+    void shouldAcceptFingerprintWithAlgorithmPrefixAndSixtyFourHex() {
+        var fingerprint = new QueryFingerprint(VALID_FINGERPRINT, "v1");
+
+        assertEquals(VALID_FINGERPRINT, fingerprint.value());
+    }
+
+    @Test
+    void shouldRejectFingerprintWithoutAlgorithmPrefix() {
+        assertThrows(IllegalArgumentException.class, () -> new QueryFingerprint(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "v1"));
+    }
+
+    @Test
+    void shouldRejectFingerprintWhenHexIsNotSixtyFourCharacters() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new QueryFingerprint("hmac-sha256:abcdef", "v1"));
+    }
+
+    @Test
+    void shouldRejectFingerprintWhenHexHasUppercaseOrNonHexCharacters() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class, () -> new QueryFingerprint(
+                        "hmac-sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "v1")),
+                () -> assertThrows(IllegalArgumentException.class, () -> new QueryFingerprint(
+                        "hmac-sha256:zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", "v1")));
     }
 
     private ObservedQuery observedQuery(

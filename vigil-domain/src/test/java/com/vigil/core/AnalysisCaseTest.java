@@ -413,7 +413,8 @@ public class AnalysisCaseTest {
         var caseId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         var eventId = UUID.fromString("22222222-2222-2222-2222-222222222222");
         var createdAt = Instant.parse("2026-08-26T12:00:00Z");
-        var fingerprint = new com.vigil.core.domain.QueryFingerprint("sha256:observed-query", "v1");
+        var fingerprint = new com.vigil.core.domain.QueryFingerprint(
+                "hmac-sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "v1");
         var observedQuery = new com.vigil.core.domain.ObservedQuery(
                 fingerprint,
                 com.vigil.core.domain.enums.TelemetrySource.PG_STAT_STATEMENTS,

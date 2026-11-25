@@ -39,7 +39,8 @@ final class AnalysisCaseFixtures {
 
     static AnalysisCase discoveredWithFingerprint(UUID caseId) {
         return AnalysisCase.reconstitute(caseId, CREATED_AT,
-                Optional.of(new QueryFingerprint("sha256:abc", "v1")),
+                Optional.of(new QueryFingerprint(
+                        "hmac-sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "v1")),
                 com.vigil.core.domain.enums.CaseStatus.DISCOVERED, 0, List.of(), List.of());
     }
 
