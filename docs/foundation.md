@@ -199,6 +199,24 @@ O SQL bruto e a forma canônica nunca são persistidos nem registrados em log; a
 
 O `queryid` de `pg_stat_statements` pode ser usado como identificador da fonte PostgreSQL, contextualizado por banco, usuário e tipo de execução. Ele **não** substitui o fingerprint nem é o identificador global e permanente do Vigil: depende do PostgreSQL, pode mudar em recriações de objetos e não deve ser presumido estável entre versões maiores.
 
+### Sanitização fail-closed (`SanitizationResult`)
+
+Antes de produzir qualquer contexto seguro, o SQL autorizado passa pela porta `QuerySanitizer`, que devolve um resultado explícito `SanitizationResult`, com exatamente dois casos:
+
+- **`Safe`** — o conteúdo sanitizado (sem literais) e a lista de regras aplicadas (`COMMENTS_REMOVED`, `LITERALS_PLACEHOLDERED`, `WHITESPACE_COLLAPSED`).
+- **`Blocked`** — o motivo como enum (`SanitizationBlockedReason`) e um detalhe curto **derivado do próprio enum**, nunca texto livre. Por construção, o detalhe não contém o SQL original nem qualquer literal.
+
+A porta **nunca lança exceção** para conteúdo recusado: recusa é um `Blocked`. Qualquer situação imprevista (token desconhecido, erro interno, entrada nula) também é `Blocked` — jamais `Safe` nem repasse do texto bruto (fail-closed).
+
+A implementação **reutiliza** dois componentes já existentes, sem duplicar lógica:
+
+1. a política do guard de EXPLAIN (`PostgresSelectStatementGuard`): instrução única, apenas `SELECT`, cláusulas proibidas e tamanho máximo. Uma recusa vira `Blocked` com o motivo correspondente.
+2. o normalizador do fingerprint (`SqlCanonicalizer`): remove comentários e troca todos os literais por placeholders; "não suportado" vira `Blocked`.
+
+**Diferença deliberada em relação ao guard de EXPLAIN:** o sanitizador aceita placeholders já presentes (`$1`), porque o texto vindo de `pg_stat_statements` já é normalizado; o guard de EXPLAIN continua rejeitando placeholders, pois não há binds para planejar.
+
+Integração com o caso: a transição `AnalysisCase.sanitize(...)` só é alcançável com um `SanitizationResult.Safe` (garantia de tipo). Com `Blocked`, o caso **não avança** — a partir de `EVIDENCE_COLLECTED` não há transição terminal de rejeição com motivo, então o caso permanece no estado atual, o caso de uso devolve o `Blocked` ao chamador e registra apenas o enum (sem SQL) no log de aplicação. A semântica de `CaseEvent` e de `reconstitute()` permanece inalterada.
+
 ### Evidence
 
 É um fato verificável. Exemplos: plano de execução, métricas por janela, relação consultada, índices existentes e estatísticas do planner.
