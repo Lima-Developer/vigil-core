@@ -327,7 +327,8 @@ class VigilCliTest {
     }
 
     private Map<String, String> env() {
-        return Map.of("VIGIL_DATABASE_PATH", directory.resolve("vigil.db").toString());
+        return Map.of("VIGIL_DATABASE_PATH", directory.resolve("vigil.db").toString(),
+                "VIGIL_FINGERPRINT_KEY", "cli-test-fingerprint-key");
     }
 
     private static String caseId(Result discover) {

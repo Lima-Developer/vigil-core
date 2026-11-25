@@ -166,23 +166,38 @@ Estes são conceitos diferentes:
 | SQL bruto | Existe temporariamente em uma fonte autorizada. | `SELECT * FROM users WHERE cpf = '099...'` |
 | Template normalizado | Explica a estrutura sem valores literais. Ainda pode revelar termos de negócio. | `SELECT * FROM users WHERE cpf = $1` |
 | Contexto sanitizado/pseudonimizado | Pode ser usado fora da fronteira confiável, conforme política. | `SELECT * FROM entity_1 WHERE field_1 = $1` |
-| Fingerprint | Identificador opaco para agrupamento e correlação. | `qf:v1:84fa9c1d...` |
+| Fingerprint | Identificador opaco para agrupamento e correlação. | `hmac-sha256:84fa9c1d...` (64 hex) |
 
 Muitas execuções concretas podem compartilhar a mesma estrutura normalizada e, portanto, o mesmo fingerprint.
 
 ```text
-SQL bruto
+SQL autorizado
   ↓
-Parse/normalização
+normalização (forma canônica v1, sem literais)
   ↓
-Representação canônica
+HMAC-SHA256(chave estável, "v1\n" + forma canônica)
   ↓
-Fingerprint opcionalmente derivado por hash ou HMAC
+fingerprint versionado  (value = "hmac-sha256:" + hex; algorithmVersion = "v1")
 ```
 
-Fingerprint não é SQL criptografado e não permite reconstruir SQL. HMAC, se adotado no futuro, também não é reversível: ele apenas produz um token verificável com uma chave. Para o MVP, o uso de HMAC não é obrigatório.
+Fingerprint não é SQL criptografado e não permite reconstruir SQL. O Vigil usa **HMAC** e não um SHA-256 simples: um hash puro de uma consulta conhecida é vulnerável a ataque de dicionário (quem adivinha a consulta confirma o hash); a chave torna o token verificável mas não força-brutável. A chave é **estável por instalação**, vinda de configuração (`VIGIL_FINGERPRINT_KEY`), nunca hardcoded — é o que permite correlacionar a mesma família de consulta entre coletas ao longo do tempo. Ela é diferente da chave de pseudonimização do `SchemaBlueprint`, que é **efêmera por coleta**; as duas nunca se misturam. Sem chave configurada, o cálculo falha de forma explícita (fail-closed); apenas o perfil de demonstração declara uma chave de demo fixa no seu arquivo de configuração.
 
-O `queryid` de `pg_stat_statements` pode ser usado como identificador da fonte PostgreSQL, contextualizado por banco, usuário e tipo de execução. Ele não é o identificador global e permanente do Vigil: depende do PostgreSQL, pode mudar em recriações de objetos e não deve ser presumido estável entre versões maiores.
+#### Regras de normalização — forma canônica `v1`
+
+A porta `QueryFingerprinter` recebe o SQL e devolve um resultado explícito: sucesso (`QueryFingerprint`) ou **não suportado** com motivo — nunca exceção genérica, nunca hash do SQL bruto como fallback. A forma canônica `v1`:
+
+- Remove comentários `-- ...` e `/* ... */`, inclusive aninhados (como no PostgreSQL).
+- Substitui **toda** constante por placeholder posicional `$1, $2, ...` na ordem de aparição: números (inteiro, decimal, notação científica); strings `'...'` com `''` escapado; `E'...'`; dollar-quote `$$...$$` e `$tag$...$tag$`; `TRUE`/`FALSE`; e o valor de literais tipados (`DATE '2024-01-01'` → `DATE $n`). `NULL` permanece como palavra.
+- Placeholders já presentes no texto (`$1, $2...`) são renumerados na mesma sequência.
+- Uma lista composta **somente** de constantes em `IN (...)` colapsa para um único placeholder: `IN (1,2,3)` e `IN (7)` → `IN ($n)`. Decisão deliberada: a aridade de uma lista `IN` de constantes é tratada como literal irrelevante, como os próprios valores; uma lista com qualquer não-constante (coluna, subquery) é preservada.
+- `LIMIT`/`OFFSET` com número seguem a regra geral e viram placeholder.
+- Palavras-chave em maiúsculas; identificadores sem aspas em minúsculas (case folding do PostgreSQL); identificadores entre aspas duplas preservam o case exato (e as aspas), então `"Orders"` difere de `orders`.
+- Espaços em branco colapsam em um único espaço e o `;` final é removido.
+- **Fail-closed:** mais de uma instrução, string/comentário/dollar-quote não terminado, instrução vazia ou qualquer token não reconhecido → "não suportado" com motivo.
+
+O SQL bruto e a forma canônica nunca são persistidos nem registrados em log; apenas o fingerprint é.
+
+O `queryid` de `pg_stat_statements` pode ser usado como identificador da fonte PostgreSQL, contextualizado por banco, usuário e tipo de execução. Ele **não** substitui o fingerprint nem é o identificador global e permanente do Vigil: depende do PostgreSQL, pode mudar em recriações de objetos e não deve ser presumido estável entre versões maiores.
 
 ### Evidence
 

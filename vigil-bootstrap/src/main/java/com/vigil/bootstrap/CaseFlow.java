@@ -8,6 +8,8 @@ import com.vigil.application.casework.TriageAnalysisCaseUseCase;
 import com.vigil.application.port.out.interfaces.AnalysisCaseAuditReader;
 import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
 import com.vigil.application.port.out.interfaces.AuditedEvent;
+import com.vigil.application.port.out.interfaces.FingerprintOutcome;
+import com.vigil.application.port.out.interfaces.QueryFingerprinter;
 import com.vigil.core.domain.AnalysisCase;
 import com.vigil.core.domain.ObservationWindow;
 import com.vigil.core.domain.ObservedQuery;
@@ -32,17 +34,24 @@ final class CaseFlow {
 
     private static final Instant SCENARIO_OBSERVED_AT = Instant.parse("2026-01-01T00:00:00Z");
 
+    /** The deterministic fixture query of the scenario; its fingerprint is computed, never hardcoded. */
+    private static final String SCENARIO_SQL =
+            "SELECT id, total FROM orders WHERE customer_id = 42 AND status = 'OPEN' "
+                    + "ORDER BY created_at DESC LIMIT 20";
+
     private final DiscoverObservedQueryUseCase discover;
     private final TriageAnalysisCaseUseCase triage;
     private final AnalysisCaseRepository repository;
     private final AnalysisCaseAuditReader audit;
+    private final QueryFingerprinter fingerprinter;
 
     CaseFlow(DiscoverObservedQueryUseCase discover, TriageAnalysisCaseUseCase triage,
-             AnalysisCaseRepository repository, AnalysisCaseAuditReader audit) {
+             AnalysisCaseRepository repository, AnalysisCaseAuditReader audit, QueryFingerprinter fingerprinter) {
         this.repository = repository;
         this.audit = audit;
         this.discover = discover;
         this.triage = triage;
+        this.fingerprinter = fingerprinter;
     }
 
     DiscoverObservedQueryResult discover() {
@@ -61,15 +70,25 @@ final class CaseFlow {
         return audit.eventsOf(caseId);
     }
 
-    /** The single deterministic scenario: a fixed SELECT observed from pg_stat_statements. */
-    private static ObservedQuery scenarioQuery() {
+    /** The single deterministic scenario: a fixed SELECT observed from pg_stat_statements, fingerprinted via the port. */
+    private ObservedQuery scenarioQuery() {
         return new ObservedQuery(
-                new QueryFingerprint("sha256:vigil-cli-first-flow", "v1"),
+                fingerprintOf(SCENARIO_SQL),
                 TelemetrySource.PG_STAT_STATEMENTS,
                 SCENARIO_OBSERVED_AT,
                 Optional.empty(),
                 CommandType.SELECT,
                 new ObservationWindow(SCENARIO_OBSERVED_AT.minusSeconds(60), SCENARIO_OBSERVED_AT),
                 new ObservedQueryMetrics(10, Duration.ofSeconds(2), 100));
+    }
+
+    /** Surfaces an unsupported fixture rather than masking it; the raw SQL is never exposed in the message. */
+    private QueryFingerprint fingerprintOf(String sql) {
+        return switch (fingerprinter.fingerprint(sql)) {
+            case FingerprintOutcome.Supported supported -> supported.fingerprint();
+            case FingerprintOutcome.Unsupported unsupported ->
+                    throw new IllegalStateException("SQL da fixture não suportado pelo fingerprint: "
+                            + unsupported.reason());
+        };
     }
 }

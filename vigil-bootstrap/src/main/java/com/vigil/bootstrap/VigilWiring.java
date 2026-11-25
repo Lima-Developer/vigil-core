@@ -31,7 +31,10 @@ import com.vigil.application.port.out.interfaces.Clock;
 import com.vigil.application.port.out.interfaces.IdGenerator;
 import com.vigil.application.port.out.interfaces.InferencePort;
 import com.vigil.application.port.out.interfaces.HypothesisValidationPort;
+import com.vigil.application.port.out.interfaces.QueryFingerprinter;
 import com.vigil.application.port.out.interfaces.WorkspaceTelemetryHistory;
+import com.vigil.adapters.fingerprint.HmacQueryFingerprinter;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Objects;
 import org.springframework.core.env.Environment;
@@ -145,9 +148,25 @@ class VigilWiring {
         return new OllamaInferenceAdapter(endpoint);
     }
 
+    /**
+     * Lazy so the key is required only when a fingerprint is actually computed (for example {@code case discover}),
+     * not at startup and not for commands like {@code triage}/{@code show} that never touch it. Absent key fails
+     * fail-closed with a clear message rather than hashing raw SQL. The key is installation-stable and never hardcoded.
+     */
+    @Bean @Lazy QueryFingerprinter queryFingerprinter(VigilProperties properties) {
+        var fingerprint = properties.fingerprint();
+        var key = fingerprint == null ? null : fingerprint.key();
+        if (key == null || key.isBlank()) {
+            throw new IllegalStateException("vigil.fingerprint.key (VIGIL_FINGERPRINT_KEY) é obrigatória para "
+                    + "calcular o fingerprint das consultas; configure uma chave estável por instalação.");
+        }
+        return new HmacQueryFingerprinter(key.getBytes(StandardCharsets.UTF_8));
+    }
+
     @Bean CaseFlow caseFlow(DiscoverObservedQueryUseCase discover, TriageAnalysisCaseUseCase triage,
-                           AnalysisCaseRepository repository, AnalysisCaseAuditReader audit) {
-        return new CaseFlow(discover, triage, repository, audit);
+                           AnalysisCaseRepository repository, AnalysisCaseAuditReader audit,
+                           @Lazy QueryFingerprinter fingerprinter) {
+        return new CaseFlow(discover, triage, repository, audit, fingerprinter);
     }
 
     @Bean @Lazy PostgresCapabilityProbe postgresCapabilityProbe(TargetProfile profile, Environment environment) {

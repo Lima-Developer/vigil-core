@@ -7,10 +7,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /** Typed external settings; validated by the application's own configuration value objects. */
 @ConfigurationProperties(prefix = "vigil")
-public record VigilProperties(Target target, Sqlite sqlite, Inference inference, Validation validation, Demo demo, Telemetry telemetry) {
+public record VigilProperties(Target target, Sqlite sqlite, Inference inference, Validation validation, Demo demo,
+                              Telemetry telemetry, Fingerprint fingerprint) {
     public record Target(String name, String environment, String host, String port, String database,
                          String sslMode, Duration connectTimeout) { }
     public record Sqlite(Path path, Long minimumFreeBytes) { }
+    /** Installation-stable secret used to key the query fingerprint HMAC. Never defaulted: absence fails fail-closed. */
+    public record Fingerprint(String key) { }
     public record Inference(Boolean enabled, String model, Duration timeout, URI endpoint) {
         public Inference {
             if (Boolean.TRUE.equals(enabled) && (model == null || model.isBlank())) {

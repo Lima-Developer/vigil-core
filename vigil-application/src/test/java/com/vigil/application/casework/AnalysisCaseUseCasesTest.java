@@ -217,7 +217,8 @@ class AnalysisCaseUseCasesTest {
 
     private static ObservedQuery observedQuery() {
         return new ObservedQuery(
-                new QueryFingerprint("sha256:observed-query", "v1"),
+                new QueryFingerprint(
+                        "hmac-sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "v1"),
                 TelemetrySource.PG_STAT_STATEMENTS,
                 NOW,
                 Optional.empty(),

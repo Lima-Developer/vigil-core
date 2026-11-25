@@ -14,6 +14,8 @@ import com.vigil.application.configuration.TargetProfile;
 import com.vigil.application.port.out.interfaces.AnalysisCaseAuditReader;
 import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
 import com.vigil.application.port.out.interfaces.Clock;
+import com.vigil.application.port.out.interfaces.FingerprintOutcome;
+import com.vigil.application.port.out.interfaces.QueryFingerprinter;
 import com.vigil.core.domain.AnalysisCase;
 import com.vigil.core.domain.Evidence;
 import com.vigil.core.domain.ObservationWindow;
@@ -38,6 +40,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -53,6 +56,10 @@ import org.springframework.web.server.ResponseStatusException;
 class DemoCaseController {
     private static final String KEY = "vigil-web-demo-v1";
     private static final String ACTOR = "vigil-web-demo";
+    /** The deterministic fixture query of the demonstration; its fingerprint is computed, never hardcoded. */
+    private static final String DEMO_SQL =
+            "SELECT id, total FROM orders WHERE customer_id = 42 AND status = 'OPEN' "
+                    + "ORDER BY created_at DESC LIMIT 20";
     private final AnalysisCaseRepository cases;
     private final AnalysisCaseAuditReader audit;
     private final DiscoverObservedQueryUseCase discover;
@@ -62,12 +69,14 @@ class DemoCaseController {
     private final Clock clock;
     private final TargetProfile target;
     private final VigilProperties properties;
+    private final QueryFingerprinter fingerprinter;
 
     DemoCaseController(AnalysisCaseRepository cases, AnalysisCaseAuditReader audit,
                        DiscoverObservedQueryUseCase discover, TriageAnalysisCaseUseCase triage,
                        RecordHumanDecisionUseCase humanDecisions,
                        ValidateAnalysisCaseUseCase validation,
-                       Clock clock, TargetProfile target, VigilProperties properties) {
+                       Clock clock, TargetProfile target, VigilProperties properties,
+                       @Lazy QueryFingerprinter fingerprinter) {
         this.cases = cases;
         this.audit = audit;
         this.discover = discover;
@@ -77,6 +86,7 @@ class DemoCaseController {
         this.clock = clock;
         this.target = target;
         this.properties = properties;
+        this.fingerprinter = fingerprinter;
     }
 
     @GetMapping("/demo")
@@ -88,12 +98,22 @@ class DemoCaseController {
     @PostMapping("/demo")
     CaseView create() {
         Instant now = clock.now();
-        var query = new ObservedQuery(new QueryFingerprint("sha256:vigil-web-demo", "v1"),
+        var query = new ObservedQuery(fingerprintOf(DEMO_SQL),
                 TelemetrySource.PG_STAT_STATEMENTS, now, Optional.empty(), CommandType.SELECT,
                 new ObservationWindow(now.minusSeconds(60), now),
                 new ObservedQueryMetrics(10, Duration.ofSeconds(2), 100));
         var result = discover.execute(new DiscoverObservedQueryCommand(query, KEY));
         return view(cases.getById(result.caseId()));
+    }
+
+    /** Computes the demo fingerprint via the port; an unsupported fixture surfaces as an error, never masked. */
+    private QueryFingerprint fingerprintOf(String sql) {
+        return switch (fingerprinter.fingerprint(sql)) {
+            case FingerprintOutcome.Supported supported -> supported.fingerprint();
+            case FingerprintOutcome.Unsupported unsupported ->
+                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                            "SQL da fixture não suportado pelo fingerprint: " + unsupported.reason());
+        };
     }
 
     @PostMapping("/{id}/triage")

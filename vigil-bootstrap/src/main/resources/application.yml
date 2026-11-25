@@ -33,3 +33,7 @@ vigil:
   demo:
     select: ${VIGIL_DEMO_SELECT:SELECT 1}
     postgres-user: ${VIGIL_TARGET_USER:}
+  fingerprint:
+    # No default on purpose: a blank key fails fail-closed when a fingerprint is computed. Only the demonstration
+    # profile (application-demo.yml) declares a fixed key. The key must be installation-stable, never hardcoded.
+    key: ${VIGIL_FINGERPRINT_KEY:}
