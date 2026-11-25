@@ -217,6 +217,20 @@ A implementação **reutiliza** dois componentes já existentes, sem duplicar l�
 
 Integração com o caso: a transição `AnalysisCase.sanitize(...)` só é alcançável com um `SanitizationResult.Safe` (garantia de tipo). Com `Blocked`, o caso **não avança** — a partir de `EVIDENCE_COLLECTED` não há transição terminal de rejeição com motivo, então o caso permanece no estado atual, o caso de uso devolve o `Blocked` ao chamador e registra apenas o enum (sem SQL) no log de aplicação. A semântica de `CaseEvent` e de `reconstitute()` permanece inalterada.
 
+### Seleção de candidatas por impacto absoluto (RF09)
+
+A seleção de consultas candidatas por **impacto absoluto** é determinística e vive no domínio (`ImpactSelectionPolicy`), sem dependência de infraestrutura. O fluxo é `consulta observada → Candidate → AnalysisCase`.
+
+- **Impacto é tempo total de execução**, nunca número de chamadas. A política ordena as famílias pelo delta de tempo total no intervalo.
+- Uma família só é **elegível** se cruzar **dois** limiares: participação mínima no tempo do workspace (*share*) **e** tempo total mínimo no intervalo. Limiares padrão documentados: **share ≥ 5%**, **tempo ≥ 100 ms**, **top N = 5** (configuráveis).
+- **Número de chamadas isolado nunca torna uma família elegível** (critério 6): alto RPM com baixo tempo total não abre caso.
+- Desempate **estável**: tempo total desc, chamadas desc, fingerprint asc. A mesma entrada sempre gera a mesma saída. Resultado vazio é válido e vem com motivo (`NO_CANDIDATES_ABOVE_THRESHOLDS` ou `WARMING`).
+- Uma `Candidate` representa a **decisão de investigar**, não a confirmação de que a consulta é inadequada: impacto precede diagnóstico. No escopo atual não há baseline, então `BaselineConfidence.ABSENT` — e uma família de alto impacto pode gerar candidata mesmo assim (critério 2).
+
+**Agregação por família:** o calculador expõe deltas por chave nativa `(dbid, userid, queryid, toplevel)` sem alterar o delta agregado do workspace. As chaves são agrupadas por **fingerprint** (a família, RF11), calculado a partir do texto normalizado do `pg_stat_statements` **dentro do adapter**; o `queryid` é só a origem (`SourceQueryId`). Chaves cujo SQL não pode ser identificado (`<insufficient privilege>`, vazio ou não suportado pelo normalizador) ficam **fora do ranking** e entram num contador de não classificadas (fail-closed); o SQL bruto nunca é identidade nem aparece no motivo ou em log. Estado de *warming* (reset de estatísticas, dealloc, tempo não monotônico ou contador regredindo) resulta em seleção vazia com motivo `WARMING`.
+
+**Abrir caso:** o `SelectionReason` (código + números, texto gerado, sem SQL) vira o **motivo sugerido da triagem** (`CaseEvent.reason` em `DISCOVERED→TRIAGED`); o operador confirma ou edita. A abertura continua sendo decisão humana e a idempotência permanece pela `discovery_idempotency_key`, não pelo fingerprint. Regressão contra baseline continua **fora do escopo** (modelada, não implementada).
+
 ### Evidence
 
 É um fato verificável. Exemplos: plano de execução, métricas por janela, relação consultada, índices existentes e estatísticas do planner.
