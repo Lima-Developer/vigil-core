@@ -118,8 +118,15 @@ public final class AnalysisCase {
         pendingDomainEvents.add(new EvidenceCollected(metadata.eventId(), caseId, evidence.id(), metadata.actor(), metadata.occurredAt(), metadata.version()));
     }
 
-    /** Records that a safe, policy-approved context was produced for the case. */
-    public void sanitize(TransitionMetadata metadata) { transition(CaseStatus.SANITIZED, metadata); }
+    /**
+     * Records that a safe, policy-approved context was produced for the case. The transition is only reachable with a
+     * {@link SanitizationResult.Safe}; a {@code Blocked} result cannot be passed, so the case never advances on refused
+     * content. The safe context itself is not stored (the aggregate never holds SQL).
+     */
+    public void sanitize(SanitizationResult.Safe safeContext, TransitionMetadata metadata) {
+        Objects.requireNonNull(safeContext, "Sanitized context must not be null.");
+        transition(CaseStatus.SANITIZED, metadata);
+    }
     /** Records an evidence-grounded diagnostic; rationale identifies its approved artifact. */
     public void diagnose(TransitionMetadata metadata) { transition(CaseStatus.DIAGNOSED, metadata); }
     /** Records a bounded, testable optimization hypothesis. */
