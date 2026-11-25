@@ -35,6 +35,9 @@ import com.vigil.application.port.out.interfaces.QueryFingerprinter;
 import com.vigil.application.port.out.interfaces.QuerySanitizer;
 import com.vigil.application.port.out.interfaces.WorkspaceTelemetryHistory;
 import com.vigil.application.casework.SanitizeCaseUseCase;
+import com.vigil.application.casework.SelectCandidatesByImpactUseCase;
+import com.vigil.application.telemetry.QueryTelemetryDeltaCalculator;
+import com.vigil.core.domain.ImpactSelectionPolicy;
 import com.vigil.adapters.fingerprint.HmacQueryFingerprinter;
 import com.vigil.adapters.postgres.QuerySanitizerAdapter;
 import java.nio.charset.StandardCharsets;
@@ -168,6 +171,19 @@ class VigilWiring {
 
     @Bean QuerySanitizer querySanitizer() {
         return new QuerySanitizerAdapter();
+    }
+
+    @Bean QueryTelemetryDeltaCalculator queryTelemetryDeltaCalculator() {
+        return new QueryTelemetryDeltaCalculator();
+    }
+
+    @Bean ImpactSelectionPolicy impactSelectionPolicy() {
+        return new ImpactSelectionPolicy();
+    }
+
+    @Bean SelectCandidatesByImpactUseCase selectCandidatesByImpactUseCase(
+            QueryTelemetryDeltaCalculator calculator, ImpactSelectionPolicy policy) {
+        return new SelectCandidatesByImpactUseCase(calculator, policy);
     }
 
     @Bean SanitizeCaseUseCase sanitizeCaseUseCase(AnalysisCaseRepository repository, QuerySanitizer sanitizer,
