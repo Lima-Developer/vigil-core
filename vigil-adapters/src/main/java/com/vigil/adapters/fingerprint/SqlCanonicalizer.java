@@ -39,7 +39,7 @@ import java.util.Set;
  * regardless of its input case even if it is not in the (necessarily partial) keyword set — which is why case never
  * changes the fingerprint. The set only governs upper- versus lower-casing cosmetics of the canonical text.
  */
-final class SqlCanonicalizer {
+public final class SqlCanonicalizer {
 
     private static final String OPERATOR_CHARS = "+-*/<>=~!@#%^&|?:";
 
@@ -57,7 +57,7 @@ final class SqlCanonicalizer {
     /** For {@link Kind#CONSTANT} the text stays {@code null} until placeholders are numbered after the IN-collapse. */
     private record Token(Kind kind, String text) { }
 
-    String canonicalize(String sql) {
+    public String canonicalize(String sql) {
         if (sql == null) {
             throw new UnsupportedSqlException("SQL ausente.");
         }

@@ -13,7 +13,22 @@ final class PostgresSelectStatementGuard {
     private PostgresSelectStatementGuard() {
     }
 
+    /**
+     * EXPLAIN path: the statement must carry no parameter placeholders, since there are no binds to plan with.
+     * {@code $1} is rejected with {@link PlanRejectionReason#PLACEHOLDERS_UNSUPPORTED}. Behavior is unchanged.
+     */
     static String validate(String text) {
+        return scan(text, false);
+    }
+
+    /**
+     * The same conservative single-statement SELECT policy, with one deliberate difference governed by
+     * {@code placeholdersAllowed}: when true, existing positional placeholders ({@code $1, $2, ...}) are accepted
+     * instead of rejected. The sanitizer sets this true because pg_stat_statements text is already normalized and
+     * carries placeholders; the EXPLAIN guard keeps it false. Every other rule (single statement, SELECT-only,
+     * forbidden clauses, maximum length) is identical, so there is one policy, not two.
+     */
+    static String scan(String text, boolean placeholdersAllowed) {
         if (text == null || text.isBlank()) throw reject(PlanRejectionReason.EMPTY);
         if (text.length() > MAX_LENGTH) throw reject(PlanRejectionReason.TOO_LARGE);
         if (text.indexOf(';') >= 0) throw reject(PlanRejectionReason.MULTIPLE_STATEMENTS);
@@ -58,8 +73,13 @@ final class PostgresSelectStatementGuard {
                 continue;
             }
             if (c == '$') {
-                if (i + 1 < length && Character.isDigit(text.charAt(i + 1)))
-                    throw reject(PlanRejectionReason.PLACEHOLDERS_UNSUPPORTED);
+                if (i + 1 < length && Character.isDigit(text.charAt(i + 1))) {
+                    if (!placeholdersAllowed) throw reject(PlanRejectionReason.PLACEHOLDERS_UNSUPPORTED);
+                    int digits = i + 1;
+                    while (digits < length && Character.isDigit(text.charAt(digits))) digits++;
+                    i = digits;
+                    continue;
+                }
                 int end = i + 1;
                 while (end < length && (Character.isLetterOrDigit(text.charAt(end)) || text.charAt(end) == '_')) end++;
                 if (end < length && text.charAt(end) == '$') {

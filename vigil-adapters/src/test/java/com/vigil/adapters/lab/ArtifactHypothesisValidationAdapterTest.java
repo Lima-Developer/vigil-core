@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.vigil.core.domain.AnalysisCase;
 import com.vigil.core.domain.Evidence;
 import com.vigil.core.domain.PlanSummaryEvidencePayload;
+import com.vigil.core.domain.SanitizationResult;
+import com.vigil.core.domain.SanitizationRule;
 import com.vigil.core.domain.TransitionMetadata;
 import com.vigil.core.domain.enums.EvidenceConfidence;
 import com.vigil.core.domain.enums.EvidenceSource;
@@ -63,7 +65,8 @@ class ArtifactHypothesisValidationAdapterTest {
                 Optional.empty());
         analysisCase.collectEvidence(evidence, "test", now);
         var metadata = new TransitionMetadata("test", "evidência suficiente", now);
-        analysisCase.sanitize(metadata);
+        analysisCase.sanitize(
+                new SanitizationResult.Safe("SELECT $1", List.of(SanitizationRule.LITERALS_PLACEHOLDERED)), metadata);
         analysisCase.diagnose(metadata);
         analysisCase.proposeHypothesis(metadata);
         analysisCase.startValidation(metadata);
