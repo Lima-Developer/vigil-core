@@ -1,0 +1,11 @@
+spring:
+  config:
+    activate:
+      on-profile: demo
+vigil:
+  # The demonstration profile is the only place allowed to carry a fixed fingerprint key. It is a demo secret, not a
+  # production one: the ephemeral web demo activates this profile so the flow runs end to end without external setup.
+  # It is still overridable by VIGIL_FINGERPRINT_KEY. This is the installation-stable fingerprint key, which is a
+  # different concept from the SchemaBlueprint pseudonymization salt (ephemeral per collection).
+  fingerprint:
+    key: ${VIGIL_FINGERPRINT_KEY:vigil-demo-fixed-fingerprint-key}

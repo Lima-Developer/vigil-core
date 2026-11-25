@@ -13,6 +13,8 @@ public class VigilApplication {
         String[] effectiveArguments = args;
         if (ephemeral != null) {
             effectiveArguments = withEphemeralStorageArguments(args, ephemeral);
+            // The demo profile carries the fixed fingerprint key so the explicitly requested demo runs end to end.
+            application.setAdditionalProfiles("demo");
             // The hook below closes Spring before deleting the SQLite files.
             application.setRegisterShutdownHook(false);
         }

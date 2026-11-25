@@ -15,7 +15,8 @@ class DemoCaseControllerTest {
                 .withPropertyValues("spring.main.web-application-type=none", "vigil.target.name=lab",
                         "vigil.target.environment=test", "vigil.target.host=localhost",
                         "vigil.target.database=postgres", "vigil.sqlite.path=" + directory.resolve("case.db"),
-                        "vigil.sqlite.minimum-free-bytes=1")
+                        "vigil.sqlite.minimum-free-bytes=1",
+                        "vigil.fingerprint.key=demo-test-fingerprint-key")
                 .run(context -> {
                     assertNull(context.getStartupFailure());
                     var api = context.getBean(DemoCaseController.class);
@@ -46,5 +47,29 @@ class DemoCaseControllerTest {
                     assertEquals("APPROVED", approved.status());
                     assertTrue(approved.events().stream().anyMatch(event -> event.type().contains("APPROVED")));
                 });
+    }
+
+    @Test void failsClosedWhenNoFingerprintKeyIsConfigured() {
+        new ApplicationContextRunner().withUserConfiguration(VigilApplication.class)
+                .withPropertyValues("spring.main.web-application-type=none", "vigil.target.name=lab",
+                        "vigil.target.environment=test", "vigil.target.host=localhost",
+                        "vigil.target.database=postgres", "vigil.sqlite.path=" + directory.resolve("nokey.db"),
+                        "vigil.sqlite.minimum-free-bytes=1", "vigil.fingerprint.key=")
+                .run(context -> {
+                    // Startup still succeeds: the fingerprinter is lazy, so the key is only required when a case is
+                    // discovered, not for the context to come up.
+                    assertNull(context.getStartupFailure());
+                    var api = context.getBean(DemoCaseController.class);
+                    var failure = assertThrows(Exception.class, api::create);
+                    assertTrue(causeChain(failure).contains("VIGIL_FINGERPRINT_KEY"), causeChain(failure));
+                });
+    }
+
+    private static String causeChain(Throwable failure) {
+        var messages = new StringBuilder();
+        for (var cause = failure; cause != null; cause = cause.getCause()) {
+            messages.append(cause.getMessage()).append('\n');
+        }
+        return messages.toString();
     }
 }

@@ -28,6 +28,7 @@ final class VigilContext {
         copy(variables, values, "VIGIL_TARGET_PORT", "vigil.target.port");
         copy(variables, values, "VIGIL_TARGET_DATABASE", "vigil.target.database");
         copy(variables, values, "VIGIL_TARGET_SSL_MODE", "vigil.target.ssl-mode");
+        copy(variables, values, "VIGIL_FINGERPRINT_KEY", "vigil.fingerprint.key");
         copy(variables, values, "VIGIL_TARGET_CONNECT_TIMEOUT_SECONDS", "vigil.target.connect-timeout");
         if (variables.containsKey("VIGIL_TARGET_CONNECT_TIMEOUT_SECONDS")) {
             values.put("vigil.target.connect-timeout", variables.get("VIGIL_TARGET_CONNECT_TIMEOUT_SECONDS") + "s");
