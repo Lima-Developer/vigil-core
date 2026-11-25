@@ -32,8 +32,11 @@ import com.vigil.application.port.out.interfaces.IdGenerator;
 import com.vigil.application.port.out.interfaces.InferencePort;
 import com.vigil.application.port.out.interfaces.HypothesisValidationPort;
 import com.vigil.application.port.out.interfaces.QueryFingerprinter;
+import com.vigil.application.port.out.interfaces.QuerySanitizer;
 import com.vigil.application.port.out.interfaces.WorkspaceTelemetryHistory;
+import com.vigil.application.casework.SanitizeCaseUseCase;
 import com.vigil.adapters.fingerprint.HmacQueryFingerprinter;
+import com.vigil.adapters.postgres.QuerySanitizerAdapter;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Objects;
@@ -161,6 +164,15 @@ class VigilWiring {
                     + "calcular o fingerprint das consultas; configure uma chave estável por instalação.");
         }
         return new HmacQueryFingerprinter(key.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Bean QuerySanitizer querySanitizer() {
+        return new QuerySanitizerAdapter();
+    }
+
+    @Bean SanitizeCaseUseCase sanitizeCaseUseCase(AnalysisCaseRepository repository, QuerySanitizer sanitizer,
+                                                  Clock clock) {
+        return new SanitizeCaseUseCase(repository, sanitizer, clock);
     }
 
     @Bean CaseFlow caseFlow(DiscoverObservedQueryUseCase discover, TriageAnalysisCaseUseCase triage,

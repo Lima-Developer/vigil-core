@@ -16,6 +16,8 @@ import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
 import com.vigil.application.port.out.interfaces.Clock;
 import com.vigil.application.port.out.interfaces.FingerprintOutcome;
 import com.vigil.application.port.out.interfaces.QueryFingerprinter;
+import com.vigil.application.port.out.interfaces.QuerySanitizer;
+import com.vigil.core.domain.SanitizationResult;
 import com.vigil.core.domain.AnalysisCase;
 import com.vigil.core.domain.Evidence;
 import com.vigil.core.domain.ObservationWindow;
@@ -70,13 +72,14 @@ class DemoCaseController {
     private final TargetProfile target;
     private final VigilProperties properties;
     private final QueryFingerprinter fingerprinter;
+    private final QuerySanitizer sanitizer;
 
     DemoCaseController(AnalysisCaseRepository cases, AnalysisCaseAuditReader audit,
                        DiscoverObservedQueryUseCase discover, TriageAnalysisCaseUseCase triage,
                        RecordHumanDecisionUseCase humanDecisions,
                        ValidateAnalysisCaseUseCase validation,
                        Clock clock, TargetProfile target, VigilProperties properties,
-                       @Lazy QueryFingerprinter fingerprinter) {
+                       @Lazy QueryFingerprinter fingerprinter, QuerySanitizer sanitizer) {
         this.cases = cases;
         this.audit = audit;
         this.discover = discover;
@@ -87,6 +90,7 @@ class DemoCaseController {
         this.target = target;
         this.properties = properties;
         this.fingerprinter = fingerprinter;
+        this.sanitizer = sanitizer;
     }
 
     @GetMapping("/demo")
@@ -116,6 +120,16 @@ class DemoCaseController {
         };
     }
 
+    /** Sanitizes the demo fixture via the port; a BLOCKED fixture surfaces as an error, never masked. */
+    private SanitizationResult.Safe safeContextOf(String sql) {
+        return switch (sanitizer.sanitize(sql)) {
+            case SanitizationResult.Safe safe -> safe;
+            case SanitizationResult.Blocked blocked ->
+                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                            "SQL da fixture bloqueado na sanitização: " + blocked.reason());
+        };
+    }
+
     @PostMapping("/{id}/triage")
     CaseView triage(@PathVariable("id") UUID id, @RequestBody TriageRequest request) {
         requireDemoCase(id);
@@ -138,7 +152,7 @@ class DemoCaseController {
                 now, "vigil-web-demo-v1", EvidenceConfidence.HIGH, payload, Optional.empty());
         var metadata = new TransitionMetadata(ACTOR, "Fixture de laboratório preparada para demonstração.", now);
         analysisCase.collectEvidence(evidence, ACTOR, now);
-        analysisCase.sanitize(metadata);
+        analysisCase.sanitize(safeContextOf(DEMO_SQL), metadata);
         analysisCase.diagnose(metadata);
         analysisCase.proposeHypothesis(metadata);
         analysisCase.startValidation(metadata);
