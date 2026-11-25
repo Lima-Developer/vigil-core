@@ -17,6 +17,8 @@ import com.vigil.core.domain.ObservationWindow;
 import com.vigil.core.domain.ObservedQuery;
 import com.vigil.core.domain.ObservedQueryMetrics;
 import com.vigil.core.domain.QueryFingerprint;
+import com.vigil.core.domain.SanitizationResult;
+import com.vigil.core.domain.SanitizationRule;
 import com.vigil.core.domain.enums.CaseStatus;
 import com.vigil.core.domain.enums.CommandType;
 import com.vigil.core.domain.enums.EvidenceConfidence;
@@ -241,7 +243,8 @@ class AnalysisCaseUseCasesTest {
         analysisCase.collectEvidence(new Evidence(UUID.randomUUID(), NEW_CASE_ID, payload.type(),
                 EvidenceSource.POSTGRESQL_EXPLAIN, NOW, "test", EvidenceConfidence.HIGH, payload, Optional.empty()),
                 "system", NOW);
-        analysisCase.sanitize(metadata);
+        analysisCase.sanitize(
+                new SanitizationResult.Safe("SELECT $1", List.of(SanitizationRule.LITERALS_PLACEHOLDERED)), metadata);
         analysisCase.diagnose(metadata);
         analysisCase.proposeHypothesis(metadata);
         analysisCase.startValidation(metadata);
@@ -259,7 +262,8 @@ class AnalysisCaseUseCasesTest {
         analysisCase.collectEvidence(new Evidence(UUID.randomUUID(), NEW_CASE_ID, payload.type(),
                 EvidenceSource.POSTGRESQL_EXPLAIN, NOW, "test", EvidenceConfidence.HIGH, payload, Optional.empty()),
                 "system", NOW);
-        analysisCase.sanitize(metadata);
+        analysisCase.sanitize(
+                new SanitizationResult.Safe("SELECT $1", List.of(SanitizationRule.LITERALS_PLACEHOLDERED)), metadata);
         analysisCase.diagnose(metadata);
         analysisCase.proposeHypothesis(metadata);
         analysisCase.startValidation(metadata);
