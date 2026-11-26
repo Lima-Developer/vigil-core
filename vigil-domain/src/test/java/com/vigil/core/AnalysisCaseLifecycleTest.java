@@ -4,6 +4,8 @@ import com.vigil.core.domain.AnalysisCase;
 import com.vigil.core.domain.Evidence;
 import com.vigil.core.domain.MetricEvidencePayload;
 import com.vigil.core.domain.ObservationWindow;
+import com.vigil.core.domain.SanitizationResult;
+import com.vigil.core.domain.SanitizationRule;
 import com.vigil.core.domain.TransitionMetadata;
 import com.vigil.core.domain.enums.CaseStatus;
 import com.vigil.core.domain.enums.EvidenceConfidence;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,13 +28,15 @@ import static org.junit.jupiter.api.Assertions.*;
 class AnalysisCaseLifecycleTest {
     private static final UUID CASE_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
     private static final Instant AT = Instant.parse("2026-11-17T20:00:00Z");
+    private static final SanitizationResult.Safe SAFE =
+            new SanitizationResult.Safe("SELECT $1", List.of(SanitizationRule.LITERALS_PLACEHOLDERED));
 
     @Test
     void shouldTraverseTheWholeAuditableLifecycleWithoutExecutingAnyTargetChange() {
         var analysisCase = AnalysisCase.discover(CASE_ID, AT);
         analysisCase.triage(meta("accepted for investigation", 1));
         analysisCase.collectEvidence(evidence(), "collector", AT.plusSeconds(2));
-        analysisCase.sanitize(meta("safe context produced", 3));
+        analysisCase.sanitize(SAFE, meta("safe context produced", 3));
         analysisCase.diagnose(meta("diagnosis references evidence", 4));
         analysisCase.proposeHypothesis(meta("bounded rewrite hypothesis", 5));
         analysisCase.startValidation(meta("sandbox profile synthetic-only", 6));
@@ -74,7 +79,7 @@ class AnalysisCaseLifecycleTest {
         var analysisCase = AnalysisCase.discover(CASE_ID, AT);
         analysisCase.triage(meta("triage", 1));
         analysisCase.collectEvidence(evidence(), "collector", AT.plusSeconds(2));
-        analysisCase.sanitize(meta("sanitized", 3));
+        analysisCase.sanitize(SAFE, meta("sanitized", 3));
         analysisCase.diagnose(meta("diagnosed", 4));
         analysisCase.proposeHypothesis(meta("hypothesis", 5));
         analysisCase.startValidation(meta("sandbox", 6));

@@ -14,8 +14,15 @@ import com.vigil.application.configuration.TargetProfile;
 import com.vigil.application.port.out.interfaces.AnalysisCaseAuditReader;
 import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
 import com.vigil.application.port.out.interfaces.Clock;
+import com.vigil.application.casework.SelectCandidatesByImpactUseCase;
+import com.vigil.application.port.out.interfaces.CumulativeQueryCounters;
 import com.vigil.application.port.out.interfaces.FingerprintOutcome;
+import com.vigil.application.port.out.interfaces.FingerprintedQueryCounters;
+import com.vigil.application.port.out.interfaces.ImpactTelemetrySnapshot;
 import com.vigil.application.port.out.interfaces.QueryFingerprinter;
+import com.vigil.application.port.out.interfaces.QuerySanitizer;
+import com.vigil.core.domain.Candidate;
+import com.vigil.core.domain.SanitizationResult;
 import com.vigil.core.domain.AnalysisCase;
 import com.vigil.core.domain.Evidence;
 import com.vigil.core.domain.ObservationWindow;
@@ -60,6 +67,11 @@ class DemoCaseController {
     private static final String DEMO_SQL =
             "SELECT id, total FROM orders WHERE customer_id = 42 AND status = 'OPEN' "
                     + "ORDER BY created_at DESC LIMIT 20";
+    /** A cheap, high-call query that must NOT be selected (criterion 6): many calls, negligible total time. */
+    private static final String DEMO_CHEAP_SQL = "SELECT 1";
+    private static final Instant SNAPSHOT_BEFORE = Instant.parse("2026-01-01T00:00:00Z");
+    private static final Instant SNAPSHOT_AFTER = Instant.parse("2026-01-01T00:05:00Z");
+    private static final Instant SNAPSHOT_RESET = Instant.parse("2026-01-01T00:00:00Z");
     private final AnalysisCaseRepository cases;
     private final AnalysisCaseAuditReader audit;
     private final DiscoverObservedQueryUseCase discover;
@@ -70,13 +82,16 @@ class DemoCaseController {
     private final TargetProfile target;
     private final VigilProperties properties;
     private final QueryFingerprinter fingerprinter;
+    private final QuerySanitizer sanitizer;
+    private final SelectCandidatesByImpactUseCase selectCandidates;
 
     DemoCaseController(AnalysisCaseRepository cases, AnalysisCaseAuditReader audit,
                        DiscoverObservedQueryUseCase discover, TriageAnalysisCaseUseCase triage,
                        RecordHumanDecisionUseCase humanDecisions,
                        ValidateAnalysisCaseUseCase validation,
                        Clock clock, TargetProfile target, VigilProperties properties,
-                       @Lazy QueryFingerprinter fingerprinter) {
+                       @Lazy QueryFingerprinter fingerprinter, QuerySanitizer sanitizer,
+                       SelectCandidatesByImpactUseCase selectCandidates) {
         this.cases = cases;
         this.audit = audit;
         this.discover = discover;
@@ -87,6 +102,8 @@ class DemoCaseController {
         this.target = target;
         this.properties = properties;
         this.fingerprinter = fingerprinter;
+        this.sanitizer = sanitizer;
+        this.selectCandidates = selectCandidates;
     }
 
     @GetMapping("/demo")
@@ -98,12 +115,35 @@ class DemoCaseController {
     @PostMapping("/demo")
     CaseView create() {
         Instant now = clock.now();
-        var query = new ObservedQuery(fingerprintOf(DEMO_SQL),
-                TelemetrySource.PG_STAT_STATEMENTS, now, Optional.empty(), CommandType.SELECT,
-                new ObservationWindow(now.minusSeconds(60), now),
-                new ObservedQueryMetrics(10, Duration.ofSeconds(2), 100));
-        var result = discover.execute(new DiscoverObservedQueryCommand(query, KEY));
+        // The case is born from a Candidate selected by the impact policy over two fixture snapshots, not a fixed query.
+        var candidate = demoCandidate();
+        var window = new ObservationWindow(now.minusSeconds(60), now);
+        var result = discover.execute(candidate, TelemetrySource.PG_STAT_STATEMENTS, now, window,
+                CommandType.SELECT, KEY);
         return view(cases.getById(result.caseId()));
+    }
+
+    /** Runs the impact policy over two deterministic fixture snapshots; the heavy query wins, the cheap one does not. */
+    private Candidate demoCandidate() {
+        var heavy = fingerprintOf(DEMO_SQL);
+        var cheap = fingerprintOf(DEMO_CHEAP_SQL);
+        var before = new ImpactTelemetrySnapshot(SNAPSHOT_BEFORE, Optional.of(SNAPSHOT_RESET), 0, true, List.of(
+                fixtureEntry(101, 0, "0", heavy), fixtureEntry(202, 0, "0", cheap)), 0);
+        var after = new ImpactTelemetrySnapshot(SNAPSHOT_AFTER, Optional.of(SNAPSHOT_RESET), 0, true, List.of(
+                fixtureEntry(101, 56, "1234", heavy), fixtureEntry(202, 10000, "50", cheap)), 0);
+        var result = selectCandidates.execute(before, after);
+        if (result.candidates().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Nenhuma candidata de impacto na fixture da demonstração: " + result.outcome());
+        }
+        return result.candidates().get(0);
+    }
+
+    private static FingerprintedQueryCounters fixtureEntry(long queryId, long calls, String totalMillis,
+                                                           QueryFingerprint fingerprint) {
+        var counters = new CumulativeQueryCounters(1, 1, queryId, true, calls, new java.math.BigDecimal(totalMillis),
+                calls, 0, 0, 0, 0);
+        return new FingerprintedQueryCounters(counters, Optional.of(fingerprint));
     }
 
     /** Computes the demo fingerprint via the port; an unsupported fixture surfaces as an error, never masked. */
@@ -113,6 +153,16 @@ class DemoCaseController {
             case FingerprintOutcome.Unsupported unsupported ->
                     throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                             "SQL da fixture não suportado pelo fingerprint: " + unsupported.reason());
+        };
+    }
+
+    /** Sanitizes the demo fixture via the port; a BLOCKED fixture surfaces as an error, never masked. */
+    private SanitizationResult.Safe safeContextOf(String sql) {
+        return switch (sanitizer.sanitize(sql)) {
+            case SanitizationResult.Safe safe -> safe;
+            case SanitizationResult.Blocked blocked ->
+                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                            "SQL da fixture bloqueado na sanitização: " + blocked.reason());
         };
     }
 
@@ -138,7 +188,7 @@ class DemoCaseController {
                 now, "vigil-web-demo-v1", EvidenceConfidence.HIGH, payload, Optional.empty());
         var metadata = new TransitionMetadata(ACTOR, "Fixture de laboratório preparada para demonstração.", now);
         analysisCase.collectEvidence(evidence, ACTOR, now);
-        analysisCase.sanitize(metadata);
+        analysisCase.sanitize(safeContextOf(DEMO_SQL), metadata);
         analysisCase.diagnose(metadata);
         analysisCase.proposeHypothesis(metadata);
         analysisCase.startValidation(metadata);
@@ -178,7 +228,8 @@ class DemoCaseController {
         return new CaseView(analysisCase.caseId(), analysisCase.status().name(),
                 "fixture de laboratório", "SELECT", observed,
                 new WindowView(observed.minusSeconds(60), observed),
-                new MetricsView(10, 2000, 200, 100), plan(), List.copyOf(events));
+                new MetricsView(10, 2000, 200, 100), plan(), List.copyOf(events),
+                demoCandidate().selectionReason().render());
     }
 
     private PlanView plan() {
@@ -211,5 +262,6 @@ class DemoCaseController {
     record MetricsView(long calls, long totalExecutionMillis, long meanExecutionMillis, long rows) { }
     record PlanView(boolean estimated, String text) { }
     record CaseView(UUID id, String status, String source, String command, Instant observedAt,
-                    WindowView window, MetricsView metrics, PlanView explain, List<EventView> events) { }
+                    WindowView window, MetricsView metrics, PlanView explain, List<EventView> events,
+                    String selectionReason) { }
 }

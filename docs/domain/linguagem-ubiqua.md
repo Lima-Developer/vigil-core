@@ -205,6 +205,20 @@ Nível de confiança disponível para comparar o comportamento atual de uma `Que
 
 Baseline não é uma condição para o Vigil funcionar. Na ausência de histórico, o Vigil usa impacto absoluto. Baseline serve para detectar desvio de comportamento.
 
+### Contrapartida em código (RF09)
+
+Estes conceitos agora têm tipos Java no domínio (`com.vigil.core.domain`), sem dependência de infraestrutura:
+
+| Conceito | Tipo | Observação |
+|---|---|---|
+| ImpactAssessment | `ImpactAssessment` | deltas da família (`QueryImpactDelta`, com `share` 0..1), posição no ranking e `BaselineConfidence`. |
+| BaselineConfidence | `BaselineConfidence` | `ABSENT`, `ESTABLISHING`, `ESTABLISHED`; no escopo atual sempre `ABSENT` (sem baseline; regressão fora do escopo). |
+| Candidate | `Candidate` | `QueryFingerprint` (identidade da família, RF11), `List<SourceQueryId>` (origens), `ImpactAssessment` e `SelectionReason`. |
+| Política de seleção | `ImpactSelectionPolicy` | determinística e pura: ordena por tempo total de execução (impacto absoluto), aplica limiares de share e tempo, nunca seleciona por número de chamadas isolado. |
+| Motivo | `SelectionReason` | código + números; o texto é gerado e nunca contém SQL nem literais. |
+
+O fluxo é `consulta observada → Candidate → AnalysisCase`: o use case `SelectCandidatesByImpactUseCase` produz as `Candidate` a partir de dois snapshots; abrir caso usa `DiscoverObservedQueryUseCase`, e o texto do `SelectionReason` é o motivo sugerido da triagem (`CaseEvent.reason`).
+
 A classificação depende de uma `BaselinePolicy` versionada e auditável. Os valores abaio são a política inicial do Vigil, não verdades universais.
 
 #### ABSENT
