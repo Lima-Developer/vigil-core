@@ -12,10 +12,16 @@ import java.util.Objects;
 public record PlanSummaryEvidencePayload(
         List<PlanNodeType> nodeTypes,
         long estimatedRows,
-        Optional<BigDecimal> estimatedTotalCost
+        Optional<BigDecimal> estimatedTotalCost,
+        List<PlanNodeEvidence> nodes
 ) implements EvidencePayload {
     public PlanSummaryEvidencePayload(List<PlanNodeType> nodeTypes, long estimatedRows) {
-        this(nodeTypes, estimatedRows, Optional.empty());
+        this(nodeTypes, estimatedRows, Optional.empty(), List.of());
+    }
+
+    public PlanSummaryEvidencePayload(List<PlanNodeType> nodeTypes, long estimatedRows,
+                                      Optional<BigDecimal> estimatedTotalCost) {
+        this(nodeTypes, estimatedRows, estimatedTotalCost, List.of());
     }
 
     public PlanSummaryEvidencePayload {
@@ -27,6 +33,7 @@ public record PlanSummaryEvidencePayload(
         }
 
         Objects.requireNonNull(estimatedTotalCost, "Estimated total cost must not be null.");
+        nodes = List.copyOf(Objects.requireNonNull(nodes, "Plan nodes must not be null."));
         estimatedTotalCost.ifPresent(cost -> {
             if (cost.signum() < 0) throw new IllegalArgumentException("Estimated total cost must not be negative.");
         });

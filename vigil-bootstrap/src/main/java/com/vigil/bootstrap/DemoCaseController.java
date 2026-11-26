@@ -29,12 +29,21 @@ import com.vigil.core.domain.ObservationWindow;
 import com.vigil.core.domain.ObservedQuery;
 import com.vigil.core.domain.ObservedQueryMetrics;
 import com.vigil.core.domain.PlanSummaryEvidencePayload;
+import com.vigil.core.domain.PlanNodeEvidence;
+import com.vigil.core.domain.RelationBlueprint;
+import com.vigil.core.domain.RelationMetadataEvidencePayload;
+import com.vigil.core.domain.SafeCatalogReference;
+import com.vigil.core.domain.SafeRelationReference;
+import com.vigil.core.domain.DiagnosticRuleEngine;
+import com.vigil.core.domain.Diagnosis;
+import com.vigil.core.domain.OptimizationHypothesis;
 import com.vigil.core.domain.QueryFingerprint;
 import com.vigil.core.domain.TransitionMetadata;
 import com.vigil.core.domain.enums.CommandType;
 import com.vigil.core.domain.enums.EvidenceConfidence;
 import com.vigil.core.domain.enums.EvidenceSource;
 import com.vigil.core.domain.enums.PlanNodeType;
+import com.vigil.core.domain.enums.RelationType;
 import com.vigil.core.domain.enums.TelemetrySource;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -45,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.OptionalLong;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.context.annotation.Lazy;
@@ -182,15 +192,34 @@ class DemoCaseController {
         if (analysisCase.status() != com.vigil.core.domain.enums.CaseStatus.TRIAGED)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "O caso precisa estar triado antes da curadoria");
         var now = clock.now();
+        var relation = new SafeRelationReference("relation_lab_orders");
+        var customer = new SafeCatalogReference("column_11111111111111111111111111111111");
+        var status = new SafeCatalogReference("column_22222222222222222222222222222222");
         var payload = new PlanSummaryEvidencePayload(List.of(PlanNodeType.SEQUENTIAL_SCAN), 100,
-                Optional.of(new BigDecimal("12.00")));
-        var evidence = new Evidence(UUID.randomUUID(), id, payload.type(), EvidenceSource.POSTGRESQL_EXPLAIN,
+                Optional.of(new BigDecimal("12.00")), List.of(new PlanNodeEvidence(
+                PlanNodeType.SEQUENTIAL_SCAN, Optional.of(relation), true, List.of(customer, status), true, 100)));
+        var planEvidence = new Evidence(UUID.randomUUID(), id, payload.type(), EvidenceSource.POSTGRESQL_EXPLAIN,
                 now, "vigil-web-demo-v1", EvidenceConfidence.HIGH, payload, Optional.empty());
-        var metadata = new TransitionMetadata(ACTOR, "Fixture de laboratório preparada para demonstração.", now);
-        analysisCase.collectEvidence(evidence, ACTOR, now);
+        var blueprint = new RelationBlueprint(relation,
+                new SafeCatalogReference("schema_33333333333333333333333333333333"), RelationType.TABLE,
+                OptionalLong.of(100_000), 1_000, List.of(), List.of(), List.of());
+        var catalogPayload = RelationMetadataEvidencePayload.fromBlueprint(blueprint);
+        var catalogEvidence = new Evidence(UUID.randomUUID(), id, catalogPayload.type(), EvidenceSource.POSTGRESQL_CATALOG,
+                now, "vigil-web-demo-v1", EvidenceConfidence.HIGH, catalogPayload, Optional.empty());
+        analysisCase.collectEvidence(planEvidence, ACTOR, now);
+        analysisCase.collectEvidence(catalogEvidence, ACTOR, now);
+        var evaluation = new DiagnosticRuleEngine().evaluate(
+                new DiagnosticRuleEngine.PlanEvidence(planEvidence.id(), payload),
+                List.of(new DiagnosticRuleEngine.CatalogEvidence(catalogEvidence.id(), blueprint)),
+                Optional.of(demoCandidate().assessment()));
+        if (evaluation.findings().isEmpty()) throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Fixture da demonstração não produziu finding: " + evaluation.inconclusiveReasons());
+        var finding = evaluation.findings().getFirst();
+        var metadata = new TransitionMetadata(ACTOR,
+                finding.ruleCode().name() + " — " + finding.explanation(), now);
         analysisCase.sanitize(safeContextOf(DEMO_SQL), metadata);
-        analysisCase.diagnose(metadata);
-        analysisCase.proposeHypothesis(metadata);
+        analysisCase.diagnose(new Diagnosis(evaluation.findings(), java.util.Set.copyOf(finding.evidenceIds())), metadata);
+        analysisCase.proposeHypothesis(new OptimizationHypothesis(relation, List.of(customer, status), finding), metadata);
         analysisCase.startValidation(metadata);
         cases.save(analysisCase);
         validation.execute(new ValidateAnalysisCaseCommand(id, ACTOR));
@@ -203,7 +232,8 @@ class DemoCaseController {
         if (request == null || request.decision() == null || request.reason() == null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma decisão e informe a justificativa");
         try {
-            humanDecisions.execute(new RecordHumanDecisionCommand(id, request.decision(), request.reason(), ACTOR));
+            humanDecisions.execute(new RecordHumanDecisionCommand(id, request.decision(), request.reason(), ACTOR,
+                    requireDemoCase(id).recommendationVersion()));
         } catch (IllegalArgumentException invalid) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, invalid.getMessage());
         }

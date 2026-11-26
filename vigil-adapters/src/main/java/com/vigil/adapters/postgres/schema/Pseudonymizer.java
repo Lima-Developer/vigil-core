@@ -12,33 +12,33 @@ import javax.crypto.spec.SecretKeySpec;
  * HMAC-SHA256 pseudonyms keyed by a salt that lives for one collection: the same name always yields the same
  * pseudonym inside it, and nothing correlates pseudonyms across collections. The salt is never persisted or logged.
  */
-final class Pseudonymizer {
+public final class Pseudonymizer {
     private static final String ALGORITHM = "HmacSHA256";
     private static final int MIN_SALT_BYTES = 16;
     private static final int DIGEST_BYTES = 16;
 
     private final SecretKeySpec key;
 
-    Pseudonymizer(byte[] salt) {
+    public Pseudonymizer(byte[] salt) {
         if (salt == null || salt.length < MIN_SALT_BYTES) {
             throw new IllegalArgumentException("Salt must have at least " + MIN_SALT_BYTES + " bytes.");
         }
         this.key = new SecretKeySpec(salt.clone(), ALGORITHM);
     }
 
-    SafeRelationReference relation(String schema, String relation) {
+    public SafeRelationReference relation(String schema, String relation) {
         return new SafeRelationReference("relation_" + digest("relation", schema, relation));
     }
 
-    SafeCatalogReference schema(String schema) {
+    public SafeCatalogReference schema(String schema) {
         return new SafeCatalogReference("schema_" + digest("schema", schema));
     }
 
-    SafeCatalogReference column(String schema, String relation, String column) {
+    public SafeCatalogReference column(String schema, String relation, String column) {
         return new SafeCatalogReference("column_" + digest("column", schema, relation, column));
     }
 
-    SafeCatalogReference index(String schema, String index) {
+    public SafeCatalogReference index(String schema, String index) {
         return new SafeCatalogReference("index_" + digest("index", schema, index));
     }
 

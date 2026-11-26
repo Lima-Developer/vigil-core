@@ -6,6 +6,7 @@ import com.vigil.application.exception.PlanRejectionReason;
 import com.vigil.application.exception.TargetConnectionFailure;
 import com.vigil.application.port.out.interfaces.ExecutionPlanSource;
 import com.vigil.core.domain.PlanSummaryEvidencePayload;
+import com.vigil.adapters.postgres.schema.Pseudonymizer;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -20,9 +21,15 @@ public final class PostgresExecutionPlanSource implements ExecutionPlanSource {
     static final int QUERY_TIMEOUT_SECONDS = 2;
     static final String EXPLAIN_PREFIX = "EXPLAIN (FORMAT JSON) ";
     private final Supplier<Connection> connections;
+    private final Pseudonymizer pseudonyms;
 
     PostgresExecutionPlanSource(Supplier<Connection> connections) {
+        this(connections, randomPseudonymizer());
+    }
+
+    PostgresExecutionPlanSource(Supplier<Connection> connections, Pseudonymizer pseudonyms) {
         this.connections = Objects.requireNonNull(connections);
+        this.pseudonyms = Objects.requireNonNull(pseudonyms);
     }
 
     public static ExecutionPlanSource forTarget(TargetProfile profile, String user, Path sslRootCert,
@@ -50,7 +57,7 @@ public final class PostgresExecutionPlanSource implements ExecutionPlanSource {
             statement.execute(LOCAL_TIMEOUT_SQL);
             result = statement.executeQuery(EXPLAIN_PREFIX + validated);
             if (!result.next()) throw new PlanCollectionRejected(PlanRejectionReason.PLAN_UNREADABLE);
-            plan = PostgresExplainPlanParser.parse(result.getString(1));
+            plan = PostgresExplainPlanParser.parse(result.getString(1), pseudonyms);
         } catch (PlanCollectionRejected failure) {
             rejection = failure;
         } catch (TargetConnectionFailure failure) {
@@ -72,6 +79,12 @@ public final class PostgresExecutionPlanSource implements ExecutionPlanSource {
         }
         if (rejection != null) throw rejection;
         return plan;
+    }
+
+    private static Pseudonymizer randomPseudonymizer() {
+        byte[] salt = new byte[32];
+        new java.security.SecureRandom().nextBytes(salt);
+        return new Pseudonymizer(salt);
     }
 
     private static PlanCollectionRejected sqlFailure(SQLException failure) {

@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 /**
  * Aggregate that owns the complete, append-only lifecycle of one investigation.
@@ -25,6 +27,10 @@ public final class AnalysisCase {
     private final List<CaseEvent> events = new ArrayList<>();
     private final List<Evidence> evidences = new ArrayList<>();
     private final List<DomainEvent> pendingDomainEvents = new ArrayList<>();
+    private Optional<Diagnosis> diagnosis = Optional.empty();
+    private Optional<OptimizationHypothesis> hypothesis = Optional.empty();
+    private Optional<Recommendation> recommendation = Optional.empty();
+    private long recommendationVersion;
     private CaseStatus status;
     private long version;
 
@@ -94,6 +100,7 @@ public final class AnalysisCase {
         result.evidences.addAll(evidences);
         result.status = status;
         result.version = version;
+        result.restoreSafeWorkflowArtifacts();
         return result;
     }
 
@@ -106,12 +113,15 @@ public final class AnalysisCase {
 
     public void collectEvidence(Evidence evidence, String actor, Instant occurredAt) {
         Objects.requireNonNull(evidence, "Evidence must not be null.");
-        requireCurrent(CaseStatus.TRIAGED, CaseStatus.EVIDENCE_COLLECTED);
+        if (status != CaseStatus.TRIAGED && status != CaseStatus.EVIDENCE_COLLECTED) {
+            throw new InvalidCaseTransitionException(status, CaseStatus.EVIDENCE_COLLECTED);
+        }
         evidence.requireBelongsTo(caseId);
         if (evidences.stream().anyMatch(item -> item.id().equals(evidence.id())))
             throw new IllegalArgumentException("Evidence is already attached to this analysis case.");
         evidences.add(evidence);
-        transition(CaseStatus.EVIDENCE_COLLECTED, new TransitionMetadata(actor, "Evidence collected.", occurredAt));
+        var metadata = new TransitionMetadata(actor, "Evidence collected.", occurredAt);
+        if (status == CaseStatus.TRIAGED) transition(CaseStatus.EVIDENCE_COLLECTED, metadata);
     }
     public void collectEvidence(Evidence evidence, DomainEventMetadata metadata) {
         collectEvidence(evidence, metadata.actor(), metadata.occurredAt());
@@ -127,10 +137,29 @@ public final class AnalysisCase {
         Objects.requireNonNull(safeContext, "Sanitized context must not be null.");
         transition(CaseStatus.SANITIZED, metadata);
     }
-    /** Records an evidence-grounded diagnostic; rationale identifies its approved artifact. */
-    public void diagnose(TransitionMetadata metadata) { transition(CaseStatus.DIAGNOSED, metadata); }
-    /** Records a bounded, testable optimization hypothesis. */
-    public void proposeHypothesis(TransitionMetadata metadata) { transition(CaseStatus.HYPOTHESIS_PROPOSED, metadata); }
+    /** Records an evidence-grounded diagnostic derived from findings of this case. */
+    public void diagnose(Diagnosis diagnosis, TransitionMetadata metadata) {
+        Objects.requireNonNull(diagnosis, "Diagnosis must not be null.");
+        var ownEvidenceIds = evidences.stream().map(Evidence::id).collect(java.util.stream.Collectors.toSet());
+        if (!ownEvidenceIds.containsAll(diagnosis.evidenceIds())) {
+            throw new IllegalArgumentException("Diagnosis references evidence from another analysis case.");
+        }
+        transition(CaseStatus.DIAGNOSED, new TransitionMetadata(metadata.actor(),
+                "diagnosis-v1:" + encodeDiagnosis(diagnosis) + " " + metadata.reason(), metadata.occuredAt()));
+        this.diagnosis = Optional.of(diagnosis);
+    }
+    /** Records a bounded, testable hypothesis linked to one finding of the diagnosis. */
+    public void proposeHypothesis(OptimizationHypothesis hypothesis, TransitionMetadata metadata) {
+        Objects.requireNonNull(hypothesis, "Optimization hypothesis must not be null.");
+        var currentDiagnosis = diagnosis.orElseThrow(() ->
+                new IllegalStateException("A hypothesis requires the diagnosis available in this aggregate."));
+        if (!currentDiagnosis.findings().contains(hypothesis.origin())) {
+            throw new IllegalArgumentException("Hypothesis origin must be a finding of the diagnosis.");
+        }
+        transition(CaseStatus.HYPOTHESIS_PROPOSED, new TransitionMetadata(metadata.actor(),
+                "hypothesis-v1:" + encodeHypothesis(hypothesis) + " " + metadata.reason(), metadata.occuredAt()));
+        this.hypothesis = Optional.of(hypothesis);
+    }
     /** Starts validation only after a sandbox profile and reason are recorded. */
     public void startValidation(TransitionMetadata metadata) { transition(CaseStatus.VALIDATING, metadata); }
     /** Records one of the three mutually exclusive sandbox outcomes. */
@@ -139,15 +168,25 @@ public final class AnalysisCase {
         transition(CaseStatus.valueOf(outcome.name()), metadata);
     }
     /** Prepares an evidence-linked recommendation for human review. */
-    public void prepareRecommendation(TransitionMetadata metadata) {
+    public void prepareRecommendation(Recommendation recommendation, TransitionMetadata metadata) {
+        Objects.requireNonNull(recommendation, "Recommendation must not be null.");
         if (status != CaseStatus.VALIDATED && status != CaseStatus.INVALIDATED && status != CaseStatus.INCONCLUSIVE)
             throw new InvalidCaseTransitionException(status, CaseStatus.AWAITING_HUMAN);
-        transition(CaseStatus.AWAITING_HUMAN, metadata);
+        if (recommendation.version() != recommendationVersion + 1) {
+            throw new IllegalArgumentException("Recommendation version must be sequential.");
+        }
+        if (hypothesis.isPresent() && !hypothesis.get().equals(recommendation.hypothesis())) {
+            throw new IllegalArgumentException("Recommendation must use the case hypothesis.");
+        }
+        transition(CaseStatus.AWAITING_HUMAN, new TransitionMetadata(metadata.actor(),
+                "recommendation-version=" + recommendation.version() + "; " + metadata.reason(), metadata.occuredAt()));
+        this.recommendation = Optional.of(recommendation);
+        this.recommendationVersion = recommendation.version();
     }
     /** Human approval is recorded only; it never executes DDL or DML. */
-    public void approve(TransitionMetadata metadata) { transition(CaseStatus.APPROVED, metadata); }
-    public void reject(TransitionMetadata metadata) { transition(CaseStatus.REJECTED, metadata); }
-    public void requestChanges(TransitionMetadata metadata) { transition(CaseStatus.CHANGES_REQUESTED, metadata); }
+    public void approve(long reviewedVersion, TransitionMetadata metadata) { requireCurrentFor(CaseStatus.APPROVED); requireRecommendationVersion(reviewedVersion); transition(CaseStatus.APPROVED, metadata); }
+    public void reject(long reviewedVersion, TransitionMetadata metadata) { requireCurrentFor(CaseStatus.REJECTED); requireRecommendationVersion(reviewedVersion); transition(CaseStatus.REJECTED, metadata); }
+    public void requestChanges(long reviewedVersion, TransitionMetadata metadata) { requireCurrentFor(CaseStatus.CHANGES_REQUESTED); requireRecommendationVersion(reviewedVersion); transition(CaseStatus.CHANGES_REQUESTED, metadata); }
     /** Preserves the full history while re-opening a case for a new investigation pass. */
     public void retriage(TransitionMetadata metadata) { transition(CaseStatus.TRIAGED, metadata); }
     /** Controlled closure; an archived case cannot transition again. */
@@ -166,6 +205,75 @@ public final class AnalysisCase {
 
     private void requireCurrentFor(CaseStatus target) {
         if (!isAllowedTransition(status, target)) throw new InvalidCaseTransitionException(status, target);
+    }
+
+    private void requireRecommendationVersion(long reviewedVersion) {
+        if (reviewedVersion < 1 || reviewedVersion != recommendationVersion) {
+            throw new IllegalArgumentException("Human decision must reference the current recommendation version.");
+        }
+    }
+
+    private void restoreSafeWorkflowArtifacts() {
+        for (var event : events) {
+            if (event.toStatus() == CaseStatus.DIAGNOSED && event.reason().startsWith("diagnosis-v1:")) {
+                diagnosis = Optional.of(decodeDiagnosis(token(event.reason(), "diagnosis-v1:")));
+            } else if (event.toStatus() == CaseStatus.HYPOTHESIS_PROPOSED
+                    && event.reason().startsWith("hypothesis-v1:")) {
+                hypothesis = Optional.of(decodeHypothesis(token(event.reason(), "hypothesis-v1:")));
+            } else if (event.toStatus() == CaseStatus.AWAITING_HUMAN
+                    && event.reason().startsWith("recommendation-version=")) {
+                int end = event.reason().indexOf(';');
+                if (end > 23) recommendationVersion = Long.parseLong(event.reason().substring(23, end));
+            }
+        }
+    }
+
+    private static String token(String reason, String prefix) {
+        int end = reason.indexOf(' ', prefix.length());
+        return reason.substring(prefix.length(), end < 0 ? reason.length() : end);
+    }
+
+    private static String encodeDiagnosis(Diagnosis diagnosis) {
+        String value = String.join("\n", diagnosis.findings().stream().map(AnalysisCase::encodeFinding).toList());
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static Diagnosis decodeDiagnosis(String encoded) {
+        String value = new String(Base64.getUrlDecoder().decode(encoded), StandardCharsets.UTF_8);
+        var findings = value.lines().map(AnalysisCase::decodeFinding).toList();
+        var ids = new java.util.LinkedHashSet<UUID>();
+        findings.forEach(item -> ids.addAll(item.evidenceIds()));
+        return new Diagnosis(findings, ids);
+    }
+
+    private static String encodeHypothesis(OptimizationHypothesis hypothesis) {
+        String value = hypothesis.relation().value() + "|"
+                + String.join(",", hypothesis.columns().stream().map(SafeCatalogReference::value).toList()) + "|"
+                + encodeFinding(hypothesis.origin());
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static OptimizationHypothesis decodeHypothesis(String encoded) {
+        String value = new String(Base64.getUrlDecoder().decode(encoded), StandardCharsets.UTF_8);
+        String[] parts = value.split("\\|", 3);
+        var columns = java.util.Arrays.stream(parts[1].split(","))
+                .map(SafeCatalogReference::new).toList();
+        return new OptimizationHypothesis(new SafeRelationReference(parts[0]), columns, decodeFinding(parts[2]));
+    }
+
+    private static String encodeFinding(Finding finding) {
+        String explanation = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(finding.explanation().getBytes(StandardCharsets.UTF_8));
+        return finding.ruleCode().name() + "," + finding.severity().name() + ","
+                + String.join("+", finding.evidenceIds().stream().map(UUID::toString).toList()) + "," + explanation;
+    }
+
+    private static Finding decodeFinding(String encoded) {
+        String[] parts = encoded.split(",", 4);
+        var ids = java.util.Arrays.stream(parts[2].split("\\+")) .map(UUID::fromString).toList();
+        String explanation = new String(Base64.getUrlDecoder().decode(parts[3]), StandardCharsets.UTF_8);
+        return new Finding(com.vigil.core.domain.enums.DiagnosticRuleCode.valueOf(parts[0]),
+                com.vigil.core.domain.enums.FindingSeverity.valueOf(parts[1]), ids, explanation);
     }
 
     private static boolean requiresEvidence(CaseStatus status) { return status != CaseStatus.DISCOVERED && status != CaseStatus.TRIAGED; }
@@ -201,4 +309,8 @@ public final class AnalysisCase {
     public List<CaseEvent> events() { return List.copyOf(events); }
     public List<Evidence> evidences() { return List.copyOf(evidences); }
     public CaseStatus status() { return status; }
+    public Optional<Diagnosis> diagnosis() { return diagnosis; }
+    public Optional<OptimizationHypothesis> hypothesis() { return hypothesis; }
+    public Optional<Recommendation> recommendation() { return recommendation; }
+    public long recommendationVersion() { return recommendationVersion; }
 }
