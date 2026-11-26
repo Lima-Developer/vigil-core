@@ -612,3 +612,23 @@ Um CaseEvent contém, no mínimo:
 | `Recommendation`         | Proposta apresentada à curadoria humana, incluindo limitações, evidências e resultado da validação.                        |
 | `HumanDecision`          | Decisão de uma pessoa responsável: aprovar, rejeitar ou solicitar mudanças.                                                |
 | `CaseEvent`              | Registro imutável de uma mudança de estado, com ator, motivo e instante.                                                   |
+
+## Contrapartida Java dos termos adicionados em tcc-final-5
+
+| Termo do domínio | Tipo Java | Garantia executável |
+|---|---|---|
+| Nó de plano sanitizado | `PlanNodeEvidence` | Persiste somente referências pseudonimizadas e fatos estruturais; nunca o texto do filtro. |
+| Regra diagnóstica | `DiagnosticRuleCode` e `DiagnosticRuleEngine` | Avaliação pura, determinística e ligada a evidence. |
+| Limiar diagnóstico | `DiagnosticRuleThresholds` | Política explícita: relação mínima de 10.000 linhas e seletividade máxima de 10% por padrão. |
+| Finding | `Finding` | Código estável, severidade, explicação segura e IDs de evidence não vazios. |
+| Inconclusão diagnóstica | `DiagnosticInconclusiveReason` | Explica qual pré-condição comprovável faltou sem inventar finding. |
+| Diagnosis | `Diagnosis` | Agrega somente findings e evidências existentes no caso. |
+| OptimizationHypothesis | `OptimizationHypothesis` | Mantém relação/colunas seguras e finding de origem; não é recomendação nem DDL. |
+| QueryShape | `QueryShape` | Classifica a forma da consulta; shapes não suportados são bloqueados antes da validação. |
+| FidelityLevel | `FidelityLevel` | Declara a fidelidade do experimento e impede confundir evidência sintética com target real. |
+| Recommendation | `Recommendation` | Material versionado com hipótese, resultado, evidências, riscos e limitações. |
+| Risco da recomendação | `RecommendationRisk` | Risco explícito para a curadoria, sem aplicação automática. |
+| Limitação da recomendação | `RecommendationLimitation` | Limite epistemológico explícito, inclusive dados sintéticos e ausência de medição no target. |
+| Contexto de inferência | `SanitizedInferenceContext` | Único contexto aceito pela porta; contém somente dados aprovados e pseudonimizados. |
+| Versão do prompt | `PromptTemplateVersion` | Torna o template reproduzível e impede prompt livre no chamador. |
+| Saída fundamentada | `InferencePort.GroundedOutput` | Só é aceita depois de schema, evidence e referências seguras serem validados. |

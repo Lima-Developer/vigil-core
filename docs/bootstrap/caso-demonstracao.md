@@ -4,6 +4,14 @@ A aplicação web local oferece uma página de um único caso. Identidade, estad
 
 ## Execução
 
+Para a demonstração reproduzível completa, com PostgreSQL sintético e SQLite em volume persistente:
+
+```sh
+docker compose up -d --build
+```
+
+O Compose inicializa 100.000 linhas sintéticas com seed determinística, habilita `pg_stat_statements`, cria um usuário somente leitura e publica o Vigil em `http://127.0.0.1:8080/`. Ao terminar o ensaio, `docker compose down -v` remove apenas os contêineres e volumes do laboratório. O `Dockerfile` usa runtime Java 21, usuário não-root e caminho SQLite externo `/var/lib/vigil/vigil.db`.
+
 No PowerShell, o modo mais simples para a banca cria um SQLite no diretório temporário do sistema e o remove ao
 encerrar a aplicação. Ele não precisa de `VIGIL_DATABASE_PATH`, credencial PostgreSQL ou rede:
 

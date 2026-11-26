@@ -1,0 +1,6 @@
+.git
+**/target
+**/__pycache__
+docs/experiments
+*.zip
+verify-*.txt

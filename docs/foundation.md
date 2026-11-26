@@ -409,7 +409,29 @@ Não confundir **baseline operacional** — comportamento histórico de uma cons
 
 - ADR-001 — Observabilidade progressiva e baseline adaptativo.
 - ADR-002 — SQLite como persistência padrão da instalação local do Vigil.
+- ADR-007 — Regras diagnósticas e evolução aditiva de Evidence.
+- ADR-008 — Fronteira segura e validada de inferência.
 - [PostgreSQL — pg_stat_statements](https://www.postgresql.org/docs/current/pgstatstatements.html)
 - [PostgreSQL — EXPLAIN](https://www.postgresql.org/docs/current/sql-explain.html)
 - [PostgreSQL — Using EXPLAIN](https://www.postgresql.org/docs/current/using-explain.html)
 - [SQLite — Write-Ahead Logging](https://www.sqlite.org/wal.html)
+
+## 13. Contrato executável de diagnóstico e curadoria
+
+O diagnóstico de produção é determinístico antes de qualquer inferência. `DiagnosticRuleEngine` cruza nós do plano, metadados pseudonimizados e impacto observado. A regra inicial `SEQ_SCAN_SELECTIVE_FILTER` só produz um `Finding` quando todas as pré-condições são comprovadas; ausência ou ambiguidade vira inconclusão explícita.
+
+O encadeamento executável é:
+
+```text
+Evidence do plano + Evidence de catálogo + impacto
+    → Finding
+    → Diagnosis
+    → OptimizationHypothesis
+    → ValidationOutcome + FidelityLevel
+    → Recommendation versionada
+    → HumanDecision vinculada à versão
+```
+
+`Recommendation` exige hipótese, resultado, evidências, riscos e limitações. A decisão humana informa a versão vigente para impedir aprovação de material obsoleto. O nível de fidelidade descreve o ambiente da validação e não transforma resultado sintético em medição do target.
+
+A fronteira de inferência recebe apenas `SanitizedInferenceContext`, schema, versão de template e timeout. O adaptador não recebe prompt livre. Toda resposta passa por `InferenceOutputValidator`, que rejeita referências inexistentes, schema incompatível e conteúdo fora do contrato antes de qualquer mudança no caso.
