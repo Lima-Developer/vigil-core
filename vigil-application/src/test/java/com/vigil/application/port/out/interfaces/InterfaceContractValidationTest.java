@@ -4,10 +4,18 @@ import com.vigil.application.casework.HumanDecision;
 import com.vigil.application.casework.RecordHumanDecisionCommand;
 import com.vigil.application.telemetry.AggregatedTelemetryDelta;
 import com.vigil.core.domain.enums.ValidationOutcome;
+import com.vigil.application.inference.PromptTemplateVersion;
+import com.vigil.application.inference.SanitizedInferenceContext;
+import com.vigil.core.domain.SafeRelationReference;
+import com.vigil.core.domain.SanitizationResult;
+import com.vigil.core.domain.SanitizationRule;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
@@ -21,29 +29,45 @@ class InterfaceContractValidationTest {
 
     @Test
     void validatesEveryInferenceRequestAndResponseBoundary() {
-        assertDoesNotThrow(() -> new InferencePort.InferenceRequest("model", "prompt", Duration.ofSeconds(1)));
-        assertDoesNotThrow(() -> new InferencePort.InferenceResponse("model", "content", 0, 0, Duration.ZERO));
+        assertDoesNotThrow(() -> request("model", validContext(), Duration.ofSeconds(1)));
+        assertDoesNotThrow(() -> new InferencePort.InferenceResponse("model", validOutput(), 0, 0, Duration.ZERO));
         for (InferenceRequestFactory invalid : List.<InferenceRequestFactory>of(
-                () -> new InferencePort.InferenceRequest(null, "prompt", Duration.ofSeconds(1)),
-                () -> new InferencePort.InferenceRequest(" ", "prompt", Duration.ofSeconds(1)),
-                () -> new InferencePort.InferenceRequest("model", null, Duration.ofSeconds(1)),
-                () -> new InferencePort.InferenceRequest("model", " ", Duration.ofSeconds(1)),
-                () -> new InferencePort.InferenceRequest("model", "prompt", null),
-                () -> new InferencePort.InferenceRequest("model", "prompt", Duration.ZERO),
-                () -> new InferencePort.InferenceRequest("model", "prompt", Duration.ofMillis(-1)))) {
-            assertThrows(IllegalArgumentException.class, invalid::create);
+                () -> request(null, validContext(), Duration.ofSeconds(1)),
+                () -> request(" ", validContext(), Duration.ofSeconds(1)),
+                () -> request("model", null, Duration.ofSeconds(1)),
+                () -> request("model", validContext(), null),
+                () -> request("model", validContext(), Duration.ZERO),
+                () -> request("model", validContext(), Duration.ofMillis(-1)))) {
+            assertThrows(RuntimeException.class, invalid::create);
         }
         for (InferenceResponseFactory invalid : List.<InferenceResponseFactory>of(
-                () -> new InferencePort.InferenceResponse(null, "content", 0, 0, Duration.ZERO),
-                () -> new InferencePort.InferenceResponse(" ", "content", 0, 0, Duration.ZERO),
+                () -> new InferencePort.InferenceResponse(null, validOutput(), 0, 0, Duration.ZERO),
+                () -> new InferencePort.InferenceResponse(" ", validOutput(), 0, 0, Duration.ZERO),
                 () -> new InferencePort.InferenceResponse("model", null, 0, 0, Duration.ZERO),
-                () -> new InferencePort.InferenceResponse("model", " ", 0, 0, Duration.ZERO),
-                () -> new InferencePort.InferenceResponse("model", "content", -1, 0, Duration.ZERO),
-                () -> new InferencePort.InferenceResponse("model", "content", 0, -1, Duration.ZERO),
-                () -> new InferencePort.InferenceResponse("model", "content", 0, 0, null),
-                () -> new InferencePort.InferenceResponse("model", "content", 0, 0, Duration.ofMillis(-1)))) {
-            assertThrows(IllegalArgumentException.class, invalid::create);
+                () -> new InferencePort.InferenceResponse("model", validOutput(), -1, 0, Duration.ZERO),
+                () -> new InferencePort.InferenceResponse("model", validOutput(), 0, -1, Duration.ZERO),
+                () -> new InferencePort.InferenceResponse("model", validOutput(), 0, 0, null),
+                () -> new InferencePort.InferenceResponse("model", validOutput(), 0, 0, Duration.ofMillis(-1)))) {
+            assertThrows(RuntimeException.class, invalid::create);
         }
+    }
+
+    private static InferencePort.InferenceRequest request(String model, SanitizedInferenceContext context,
+                                                          Duration timeout) {
+        return new InferencePort.InferenceRequest(model, context, InferencePort.OutputSchema.DIAGNOSIS_V1,
+                PromptTemplateVersion.DIAGNOSTIC_V1, timeout);
+    }
+
+    private static SanitizedInferenceContext validContext() {
+        return new SanitizedInferenceContext(
+                new SanitizationResult.Safe("sanitized", List.of(SanitizationRule.LITERALS_PLACEHOLDERED)),
+                List.of(new SafeRelationReference("relation_orders")), List.of(),
+                Set.of(UUID.fromString("11111111-1111-1111-1111-111111111111")));
+    }
+
+    private static InferencePort.GroundedOutput validOutput() {
+        return new InferencePort.GroundedOutput(InferencePort.OutputSchema.DIAGNOSIS_V1,
+                "Explicação segura", validContext().allowedEvidenceIds(), Optional.empty(), List.of());
     }
 
     @Test
@@ -98,19 +122,22 @@ class InterfaceContractValidationTest {
             assertThrows(IllegalArgumentException.class, invalid::create);
         }
         assertEquals("valid reason", new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), HumanDecision.APPROVE,
-                " valid reason ", "reviewer").reason());
+                " valid reason ", "reviewer", 1).reason());
         assertThrows(NullPointerException.class,
-                () -> new RecordHumanDecisionCommand(null, HumanDecision.APPROVE, "valid reason", "reviewer"));
+                () -> new RecordHumanDecisionCommand(null, HumanDecision.APPROVE, "valid reason", "reviewer", 1));
         assertThrows(NullPointerException.class,
-                () -> new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), null, "valid reason", "reviewer"));
+                () -> new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), null, "valid reason", "reviewer", 1));
         assertThrows(IllegalArgumentException.class,
-                () -> new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), HumanDecision.APPROVE, null, "reviewer"));
+                () -> new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), HumanDecision.APPROVE, null, "reviewer", 1));
         assertThrows(IllegalArgumentException.class,
-                () -> new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), HumanDecision.APPROVE, "short", "reviewer"));
+                () -> new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), HumanDecision.APPROVE, "short", "reviewer", 1));
         assertThrows(IllegalArgumentException.class,
-                () -> new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), HumanDecision.APPROVE, "valid reason", null));
+                () -> new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), HumanDecision.APPROVE, "valid reason", null, 1));
         assertThrows(IllegalArgumentException.class,
-                () -> new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), HumanDecision.APPROVE, "valid reason", " "));
+                () -> new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), HumanDecision.APPROVE, "valid reason", " ", 1));
+        assertThrows(IllegalArgumentException.class,
+                () -> new RecordHumanDecisionCommand(java.util.UUID.randomUUID(), HumanDecision.APPROVE,
+                        "valid reason", "reviewer", 0));
     }
 
     private static AggregatedTelemetryDelta validDelta(String quality, String reason) {
