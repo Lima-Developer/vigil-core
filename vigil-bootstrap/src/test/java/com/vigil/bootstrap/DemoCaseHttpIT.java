@@ -24,7 +24,8 @@ class DemoCaseHttpIT {
                         "vigil.target.environment=test", "vigil.target.host=localhost",
                         "vigil.target.database=postgres", "vigil.sqlite.path=" + directory.resolve("case.db"),
                         "vigil.sqlite.minimum-free-bytes=1")
-                .run("--vigil.sqlite.path=" + directory.resolve("case.db"))) {
+                .run("--vigil.sqlite.path=" + directory.resolve("case.db"),
+                        "--vigil.fingerprint.key=http-it-fingerprint-key")) {
             var base = "http://127.0.0.1:" + ((WebServerApplicationContext) context).getWebServer().getPort();
             try (var client = HttpClient.newHttpClient()) {
                 assertEquals(404, request(client, "GET", base + "/api/cases/demo", null).statusCode());
