@@ -56,8 +56,8 @@ O veredito avalia se o código e os testes sustentam a parte que o Quadro A.1 de
 ## Resultado inicial
 
 - VERDADEIRO: 23
-- PARCIAL: 13
-- AUSENTE: 10
+- PARCIAL: 14
+- AUSENTE: 9
 
 ## Resultado final
 
@@ -125,7 +125,7 @@ Totais finais: **40 VERDADEIRO, 6 PARCIAL, 0 AUSENTE**.
 
 | Momento | VERDADEIRO | PARCIAL | AUSENTE |
 |---|---:|---:|---:|
-| Base `tcc-final-4` (`32ab7c1`) | 23 | 13 | 10 |
+| Base `tcc-final-4` (`32ab7c1`) | 23 | 14 | 9 |
 | Implementação `tcc-final-5` | 40 | 6 | 0 |
 
 Permanecem deliberadamente fora do recorte: target real, regressão histórica, chamada real ao Bedrock, medição real de egress, comparação de schema por Codex/Claude e overhead do Vigil.
