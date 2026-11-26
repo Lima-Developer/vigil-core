@@ -22,9 +22,9 @@ public final class RecordHumanDecisionUseCase {
         var metadata = new TransitionMetadata(command.actor(), command.reason(), clock.now());
         try {
             switch (command.decision()) {
-                case APPROVE -> analysisCase.approve(metadata);
-                case REJECT -> analysisCase.reject(metadata);
-                case REQUEST_CHANGES -> analysisCase.requestChanges(metadata);
+                case APPROVE -> analysisCase.approve(command.recommendationVersion(), metadata);
+                case REJECT -> analysisCase.reject(command.recommendationVersion(), metadata);
+                case REQUEST_CHANGES -> analysisCase.requestChanges(command.recommendationVersion(), metadata);
             }
         } catch (InvalidCaseTransitionException exception) {
             throw new InvalidAnalysisCaseTransition(exception);

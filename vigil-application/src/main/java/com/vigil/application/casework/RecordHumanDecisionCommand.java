@@ -4,7 +4,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 /** Explicit command; a human decision is recorded, never executed against the monitored database. */
-public record RecordHumanDecisionCommand(UUID caseId, HumanDecision decision, String reason, String actor) {
+public record RecordHumanDecisionCommand(UUID caseId, HumanDecision decision, String reason, String actor,
+                                         long recommendationVersion) {
     public RecordHumanDecisionCommand {
         Objects.requireNonNull(caseId, "Case id must not be null.");
         Objects.requireNonNull(decision, "Decision must not be null.");
@@ -14,6 +15,7 @@ public record RecordHumanDecisionCommand(UUID caseId, HumanDecision decision, St
         if (actor == null || actor.isBlank()) {
             throw new IllegalArgumentException("Actor must not be blank.");
         }
+        if (recommendationVersion < 1) throw new IllegalArgumentException("Recommendation version must be positive.");
         reason = reason.trim();
     }
 }

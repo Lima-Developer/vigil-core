@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 import static com.vigil.adapters.sqlite.RowMapperTestSupport.read;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EvidenceRowMapperTest {
     private static final String ID = "33333333-3333-3333-3333-333333333333";
@@ -59,6 +60,41 @@ class EvidenceRowMapperTest {
         assertEquals(Optional.empty(), ((com.vigil.core.domain.PlanSummaryEvidencePayload)
                 EvidencePayloadCodec.decode(EvidenceType.PLAN_SUMMARY,
                         "nodes=INDEX_SCAN;estimatedRows=12")).estimatedTotalCost());
+    }
+
+    @Test
+    void shouldDecodeARealLegacyPayloadAndRoundTripAdditivePerNodeFacts() {
+        String legacy = "nodes=SEQUENTIAL_SCAN,HASH_JOIN;estimatedRows=1000000";
+        var old = (com.vigil.core.domain.PlanSummaryEvidencePayload)
+                EvidencePayloadCodec.decode(EvidenceType.PLAN_SUMMARY, legacy);
+        assertTrue(old.nodes().isEmpty());
+
+        var relation = new com.vigil.core.domain.SafeRelationReference("relation_orders");
+        var column = new com.vigil.core.domain.SafeCatalogReference(
+                "column_11111111111111111111111111111111");
+        var current = new com.vigil.core.domain.PlanSummaryEvidencePayload(
+                java.util.List.of(com.vigil.core.domain.enums.PlanNodeType.SEQUENTIAL_SCAN), 12,
+                Optional.empty(), java.util.List.of(new com.vigil.core.domain.PlanNodeEvidence(
+                com.vigil.core.domain.enums.PlanNodeType.SEQUENTIAL_SCAN, Optional.of(relation), true,
+                java.util.List.of(column), true, 12)));
+        assertEquals(current, EvidencePayloadCodec.decode(EvidenceType.PLAN_SUMMARY,
+                EvidencePayloadCodec.encode(current)));
+    }
+
+    @Test
+    void shouldRoundTripMinimalRelationBlueprintEvidence() {
+        var blueprint = new com.vigil.core.domain.RelationBlueprint(
+                new com.vigil.core.domain.SafeRelationReference("relation_orders"),
+                new com.vigil.core.domain.SafeCatalogReference("schema_11111111111111111111111111111111"),
+                com.vigil.core.domain.enums.RelationType.TABLE, java.util.OptionalLong.of(100_000), 512,
+                java.util.List.of(), java.util.List.of(), java.util.List.of(new com.vigil.core.domain.IndexBlueprint(
+                new com.vigil.core.domain.SafeCatalogReference("index_22222222222222222222222222222222"),
+                "btree", java.util.List.of(com.vigil.core.domain.IndexKey.ofColumn(
+                new com.vigil.core.domain.SafeCatalogReference("column_33333333333333333333333333333333"))),
+                false, false, false, true)));
+        var payload = com.vigil.core.domain.RelationMetadataEvidencePayload.fromBlueprint(blueprint);
+        assertEquals(payload, EvidencePayloadCodec.decode(EvidenceType.RELATION_METADATA,
+                EvidencePayloadCodec.encode(payload)));
     }
 
     @Test

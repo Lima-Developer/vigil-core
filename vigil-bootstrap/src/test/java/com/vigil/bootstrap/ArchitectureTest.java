@@ -49,9 +49,20 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage("java.sql..", "javax.sql..", "org.sqlite..")
             .because("o bootstrap compõe adapters e encaminha comandos, sem JDBC próprio");
 
+    private static final ArchRule INFERENCE_ADAPTERS_ONLY_ACCEPT_APPROVED_REQUESTS = ArchRuleDefinition.methods()
+            .that().areDeclaredInClassesThat().resideInAPackage("com.vigil.adapters.inference..")
+            .and().haveName("infer")
+            .should().haveRawParameterTypes(com.vigil.application.port.out.interfaces.InferencePort.InferenceRequest.class)
+            .because("adapters de inferência recebem somente a requisição construída com SanitizedInferenceContext");
+
     @Test
     void shouldKeepBootstrapFreeOfJdbc() {
         BOOTSTRAP_ONLY_COMPOSES.check(productionClasses());
+    }
+
+    @Test
+    void shouldKeepFreePromptStringsOutOfInferenceAdapters() {
+        INFERENCE_ADAPTERS_ONLY_ACCEPT_APPROVED_REQUESTS.check(productionClasses());
     }
 
     @Test

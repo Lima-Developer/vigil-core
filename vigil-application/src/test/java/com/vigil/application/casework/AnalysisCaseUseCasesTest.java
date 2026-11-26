@@ -13,6 +13,11 @@ import com.vigil.core.domain.Evidence;
 import com.vigil.core.domain.PlanSummaryEvidencePayload;
 import com.vigil.core.domain.QueryTriaged;
 import com.vigil.core.domain.TransitionMetadata;
+import com.vigil.core.domain.Diagnosis;
+import com.vigil.core.domain.Finding;
+import com.vigil.core.domain.OptimizationHypothesis;
+import com.vigil.core.domain.SafeCatalogReference;
+import com.vigil.core.domain.SafeRelationReference;
 import com.vigil.core.domain.ObservationWindow;
 import com.vigil.core.domain.ObservedQuery;
 import com.vigil.core.domain.ObservedQueryMetrics;
@@ -26,6 +31,9 @@ import com.vigil.core.domain.enums.EvidenceSource;
 import com.vigil.core.domain.enums.PlanNodeType;
 import com.vigil.core.domain.enums.TelemetrySource;
 import com.vigil.core.domain.enums.ValidationOutcome;
+import com.vigil.core.domain.enums.QueryShape;
+import com.vigil.core.domain.enums.DiagnosticRuleCode;
+import com.vigil.core.domain.enums.FindingSeverity;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -172,7 +180,7 @@ class AnalysisCaseUseCasesTest {
         var useCase = new RecordHumanDecisionUseCase(repository, fixedClock());
 
         useCase.execute(new RecordHumanDecisionCommand(NEW_CASE_ID, HumanDecision.APPROVE,
-                "Evidências sintéticas suficientes para aprovar a recomendação.", "reviewer"));
+                "Evidências sintéticas suficientes para aprovar a recomendação.", "reviewer", 1));
 
         assertAll(
                 () -> assertEquals(CaseStatus.APPROVED, analysisCase.status()),
@@ -190,7 +198,7 @@ class AnalysisCaseUseCasesTest {
 
         assertThrows(InvalidAnalysisCaseTransition.class, () -> useCase.execute(
                 new RecordHumanDecisionCommand(NEW_CASE_ID, HumanDecision.REJECT,
-                        "Ainda não existe recomendação a revisar.", "reviewer")));
+                        "Ainda não existe recomendação a revisar.", "reviewer", 1)));
         assertEquals(1, repository.saves());
     }
 
@@ -211,6 +219,24 @@ class AnalysisCaseUseCasesTest {
                 () -> assertEquals(2, repository.saves()),
                 () -> assertEquals(CaseStatus.AWAITING_HUMAN, analysisCase.events().getLast().toStatus())
         );
+    }
+
+    @Test
+    void shouldRejectUnsupportedQueryShapeBeforeCallingTheValidator() {
+        var repository = new FakeAnalysisCaseRepository();
+        var analysisCase = validatingCase();
+        repository.save(analysisCase);
+        var called = new java.util.concurrent.atomic.AtomicBoolean();
+        HypothesisValidationPort validator = ignored -> {
+            called.set(true);
+            return new HypothesisValidationPort.ValidationAssessment(ValidationOutcome.VALIDATED, "não deve executar");
+        };
+        var useCase = new ValidateAnalysisCaseUseCase(repository, validator, fixedClock());
+
+        assertThrows(IllegalArgumentException.class, () -> useCase.execute(
+                new ValidateAnalysisCaseCommand(NEW_CASE_ID, "system", QueryShape.SUBQUERY)));
+        assertFalse(called.get());
+        assertEquals(CaseStatus.VALIDATING, analysisCase.status());
     }
 
     private static DiscoverObservedQueryCommand discoveryCommand(String idempotencyKey) {
@@ -240,16 +266,19 @@ class AnalysisCaseUseCasesTest {
         analysisCase.triage(metadata);
         var payload = new PlanSummaryEvidencePayload(List.of(PlanNodeType.SEQUENTIAL_SCAN), 100,
                 Optional.of(BigDecimal.TEN));
-        analysisCase.collectEvidence(new Evidence(UUID.randomUUID(), NEW_CASE_ID, payload.type(),
-                EvidenceSource.POSTGRESQL_EXPLAIN, NOW, "test", EvidenceConfidence.HIGH, payload, Optional.empty()),
-                "system", NOW);
+        var evidence = new Evidence(UUID.randomUUID(), NEW_CASE_ID, payload.type(),
+                EvidenceSource.POSTGRESQL_EXPLAIN, NOW, "test", EvidenceConfidence.HIGH, payload, Optional.empty());
+        analysisCase.collectEvidence(evidence, "system", NOW);
         analysisCase.sanitize(
                 new SanitizationResult.Safe("SELECT $1", List.of(SanitizationRule.LITERALS_PLACEHOLDERED)), metadata);
-        analysisCase.diagnose(metadata);
-        analysisCase.proposeHypothesis(metadata);
+        diagnoseAndPropose(analysisCase, evidence, metadata);
         analysisCase.startValidation(metadata);
         analysisCase.recordValidation(ValidationOutcome.VALIDATED, metadata);
-        analysisCase.prepareRecommendation(metadata);
+        var hypothesis = analysisCase.hypothesis().orElseThrow();
+        analysisCase.prepareRecommendation(new com.vigil.core.domain.Recommendation(1, hypothesis,
+                ValidationOutcome.VALIDATED, java.util.Set.copyOf(hypothesis.origin().evidenceIds()),
+                List.of(com.vigil.core.domain.enums.RecommendationRisk.PLAN_VARIABILITY),
+                List.of(com.vigil.core.domain.enums.RecommendationLimitation.SYNTHETIC_DATA_ONLY)), metadata);
         return analysisCase;
     }
 
@@ -259,15 +288,23 @@ class AnalysisCaseUseCasesTest {
         analysisCase.triage(metadata);
         var payload = new PlanSummaryEvidencePayload(List.of(PlanNodeType.SEQUENTIAL_SCAN), 100,
                 Optional.of(BigDecimal.TEN));
-        analysisCase.collectEvidence(new Evidence(UUID.randomUUID(), NEW_CASE_ID, payload.type(),
-                EvidenceSource.POSTGRESQL_EXPLAIN, NOW, "test", EvidenceConfidence.HIGH, payload, Optional.empty()),
-                "system", NOW);
+        var evidence = new Evidence(UUID.randomUUID(), NEW_CASE_ID, payload.type(),
+                EvidenceSource.POSTGRESQL_EXPLAIN, NOW, "test", EvidenceConfidence.HIGH, payload, Optional.empty());
+        analysisCase.collectEvidence(evidence, "system", NOW);
         analysisCase.sanitize(
                 new SanitizationResult.Safe("SELECT $1", List.of(SanitizationRule.LITERALS_PLACEHOLDERED)), metadata);
-        analysisCase.diagnose(metadata);
-        analysisCase.proposeHypothesis(metadata);
+        diagnoseAndPropose(analysisCase, evidence, metadata);
         analysisCase.startValidation(metadata);
         return analysisCase;
+    }
+
+    private static void diagnoseAndPropose(AnalysisCase analysisCase, Evidence evidence, TransitionMetadata metadata) {
+        var finding = new Finding(DiagnosticRuleCode.SEQ_SCAN_SELECTIVE_FILTER, FindingSeverity.HIGH,
+                List.of(evidence.id()), "Explicação segura baseada exclusivamente em evidência pseudonimizada.");
+        analysisCase.diagnose(new Diagnosis(List.of(finding), java.util.Set.of(evidence.id())), metadata);
+        analysisCase.proposeHypothesis(new OptimizationHypothesis(
+                new SafeRelationReference("relation_orders"),
+                List.of(new SafeCatalogReference("column_0123456789abcdef0123456789abcdef")), finding), metadata);
     }
 
     private static final class FixedIdGenerator implements IdGenerator {

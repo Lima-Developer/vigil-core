@@ -5,6 +5,9 @@ import com.vigil.application.port.out.interfaces.AnalysisCaseRepository;
 import com.vigil.application.port.out.interfaces.Clock;
 import com.vigil.application.port.out.interfaces.HypothesisValidationPort;
 import com.vigil.core.domain.TransitionMetadata;
+import com.vigil.core.domain.Recommendation;
+import com.vigil.core.domain.enums.RecommendationRisk;
+import com.vigil.core.domain.enums.RecommendationLimitation;
 import com.vigil.core.exception.InvalidCaseTransitionException;
 import java.util.Objects;
 
@@ -25,13 +28,23 @@ public final class ValidateAnalysisCaseUseCase {
     }
 
     public HypothesisValidationPort.ValidationAssessment execute(ValidateAnalysisCaseCommand command) {
+        if (!command.queryShape().automaticValidationSupported()) {
+            throw new IllegalArgumentException("UNSUPPORTED_QUERY_SHAPE");
+        }
         var analysisCase = repository.getById(command.caseId());
         var assessment = validator.validate(analysisCase);
         var at = clock.now();
         try {
             analysisCase.recordValidation(assessment.outcome(),
                     new TransitionMetadata(command.actor(), assessment.rationale(), at));
-            analysisCase.prepareRecommendation(new TransitionMetadata(command.actor(),
+            var hypothesis = analysisCase.hypothesis().orElseThrow(() ->
+                    new IllegalStateException("Optimization hypothesis is not available."));
+            var recommendation = new Recommendation(analysisCase.recommendationVersion() + 1, hypothesis,
+                    assessment.outcome(), java.util.Set.copyOf(hypothesis.origin().evidenceIds()),
+                    java.util.List.of(RecommendationRisk.PLAN_VARIABILITY),
+                    java.util.List.of(RecommendationLimitation.SYNTHETIC_DATA_ONLY,
+                            RecommendationLimitation.NO_REAL_TARGET_VALIDATION));
+            analysisCase.prepareRecommendation(recommendation, new TransitionMetadata(command.actor(),
                     "Classificação automática concluída; aguardando decisão humana.", at));
         } catch (InvalidCaseTransitionException exception) {
             throw new InvalidAnalysisCaseTransition(exception);

@@ -37,12 +37,18 @@ public final class PostgresSchemaCatalogCollector {
     }
 
     public SchemaBlueprint collect(Instant collectedAt, Collection<RelationSelector> relevantRelations) {
+        return collect(collectedAt, relevantRelations, new Pseudonymizer(saltSource.get()));
+    }
+
+    /** Allows one collection session to share its ephemeral pseudonyms with plan parsing. */
+    public SchemaBlueprint collect(Instant collectedAt, Collection<RelationSelector> relevantRelations,
+                                   Pseudonymizer pseudonyms) {
         Objects.requireNonNull(collectedAt, "Collected at must not be null.");
+        Objects.requireNonNull(pseudonyms, "Pseudonymizer must not be null.");
         var selectors = new LinkedHashSet<>(Objects.requireNonNull(relevantRelations, "Relations must not be null."));
         if (selectors.isEmpty() || selectors.contains(null)) {
             throw new IllegalArgumentException("At least one relevant relation is required.");
         }
-        var pseudonyms = new Pseudonymizer(saltSource.get());
         try (Connection opened = connection.get()) {
             // Read-only is enforced by the server only inside a transaction; repeatable read keeps the four
             // catalog queries on one snapshot.

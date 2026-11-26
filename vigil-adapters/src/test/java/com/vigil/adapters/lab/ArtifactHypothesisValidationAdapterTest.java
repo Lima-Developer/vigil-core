@@ -8,10 +8,17 @@ import com.vigil.core.domain.PlanSummaryEvidencePayload;
 import com.vigil.core.domain.SanitizationResult;
 import com.vigil.core.domain.SanitizationRule;
 import com.vigil.core.domain.TransitionMetadata;
+import com.vigil.core.domain.Diagnosis;
+import com.vigil.core.domain.Finding;
+import com.vigil.core.domain.OptimizationHypothesis;
+import com.vigil.core.domain.SafeCatalogReference;
+import com.vigil.core.domain.SafeRelationReference;
 import com.vigil.core.domain.enums.EvidenceConfidence;
 import com.vigil.core.domain.enums.EvidenceSource;
 import com.vigil.core.domain.enums.PlanNodeType;
 import com.vigil.core.domain.enums.ValidationOutcome;
+import com.vigil.core.domain.enums.DiagnosticRuleCode;
+import com.vigil.core.domain.enums.FindingSeverity;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.time.Instant;
@@ -67,8 +74,12 @@ class ArtifactHypothesisValidationAdapterTest {
         var metadata = new TransitionMetadata("test", "evidência suficiente", now);
         analysisCase.sanitize(
                 new SanitizationResult.Safe("SELECT $1", List.of(SanitizationRule.LITERALS_PLACEHOLDERED)), metadata);
-        analysisCase.diagnose(metadata);
-        analysisCase.proposeHypothesis(metadata);
+        var finding = new Finding(DiagnosticRuleCode.SEQ_SCAN_SELECTIVE_FILTER, FindingSeverity.HIGH,
+                List.of(evidence.id()), "Explicação segura baseada exclusivamente em evidência pseudonimizada.");
+        analysisCase.diagnose(new Diagnosis(List.of(finding), java.util.Set.of(evidence.id())), metadata);
+        analysisCase.proposeHypothesis(new OptimizationHypothesis(
+                new SafeRelationReference("relation_orders"),
+                List.of(new SafeCatalogReference("column_0123456789abcdef0123456789abcdef")), finding), metadata);
         analysisCase.startValidation(metadata);
         return analysisCase;
     }

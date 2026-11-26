@@ -5,6 +5,7 @@ import com.vigil.application.exception.PlanCollectionRejected;
 import com.vigil.application.exception.PlanRejectionReason;
 import com.vigil.core.domain.enums.PlanNodeType;
 import java.util.List;
+import com.vigil.adapters.postgres.schema.Pseudonymizer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -45,5 +46,35 @@ class PostgresExplainPlanParserTest {
         var result = PostgresExplainPlanParser.parse("[{\"Plan\":{\"Node Type\":\"Index Scan\",\"Plan Rows\":0}}]");
         assertEquals(0, result.estimatedRows());
         assertEquals(List.of(PlanNodeType.INDEX_SCAN), result.nodeTypes());
+    }
+
+    @Test
+    void extractsOnlyPseudonymizedFilterColumnsAndNeverCarriesFilterText() {
+        var summary = PostgresExplainPlanParser.parse("""
+                [{"Plan":{"Node Type":"Seq Scan","Schema":"public","Relation Name":"orders",
+                "Plan Rows":100,"Filter":"((customer_id = 42) AND (status = 'OPEN'::text))"}}]
+                """, new Pseudonymizer(new byte[32]));
+        var node = summary.nodes().getFirst();
+        assertAll(
+                () -> assertTrue(node.filterPresent()),
+                () -> assertTrue(node.filterColumnsKnown()),
+                () -> assertEquals(2, node.filterColumns().size()),
+                () -> assertFalse(summary.toString().contains("customer_id")),
+                () -> assertFalse(summary.toString().contains("OPEN")),
+                () -> assertFalse(summary.toString().contains("42"))
+        );
+    }
+
+    @Test
+    void ambiguousOrFunctionalFilterFailsClosedWithUnknownColumns() {
+        var summary = PostgresExplainPlanParser.parse("""
+                [{"Plan":{"Node Type":"Seq Scan","Schema":"public","Relation Name":"orders",
+                "Plan Rows":100,"Filter":"(lower(status) = 'open' OR customer_id = 42)"}}]
+                """, new Pseudonymizer(new byte[32]));
+        assertAll(
+                () -> assertTrue(summary.nodes().getFirst().filterPresent()),
+                () -> assertFalse(summary.nodes().getFirst().filterColumnsKnown()),
+                () -> assertTrue(summary.nodes().getFirst().filterColumns().isEmpty())
+        );
     }
 }
